@@ -7,7 +7,6 @@ import 'driver_profile.dart';
 import 'recieve_order_screen.dart';
 import 'activity_history.dart';
 import 'dart:async';
-import 'withdrawal_history_screen.dart';
 
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
@@ -240,17 +239,7 @@ class _HomeDashboard extends StatelessWidget {
                     Icons.payments_outlined,
                     Colors.redAccent,
                         () => _showWithdrawDialog(context)),
-                _buildMenuCard(context, "HỖ TRỢ", Icons.headset_mic_rounded, Colors.teal, () => _showSupportDialog(context)),
-                _buildMenuCard(
-                  context,
-                  "LỊCH SỬ RÚT TIỀN",
-                  Icons.history_rounded,
-                  Colors.purple,
-                      () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const WithdrawalHistoryScreen()),
-                  ),
-                ),
+
               ],
             ),
           ),
