@@ -211,7 +211,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
                 // 3. Slogan
                 Text(
-                  "Đây là slogan cho app tài xế",
+                  "Đối tác tin cậy, kết nối mọi nẻo đường.",
                   textAlign: TextAlign.center,
                   style: theme.textTheme.titleMedium!.copyWith( // Dùng titleMedium
                     fontWeight: FontWeight.w500,
