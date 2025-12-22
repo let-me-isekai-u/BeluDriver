@@ -57,6 +57,14 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
     _loadProfile();
   }
 
+  Future<void> _openZalo() async {
+    final Uri zaloUrl = Uri.parse('https://zalo.me/0823416820');
+    if (await canLaunchUrl(zaloUrl)) {
+      await launchUrl(zaloUrl, mode: LaunchMode.externalApplication);
+    }
+  }
+
+
   // ================= LOGIC LOAD PROFILE (GIỮ NGUYÊN) =================
   Future<void> _loadProfile() async {
     try {
@@ -249,28 +257,39 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
 
               // Nút Gọi Tổng Đài
               _buildSupportAction(
-                icon: Icons.phone_in_talk_rounded,
-                title: "Gọi tổng đài hỗ trợ",
-                subtitle: "1900 xxxx (Miễn phí)",
-                color: Colors.green,
-                onTap: () {
-                  // Logic thực hiện cuộc gọi
+                leading: CircleAvatar(
+                  backgroundColor: Colors.green.withOpacity(0.1),
+                  child: const Icon(Icons.phone_in_talk_rounded, color: Colors.green),
+                ),
+                title: "Gọi điện thoại hỗ trợ",
+                subtitle: "08 2341 6820",
+                onTap: () async {
                   Navigator.pop(context);
+
+                  final uri = Uri.parse('tel:0823416820');
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
                 },
               ),
+
               const SizedBox(height: 12),
 
               // Nút Nhắn tin Zalo/Chat
               _buildSupportAction(
-                icon: Icons.chat_bubble_rounded,
-                title: "Chat với tư vấn viên",
-                subtitle: "Phản hồi trong vòng 5 phút",
-                color: Colors.blue,
+                leading: Image.asset(
+                  'lib/assets/icons/icons8-zalo-100.png',
+                  width: 40,
+                  height: 40,
+                ),
+                title: "Nhắn tin với chúng tôi",
+                subtitle: "Sẵn sàng hỗ trợ",
                 onTap: () {
-                  // Logic mở chat
                   Navigator.pop(context);
+                  _openZalo();
                 },
               ),
+
               const SizedBox(height: 20),
             ],
           ),
@@ -280,10 +299,9 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
   }
 
   Widget _buildSupportAction({
-    required IconData icon,
+    required Widget leading,
     required String title,
     required String subtitle,
-    required Color color,
     required VoidCallback onTap,
   }) {
     return InkWell(
@@ -297,10 +315,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
         ),
         child: Row(
           children: [
-            CircleAvatar(
-              backgroundColor: color.withOpacity(0.1),
-              child: Icon(icon, color: color),
-            ),
+            leading,
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -317,6 +332,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
       ),
     );
   }
+
 
   // 3. Nút Cập nhật, Đổi mật khẩu, hỗ trợ
   Widget _buildActionButtons(BuildContext context) {
