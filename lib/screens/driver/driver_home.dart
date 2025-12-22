@@ -8,6 +8,8 @@ import 'recieve_order_screen.dart';
 import 'activity_history.dart';
 import 'dart:async';
 import 'withdrawal_history_screen.dart';
+import 'package:intl/intl.dart';
+
 
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
@@ -146,37 +148,193 @@ class _HomeDashboard extends StatelessWidget {
     required this.onRefreshProfile,
   });
 
-  void _showDepositDialog(BuildContext context, ThemeData theme) {
+  void _showDepositDialog(BuildContext parentContext, ThemeData theme) {
     final TextEditingController amountController = TextEditingController();
+
     showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
+      context: parentContext,
+      builder: (dialogContext) => AlertDialog(
         title: const Text("Nạp tiền vào ví"),
         content: TextField(
           controller: amountController,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(hintText: "Ví dụ: 500,000", suffixText: "đ"),
+          decoration: const InputDecoration(
+            hintText: "Ví dụ: 500.000",
+            suffixText: "đ",
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy")),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text("Hủy"),
+          ),
           ElevatedButton(
-            onPressed: () async {
+            onPressed: () {
               final amount = double.tryParse(amountController.text);
               if (amount == null || amount <= 0 || profile == null) return;
-              Navigator.pop(context);
-              _showQRDialog(context, theme, amount, "${profile!.id}${DateTime.now().millisecondsSinceEpoch}");
+
+              // ✅ TẠO NỘI DUNG CHUYỂN KHOẢN: id + HHmmss
+              final now = DateTime.now();
+              final timeStr = DateFormat('HHmmss').format(now);
+              final content = "${profile!.id}$timeStr";
+
+              Navigator.pop(dialogContext);
+
+              // mở QR
+              _showQRDialog(
+                parentContext,
+                theme,
+                amount,
+                content,
+              );
             },
             child: const Text("NẠP TIỀN"),
           ),
+
         ],
       ),
     );
   }
 
-  void _showQRDialog(BuildContext context, ThemeData theme, double amount, String content) {
-    // Logic Polling nạp tiền của bạn...
+
+  void _showQRDialog(
+      BuildContext parentContext,
+      ThemeData theme,
+      double amount,
+      String content,
+      ) async {
+    // ===== 1. CẢNH BÁO =====
+    final confirmed = await showDialog<bool>(
+      context: parentContext,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Lưu ý quan trọng"),
+        content: const Text(
+          "Vui lòng KHÔNG tắt ứng dụng hoặc đóng mã QR cho đến khi hệ thống xác nhận chuyển khoản thành công.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Hủy"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Tôi đã hiểu"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    // ===== 2. QR =====
+    final qrUrl =
+        "https://img.vietqr.io/image/MB-246878888-compact2.png"
+        "?amount=${amount.toStringAsFixed(0)}"
+        "&addInfo=$content"
+        "&accountName=CTY%20CP%20CN%20VA%20DV%20TT%20THE%20BELUGAS";
+
+    int countdown = 300;
+    Timer? countdownTimer;
+    Timer? pollTimer;
+
+    showDialog(
+      context: parentContext,
+      barrierDismissible: false,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (dialogContext, setState) {
+            countdownTimer ??= Timer.periodic(const Duration(seconds: 1), (t) {
+              if (countdown <= 0) {
+                t.cancel();
+                pollTimer?.cancel();
+                Navigator.pop(dialogCtx);
+
+                ScaffoldMessenger.of(parentContext).showSnackBar(
+                  const SnackBar(
+                    content: Text("Hết thời gian chờ thanh toán"),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              } else {
+                setState(() => countdown--);
+              }
+            });
+
+            pollTimer ??= Timer(const Duration(seconds: 15), () {
+              pollTimer = Timer.periodic(const Duration(seconds: 7), (t) async {
+                try {
+                  final prefs = await SharedPreferences.getInstance();
+                  final token = prefs.getString('accessToken') ?? '';
+
+                  final res = await ApiService.depositWallet(
+                    accessToken: token,
+                    amount: amount,
+                    content: content,
+                  );
+
+                  if (res.statusCode == 200) {
+                    final body = jsonDecode(res.body);
+                    if (body['success'] == true) {
+                      countdownTimer?.cancel();
+                      t.cancel();
+                      Navigator.pop(dialogCtx);
+
+                      ScaffoldMessenger.of(parentContext).showSnackBar(
+                        SnackBar(
+                          content: Text(body['message'] ?? "Nạp tiền thành công"),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+
+                      onRefreshProfile();
+                    }
+                  }
+                } catch (_) {}
+              });
+            });
+
+            final minutes = countdown ~/ 60;
+            final seconds = (countdown % 60).toString().padLeft(2, '0');
+
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text("Quét mã QR để nạp tiền",
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 12),
+                    Image.network(qrUrl, height: 280),
+                    const SizedBox(height: 8),
+                    Text("Số tiền: ${amount.toStringAsFixed(0)} đ"),
+                    Text("Nội dung: $content", style: const TextStyle(color: Colors.orange)),
+                    const SizedBox(height: 8),
+                    Text("Còn lại: $minutes:$seconds",
+                        style: const TextStyle(color: Colors.red)),
+                    TextButton(
+                      onPressed: () {
+                        countdownTimer?.cancel();
+                        pollTimer?.cancel();
+                        Navigator.pop(dialogCtx);
+                      },
+                      child: const Text("Đóng"),
+                    )
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
+
+
+  //Dialog rút tiền
   void _showWithdrawDialog(BuildContext context) {
     if (profile == null) return;
     showDialog(

@@ -655,6 +655,7 @@ class ApiService {
     required String bankName,
     required String accountNumber,
     required String accountName,
+
   }) async {
     final url = Uri.parse(
       "https://belucar.belugaexpress.com/api/withdrawalapi/create",
