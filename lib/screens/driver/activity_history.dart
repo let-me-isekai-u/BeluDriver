@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_service.dart';
+import '../../models/driver/ride_model.dart'; // Đã thêm import model
 import 'ride_detail_screen.dart';
 
 class ActivityScreen extends StatefulWidget {
@@ -13,8 +13,9 @@ class ActivityScreen extends StatefulWidget {
 }
 
 class _ActivityScreenState extends State<ActivityScreen> {
-  List<Map<String, dynamic>> ongoingRides = [];
-  List<Map<String, dynamic>> historyRides = [];
+  // Thay đổi kiểu dữ liệu sang RideModel
+  List<RideModel> ongoingRides = [];
+  List<RideModel> historyRides = [];
   bool _isLoading = true;
 
   @override
@@ -27,44 +28,53 @@ class _ActivityScreenState extends State<ActivityScreen> {
   // FETCH API
   // ======================
   Future<void> _fetchRides() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('accessToken') ?? '';
 
-      // TAB ĐANG DIỄN RA
-      final processingRes = await ApiService.getProcessingRides(accessToken: token);
-      if (processingRes.statusCode == 200) {
-        final body = jsonDecode(processingRes.body);
+      // Gọi đồng thời 2 API để tối ưu tốc độ load
+      final responses = await Future.wait([
+        ApiService.getProcessingRides(accessToken: token),
+        ApiService.getRideHistory(accessToken: token),
+      ]);
+
+      // Xử lý TAB ĐANG DIỄN RA
+      if (responses[0].statusCode == 200) {
+        final body = jsonDecode(responses[0].body);
         if (body['success'] == true) {
-          ongoingRides = _mapApiRides(body['data']);
+          ongoingRides = (body['data'] as List)
+              .map((e) => RideModel.fromJson(e))
+              .toList();
         }
       }
 
-      // TAB LỊCH SỬ
-      final historyRes = await ApiService.getRideHistory(accessToken: token);
-      if (historyRes.statusCode == 200) {
-        final body = jsonDecode(historyRes.body);
+      // Xử lý TAB LỊCH SỬ
+      if (responses[1].statusCode == 200) {
+        final body = jsonDecode(responses[1].body);
         if (body['success'] == true) {
-          historyRides = _mapApiRides(body['data']);
+          historyRides = (body['data'] as List)
+              .map((e) => RideModel.fromJson(e))
+              .toList();
         }
       }
     } catch (e) {
       debugPrint("🔥 Fetch rides error: $e");
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   // ======================
-  // XỬ LÝ HOÀN THÀNH CHUYẾN XE (NÚT ĐẾN NƠI)
+  // XỬ LÝ HOÀN THÀNH CHUYẾN XE
   // ======================
   Future<void> _handleCompleteRide(int rideId, String code) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('accessToken') ?? '';
     if (token.isEmpty) return;
 
-    // Hiển thị loading nhẹ
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -73,59 +83,17 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
     final res = await ApiService.completeRide(accessToken: token, rideId: rideId);
 
-    // Đóng loading
-    if (mounted) Navigator.pop(context);
+    if (mounted) Navigator.pop(context); // Đóng loading
 
     if (res.statusCode == 200) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Chuyến xe $code đã hoàn thành!"), backgroundColor: Colors.green),
       );
-      // Tải lại danh sách để chuyến xe chuyển từ tab Đang di chuyển sang Lịch sử
-      _fetchRides();
+      _fetchRides(); // Tải lại danh sách
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Không thể cập nhật trạng thái. Vui lòng thử lại!"), backgroundColor: Colors.red),
+        const SnackBar(content: Text("Không thể cập nhật trạng thái."), backgroundColor: Colors.red),
       );
-    }
-  }
-
-  // ======================
-  // MAP API → UI
-  // ======================
-  List<Map<String, dynamic>> _mapApiRides(List list) {
-    return list.map<Map<String, dynamic>>((ride) {
-      final int status = int.tryParse(ride['status'].toString()) ?? -1;
-
-      return {
-        "id": ride['rideId'],
-        "code": ride['code'],
-        "date": DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(ride['createdAt'])),
-        "from": "${ride['fromAddress']}, ${ride['fromDistrict']}",
-        "to": "${ride['toAddress']}, ${ride['toProvince']}",
-        "price": "${NumberFormat('#,###').format(ride['price'])}đ",
-        "status": _getStatusText(status),
-        "statusColor": _getStatusColor(status),
-        "rawStatus": status, // Lưu lại số status để check hiển thị nút
-        "paymentMethod": ride['paymentMethod'] ?? "Chưa xác định",
-      };
-    }).toList();
-  }
-
-  String _getStatusText(int status) {
-    switch (status) {
-      case 3: return "Đang di chuyển";
-      case 4: return "Hoàn thành";
-      case 5: return "Đã hủy";
-      default: return "Không xác định";
-    }
-  }
-
-  Color _getStatusColor(int status) {
-    switch (status) {
-      case 3: return Colors.orange; // Đổi sang màu cam cho "đang đi" dễ nhìn hơn
-      case 4: return Colors.green;
-      case 5: return Colors.red;
-      default: return Colors.grey;
     }
   }
 
@@ -170,7 +138,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
     );
   }
 
-  Widget _buildList(List<Map<String, dynamic>> rides, ThemeData theme) {
+  Widget _buildList(List<RideModel> rides, ThemeData theme) {
     if (rides.isEmpty) return const Center(child: Text("Không có dữ liệu chuyến xe"));
 
     return RefreshIndicator(
@@ -178,46 +146,43 @@ class _ActivityScreenState extends State<ActivityScreen> {
       child: ListView.builder(
         padding: const EdgeInsets.all(12),
         itemCount: rides.length,
-        itemBuilder: (context, index) {
-          final ride = rides[index];
-          return _buildRideCard(ride, theme);
-        },
+        itemBuilder: (context, index) => _buildRideCard(rides[index], theme),
       ),
     );
   }
 
-  Widget _buildRideCard(Map<String, dynamic> ride, ThemeData theme) {
+  Widget _buildRideCard(RideModel ride, ThemeData theme) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
-        onTap: () => _navigateToDetail(ride['id']),
+        onTap: () => _navigateToDetail(ride.id),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              // Header Row
+              // Header Row sử dụng getter từ Model
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(ride['date'], style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                  Text(ride.formattedDate, style: const TextStyle(color: Colors.grey, fontSize: 13)),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: ride['statusColor'].withOpacity(0.1),
+                      color: ride.statusColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      ride['status'],
-                      style: TextStyle(color: ride['statusColor'], fontSize: 11, fontWeight: FontWeight.bold),
+                      ride.statusText,
+                      style: TextStyle(color: ride.statusColor, fontSize: 11, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
               ),
               const Divider(height: 24),
-              _buildLocationLine(ride['from'], ride['to']),
+              _buildLocationLine(ride.fromAddress, ride.toAddress),
               const SizedBox(height: 16),
 
               // Info & Action Row
@@ -227,27 +192,25 @@ class _ActivityScreenState extends State<ActivityScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(ride['code'], style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.blueGrey)),
+                      Text(ride.code, style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.blueGrey)),
                       const SizedBox(height: 2),
-                      Text(ride['paymentMethod'], style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                      Text(ride.paymentMethod, style: const TextStyle(fontSize: 11, color: Colors.grey)),
                     ],
                   ),
                   Text(
-                    ride['price'],
+                    ride.formattedPrice,
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                   ),
                 ],
               ),
 
-              // ======================
-              // HIỂN THỊ NÚT ĐẾN NƠI NẾU STATUS = 3
-              // ======================
-              if (ride['rawStatus'] == 3) ...[
+              // Kiểm tra status trực tiếp bằng số int từ Model
+              if (ride.status == 3) ...[
                 const Divider(height: 24),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () => _handleCompleteRide(ride['id'], ride['code']),
+                    onPressed: () => _handleCompleteRide(ride.id, ride.code),
                     icon: const Icon(Icons.check_circle_outline),
                     label: const Text("XÁC NHẬN ĐẾN NƠI", style: TextStyle(fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(

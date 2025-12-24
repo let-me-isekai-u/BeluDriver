@@ -14,9 +14,7 @@ class ReceiveOrderTab extends StatefulWidget {
 
 class _ReceiveOrderTabState extends State<ReceiveOrderTab> {
   List<dynamic> provinces = [];
-  List<dynamic> districts = [];
   int? selectedProvinceId;
-  int? selectedDistrictId;
   List<Map<String, dynamic>> allNewRides = [];
 
   // 1. DANH SÁCH ĐƠN MỚI
@@ -81,11 +79,30 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> {
     });
   }
 
+  //chuyển hướng chi tiết chuyến đi
+  void _navigateToDetail(Map<String, dynamic> ride) {
+    // Lấy rideId từ dữ liệu trả về của API getAcceptedRides
+    final int rideId = int.tryParse(ride['rideId']?.toString() ?? ride['id']?.toString() ?? '0') ?? 0;
+
+    if (rideId != 0) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RideDetailScreen(rideId: rideId),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Không tìm thấy mã chuyến xe!")),
+      );
+    }
+  }
+
   void _applyFilter() {
     setState(() {
       newRides = allNewRides.where((ride) {
         final String spot = (ride['fromProvince'] != null
-            ? "${ride['fromProvince']} ${ride['fromDistrict']}"
+            ? "${ride['fromProvince']}"
             : ride['fromAddress'] ?? '')
             .toLowerCase();
 
@@ -96,12 +113,6 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> {
           if (!spot.contains(provinceName)) return false;
         }
 
-        if (selectedDistrictId != null) {
-          final district = districts.firstWhere((d) => d['id'] == selectedDistrictId, orElse: () => null);
-          if (district == null) return false;
-          final districtName = district['name'].toString().toLowerCase();
-          if (!spot.contains(districtName)) return false;
-        }
         return true;
       }).toList();
     });
@@ -112,10 +123,14 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> {
     final token = prefs.getString('accessToken') ?? '';
     if (token.isEmpty) return;
 
+    final int id = int.tryParse(ride['id'].toString()) ?? 0;
+    if (id == 0) return;
+
     final res = await ApiService.acceptRide(
       accessToken: token,
-      rideId: int.tryParse(ride['rideId'].toString()) ?? 0,
+      id: id,
     );
+
 
     if (res.statusCode == 200) {
       final body = jsonDecode(res.body);
@@ -210,43 +225,14 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> {
             onChanged: (val) async {
               setState(() {
                 selectedProvinceId = val;
-                selectedDistrictId = null;
-                districts = [];
+
               });
-              if (val != null) {
-                final dData = await ApiService.getDistricts(val);
-                setState(() => districts = dData);
-              }
+
               _applyFilter();
             },
           ),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<int>(
-                  value: selectedDistrictId,
-                  hint: const Text("Quận / Huyện"),
-                  items: districts.map((d) => DropdownMenuItem<int>(value: d['id'], child: Text(d['name']))).toList(),
-                  onChanged: (val) {
-                    setState(() => selectedDistrictId = val);
-                    _applyFilter();
-                  },
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.refresh, color: Colors.red),
-                onPressed: () {
-                  setState(() {
-                    selectedProvinceId = null;
-                    selectedDistrictId = null;
-                    districts = [];
-                  });
-                  _applyFilter();
-                },
-              )
-            ],
-          ),
+
         ],
       ),
     );
@@ -263,8 +249,8 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> {
 
   Widget _buildRideCard(Map<String, dynamic> ride, bool isNew) {
     final theme = Theme.of(context);
-    final String fromText = "${ride['fromAddress'] ?? ''}, ${ride['fromDistrict'] ?? ''}, ${ride['fromProvince'] ?? ''}";
-    final String toText = "${ride['toAddress'] ?? ''}, ${ride['toDistrict'] ?? ''}, ${ride['toProvince'] ?? ''}";
+    final String fromText = "${ride['fromAddress'] ?? ''}, ${ride['fromProvince'] ?? ''}";
+    final String toText = "${ride['toAddress'] ?? ''}, ${ride['toProvince'] ?? ''}";
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -297,46 +283,50 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> {
 
   Widget _buildCardFooter(Map<String, dynamic> ride, ThemeData theme, bool isNew) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "${NumberFormat('#,###').format(ride['price'] ?? 0)}đ",
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.orange),
-            ),
-            // 👉 THÊM THÔNG TIN THANH TOÁN Ở ĐÂY
-            Text(
-              ride['paymentMethod'] ?? "Tiền mặt",
-              style: const TextStyle(fontSize: 12, color: Colors.blueGrey, fontWeight: FontWeight.w500),
-            ),
-          ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "${NumberFormat('#,###').format(ride['price'] ?? 0)}đ",
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange,
+                ),
+              ),
+              Text(
+                ride['paymentMethod'] ?? "Tiền mặt",
+                style: const TextStyle(fontSize: 12),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
+        const SizedBox(width: 8),
         isNew
             ? ElevatedButton(
           onPressed: () => _acceptRide(ride),
           child: const Text("NHẬN ĐƠN"),
         )
             : Row(
+          mainAxisSize: MainAxisSize.min, // ⭐ QUAN TRỌNG
           children: [
             OutlinedButton(
-              onPressed: () {
-                final id = int.tryParse(ride['rideId'].toString()) ?? 0;
-                if (id > 0) Navigator.push(context, MaterialPageRoute(builder: (_) => RideDetailScreen(rideId: id)));
-              },
+              onPressed: () => _navigateToDetail(ride) ,
               child: const Text("CHI TIẾT"),
             ),
             const SizedBox(width: 8),
             ElevatedButton(
               onPressed: () => _startRide(ride),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
               child: const Text("XUẤT PHÁT"),
             ),
           ],
         ),
       ],
     );
+
   }
 
   Widget _buildLocationRow(IconData icon, Color color, String address) {

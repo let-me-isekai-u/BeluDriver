@@ -392,10 +392,10 @@ class ApiService {
   //xác nhận đơn của tài xế POST
   static Future<http.Response> acceptRide({
     required String accessToken,
-    required int rideId,
+    required int id, // id của đơn trạng thái 1
   }) async {
     final url = Uri.parse(
-      "https://belucar.belugaexpress.com/api/rideapi/accept/$rideId",
+      "https://belucar.belugaexpress.com/api/rideapi/accept/$id",
     );
 
     print("🔵 [API] ACCEPT RIDE → $url");
@@ -473,30 +473,6 @@ class ApiService {
     }
   }
 
-  //Lấy huyện theo tỉnh để lọc đơn
-  static Future<List<dynamic>> getDistricts(int provinceId) async {
-    final url = Uri.parse(
-      "https://belucar.belugaexpress.com/api/provinceapi/district/$provinceId",
-    );
-
-    try {
-      final response = await http.get(url).timeout(const Duration(seconds: 15));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data is List) {
-          return data;
-        }
-      }
-
-      print(
-          "⚠️ getDistricts(): Unexpected response ${response.statusCode} for provinceId=$provinceId");
-      return [];
-    } catch (e) {
-      print("🔥 getDistricts() ERROR for provinceId=$provinceId: $e");
-      return [];
-    }
-  }
 
 //Lấy chi tiết chuyến xe
   static Future<http.Response> getRideDetail({
@@ -507,7 +483,13 @@ class ApiService {
       "https://belucar.belugaexpress.com/api/driverapi/ride-detail/$rideId",
     );
 
-    print("🔵 [API] GET WAITING RIDES → $url");
+    // 🔍 LOG TRƯỚC KHI CALL API
+    print("══════════════════════════════════════");
+    print("🚀 [API] GET RIDE DETAIL");
+    print("➡️ URL: $url");
+    print("➡️ rideId: $rideId");
+    print("➡️ Token: ${accessToken.isNotEmpty ? "OK" : "EMPTY"}");
+    print("══════════════════════════════════════");
 
     try {
       final res = await http.get(
@@ -518,15 +500,20 @@ class ApiService {
         },
       ).timeout(const Duration(seconds: 20));
 
-      print("📥 [API] STATUS: ${res.statusCode}");
-      print("📥 [API] BODY: ${res.body}");
+      // 📥 LOG RESPONSE
+      print("📥 [API] RESPONSE STATUS: ${res.statusCode}");
+      print("📥 [API] RESPONSE BODY:");
+      print(res.body);
+      print("══════════════════════════════════════");
 
       return res;
     } catch (e) {
-      print("❌ [API] GET TRIPS DETAIL ERROR: $e");
+      print("❌ [API] GET RIDE DETAIL ERROR: $e");
+      print("══════════════════════════════════════");
       return _errorResponse(e);
     }
   }
+
 
   // Bắt đầu chuyến đi
   static Future<http.Response> startRide({
