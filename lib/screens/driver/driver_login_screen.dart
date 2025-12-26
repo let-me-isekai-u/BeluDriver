@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'driver_home.dart';
 import 'driver_register_screen.dart';
-import '../forgot_password_screen.dart'; // Đảm bảo đường dẫn này đúng với cấu trúc mới
+import '../forgot_password_screen.dart';
 import 'dart:convert';
 import '../../services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../services/firebase_notification_service.dart';
 
 class DriverLoginScreen extends StatefulWidget {
   const DriverLoginScreen({super.key});
@@ -60,13 +62,14 @@ class _LoginScreenState extends State<DriverLoginScreen> with TickerProviderStat
     }
 
     setState(() => _isLoading = true);
-    final deviceToken = ""; // Tạm thời để trống theo code cũ của bạn
+    String? deviceToken = await FirebaseNotificationService.getDeviceToken();
+    final String tokenToSend = deviceToken ?? "";
 
     try {
       final res = await ApiService.driverLogin(
         phone: phone,
         password: password,
-        deviceToken: deviceToken,
+        deviceToken: tokenToSend,
       );
 
       if (res.statusCode == 200) {

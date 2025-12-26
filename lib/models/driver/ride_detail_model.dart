@@ -9,7 +9,7 @@ class RideDetailModel {
   final String? note;
 
   final String customerName;
-  final String customerPhone;
+  final String customerNumber;
 
   final String fromAddress;
   final String fromProvince;
@@ -27,7 +27,7 @@ class RideDetailModel {
     this.pickupTime,
     this.note,
     required this.customerName,
-    required this.customerPhone,
+    required this.customerNumber,
     required this.fromAddress,
     required this.fromProvince,
     required this.toAddress,
@@ -45,7 +45,7 @@ class RideDetailModel {
       pickupTime: json['pickupTime'],
       note: json['note'],
       customerName: json['customerName'] ?? 'Khách hàng',
-      customerPhone: json['customerPhone'] ?? '',
+      customerNumber: json['customerNumber'] ?? '',
       fromAddress: json['fromAddress'] ?? '',
       fromProvince: json['fromProvince'] ?? '',
       toAddress: json['toAddress'] ?? '',

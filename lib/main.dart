@@ -5,11 +5,25 @@ import 'app_theme.dart';
 import 'screens/driver/driver_login_screen.dart';
 import 'Screens/splash_screen.dart';
 
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'services/firebase_notification_service.dart';
+
+
 
 void main() async { // THÊM TỪ KHÓA ASYNC
 
   // 1. Đảm bảo Flutter Widgets đã được khởi tạo
   WidgetsFlutterBinding.ensureInitialized();
+  // Khởi tạo firebase
+  await Firebase.initializeApp();
+
+  FirebaseMessaging.onBackgroundMessage(
+    FirebaseNotificationService.firebaseMessagingBackgroundHandler,
+  );
+
+  await FirebaseNotificationService.init();
+
 
   // 2. Khởi tạo Shared Preferences để đảm bảo có thể đọc token ngay lập tức
   // Đây là bước quan trọng để fix lỗi tiềm ẩn khi đọc token trên Splash Screen

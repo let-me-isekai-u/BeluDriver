@@ -161,15 +161,15 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
           child: Text(_ride!.customerName[0]),
         ),
         title: Text(_ride!.customerName, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(_ride!.customerPhone.isNotEmpty ? _ride!.customerPhone : "BeluCar Customer"),
+        subtitle: Text(_ride!.customerNumber.isNotEmpty ? _ride!.customerNumber : "BeluCar Customer"),
         trailing: IconButton(
           icon: const Icon(Icons.phone, color: Colors.green, size: 28),
           onPressed: () async {
-            if (_ride!.customerPhone.isEmpty) {
+            if (_ride!.customerNumber.isEmpty) {
               _showSnackBar("Không có số điện thoại", Colors.red);
               return;
             }
-            final uri = Uri.parse('tel:${_ride!.customerPhone}');
+            final uri = Uri.parse('tel:${_ride!.customerNumber}');
             if (await canLaunchUrl(uri)) await launchUrl(uri);
           },
         ),
