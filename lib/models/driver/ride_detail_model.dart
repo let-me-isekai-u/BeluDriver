@@ -3,7 +3,7 @@ class RideDetailModel {
   final String code;
   final int status;
   final double price;
-  final String type;
+  final int type;
   final String paymentMethod;
   final String? pickupTime;
   final String? note;
@@ -40,7 +40,7 @@ class RideDetailModel {
       code: json['code'] ?? '',
       status: json['status'] ?? 0,
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
-      type: json['type'].toString(),
+      type: int.tryParse(json['type'].toString()) ?? 1,
       paymentMethod: json['paymentMethod'] ?? 'Tiền mặt',
       pickupTime: json['pickupTime'],
       note: json['note'],
@@ -51,5 +51,15 @@ class RideDetailModel {
       toAddress: json['toAddress'] ?? '',
       toProvince: json['toProvince'] ?? '',
     );
+  }
+
+  String get typeText{
+    switch (type){
+      case 1: return "Chở người";
+      case 2: return "Chở người - bao xe";
+      case 3: return "Chở hàng";
+      case 4: return "Chở hàng hoả tốc";
+      default: return "Lỗi không xác định, vui lòng liên hệ cskh";
+    }
   }
 }

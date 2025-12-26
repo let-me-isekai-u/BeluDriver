@@ -213,7 +213,7 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
       icon: Icons.info_outline,
       child: Column(
         children: [
-          _buildDetailRow("Loại dịch vụ", "Chuyến xe #${_ride!.type}"),
+          _buildDetailRow("Loại dịch vụ", _ride!.typeText),
           _buildDetailRow("Thanh toán", _ride!.paymentMethod),
           _buildDetailRow("Thời gian đón", _formatDate(_ride!.pickupTime)),
           _buildDetailRow("Ghi chú", _ride!.note ?? "Không có ghi chú", isLast: true),

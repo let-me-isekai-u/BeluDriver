@@ -9,7 +9,7 @@ class RideModel {
   final String toAddress;
   final double price;
   final int status;
-  final String paymentMethod;
+  final int paymentMethod;
 
   RideModel({
     required this.id,
@@ -32,7 +32,7 @@ class RideModel {
       toAddress: "${json['toAddress']}, ${json['toProvince']}",
       price: (json['price'] ?? 0).toDouble(),
       status: int.tryParse(json['status'].toString()) ?? -1,
-      paymentMethod: json['paymentMethod'] ?? "Chưa xác định",
+      paymentMethod: int.tryParse(json['paymentMethod'].toString()) ?? 3,
     );
   }
 
@@ -47,6 +47,15 @@ class RideModel {
       case 4: return "Hoàn thành";
       case 5: return "Đã hủy";
       default: return "Không xác định";
+    }
+  }
+
+  String get paymentMethodText{
+    switch (paymentMethod){
+      case 1: return "Thanh toán chuyển khoản";
+      case 2: return "Thanh toán bằng ví khách hàng";
+      case 3: return "Thanh toán tiền mặt";
+      default: return "Lỗi không xác định, vui lòng liên hệ cskh";
     }
   }
 
