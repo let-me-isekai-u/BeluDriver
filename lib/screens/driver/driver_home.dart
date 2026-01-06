@@ -10,7 +10,6 @@ import 'dart:async';
 import 'withdrawal_history_screen.dart';
 import 'package:intl/intl.dart';
 
-
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
 
@@ -119,12 +118,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text(
-                  _profile != null
-                      ? "Ví: ${_profile!.wallet.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ',')} VND"
-                      : "Ví: 0đ",
-                  style: const TextStyle(fontSize: 13, color: Colors.white),
-                ),
               ),
             ],
           ),
@@ -173,29 +166,19 @@ class _HomeDashboard extends StatelessWidget {
               final amount = double.tryParse(amountController.text);
               if (amount == null || amount <= 0 || profile == null) return;
 
-              // ✅ TẠO NỘI DUNG CHUYỂN KHOẢN: id + HHmmss
               final now = DateTime.now();
               final timeStr = DateFormat('HHmmss').format(now);
               final content = "${profile!.id}$timeStr";
 
               Navigator.pop(dialogContext);
-
-              // mở QR
-              _showQRDialog(
-                parentContext,
-                theme,
-                amount,
-                content,
-              );
+              _showQRDialog(parentContext, theme, amount, content);
             },
             child: const Text("NẠP TIỀN"),
           ),
-
         ],
       ),
     );
   }
-
 
   void _showQRDialog(
       BuildContext parentContext,
@@ -203,7 +186,6 @@ class _HomeDashboard extends StatelessWidget {
       double amount,
       String content,
       ) async {
-    // ===== 1. CẢNH BÁO =====
     final confirmed = await showDialog<bool>(
       context: parentContext,
       barrierDismissible: false,
@@ -227,7 +209,6 @@ class _HomeDashboard extends StatelessWidget {
 
     if (confirmed != true) return;
 
-    // ===== 2. QR =====
     final qrUrl =
         "https://img.vietqr.io/image/MB-246878888-compact2.png"
         "?amount=${amount.toStringAsFixed(0)}"
@@ -249,12 +230,8 @@ class _HomeDashboard extends StatelessWidget {
                 t.cancel();
                 pollTimer?.cancel();
                 Navigator.pop(dialogCtx);
-
                 ScaffoldMessenger.of(parentContext).showSnackBar(
-                  const SnackBar(
-                    content: Text("Hết thời gian chờ thanh toán"),
-                    backgroundColor: Colors.red,
-                  ),
+                  const SnackBar(content: Text("Hết thời gian chờ thanh toán"), backgroundColor: Colors.red),
                 );
               } else {
                 setState(() => countdown--);
@@ -266,7 +243,6 @@ class _HomeDashboard extends StatelessWidget {
                 try {
                   final prefs = await SharedPreferences.getInstance();
                   final token = prefs.getString('accessToken') ?? '';
-
                   final res = await ApiService.depositWallet(
                     accessToken: token,
                     amount: amount,
@@ -279,14 +255,9 @@ class _HomeDashboard extends StatelessWidget {
                       countdownTimer?.cancel();
                       t.cancel();
                       Navigator.pop(dialogCtx);
-
                       ScaffoldMessenger.of(parentContext).showSnackBar(
-                        SnackBar(
-                          content: Text(body['message'] ?? "Nạp tiền thành công"),
-                          backgroundColor: Colors.green,
-                        ),
+                        SnackBar(content: Text(body['message'] ?? "Nạp tiền thành công"), backgroundColor: Colors.green),
                       );
-
                       onRefreshProfile();
                     }
                   }
@@ -304,16 +275,14 @@ class _HomeDashboard extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text("Quét mã QR để nạp tiền",
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Text("Quét mã QR để nạp tiền", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 12),
                     Image.network(qrUrl, height: 280),
                     const SizedBox(height: 8),
                     Text("Số tiền: ${amount.toStringAsFixed(0)} đ"),
                     Text("Nội dung: $content", style: const TextStyle(color: Colors.orange)),
                     const SizedBox(height: 8),
-                    Text("Còn lại: $minutes:$seconds",
-                        style: const TextStyle(color: Colors.red)),
+                    Text("Còn lại: $minutes:$seconds", style: const TextStyle(color: Colors.red)),
                     TextButton(
                       onPressed: () {
                         countdownTimer?.cancel();
@@ -332,9 +301,6 @@ class _HomeDashboard extends StatelessWidget {
     );
   }
 
-
-
-  //Dialog rút tiền
   void _showWithdrawDialog(BuildContext context) {
     if (profile == null) return;
     showDialog(
@@ -352,13 +318,9 @@ class _HomeDashboard extends StatelessWidget {
     });
   }
 
-  void _showSupportDialog(BuildContext context) {
-    // Logic Support của bạn...
-  }
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context); // Fix lỗi thiếu biến theme
+    final theme = Theme.of(context);
     return SingleChildScrollView(
       child: Column(
         children: [
@@ -390,15 +352,8 @@ class _HomeDashboard extends StatelessWidget {
               children: [
                 _buildMenuCard(context, "NHẬN ĐƠN MỚI", Icons.near_me_rounded, Colors.orange, () => onNavigate(1)),
                 _buildMenuCard(context, "LỊCH SỬ CHUYẾN", Icons.assignment_rounded, Colors.blue, () => onNavigate(2)),
-                _buildMenuCard(
-                    context, "NẠP TIỀN VÍ", Icons.account_balance_wallet_rounded, Colors.green, () => _showDepositDialog(context, theme)),
-                _buildMenuCard(
-                    context,
-                    "RÚT TIỀN",
-                    Icons.payments_outlined,
-                    Colors.redAccent,
-                        () => _showWithdrawDialog(context)),
-
+                _buildMenuCard(context, "NẠP TIỀN VÍ", Icons.account_balance_wallet_rounded, Colors.green, () => _showDepositDialog(context, theme)),
+                _buildMenuCard(context, "RÚT TIỀN", Icons.payments_outlined, Colors.redAccent, () => _showWithdrawDialog(context)),
                 _buildMenuCard(
                   context,
                   "LỊCH SỬ RÚT TIỀN",
@@ -437,7 +392,7 @@ class _HomeDashboard extends StatelessWidget {
   }
 }
 
-/// ===== DIALOG RÚT TIỀN (VỚI PICKER NGÂN HÀNG CÓ FILTER & LOGO) =====
+/// ===== DIALOG RÚT TIỀN (VERSION MỚI) =====
 class WithdrawDialogContent extends StatefulWidget {
   final double currentWallet;
   final int driverId;
@@ -481,8 +436,8 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
           });
         }
       }
-    } catch (e) {
-      if(mounted) setState(() => _loadingBanks = false);
+    } catch (_) {
+      if (mounted) setState(() => _loadingBanks = false);
     }
   }
 
@@ -510,10 +465,10 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
                     onChanged: (value) {
                       setModalState(() {
                         _filteredBanks = _banks.where((bank) {
-                          final query = value.toLowerCase();
-                          return bank['name'].toString().toLowerCase().contains(query) ||
-                              bank['shortName'].toString().toLowerCase().contains(query) ||
-                              bank['code'].toString().toLowerCase().contains(query);
+                          final q = value.toLowerCase();
+                          return bank['name'].toString().toLowerCase().contains(q) ||
+                              bank['shortName'].toString().toLowerCase().contains(q) ||
+                              bank['code'].toString().toLowerCase().contains(q);
                         }).toList();
                       });
                     },
@@ -525,7 +480,11 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
                       itemBuilder: (context, index) {
                         final bank = _filteredBanks[index];
                         return ListTile(
-                          leading: Image.network(bank['logo'], width: 35, errorBuilder: (_,__,___)=>const Icon(Icons.account_balance)),
+                          leading: Image.network(
+                            bank['logo'],
+                            width: 35,
+                            errorBuilder: (_, __, ___) => const Icon(Icons.account_balance),
+                          ),
                           title: Text(bank['shortName']),
                           subtitle: Text(bank['name'], maxLines: 1, overflow: TextOverflow.ellipsis),
                           onTap: () {
@@ -550,7 +509,7 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
     );
   }
 
-  Future<void> _handleWithdraw() async {
+  Future<void> _confirmWithdraw() async {
     final amountText = _amountController.text.replaceAll(',', '');
     final amount = int.tryParse(amountText) ?? 0;
 
@@ -563,6 +522,33 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
       return;
     }
 
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Xác nhận rút tiền"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _infoRow("Số tiền", "${NumberFormat('#,###').format(amount)} đ"),
+            _infoRow("Ngân hàng", _selectedBankShortName!),
+            _infoRow("Số tài khoản", _accountNumberController.text),
+            _infoRow("Chủ tài khoản", _accountNameController.text.toUpperCase()),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("HỦY")),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("XÁC NHẬN")),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      _submitWithdraw(amount);
+    }
+  }
+
+  Future<void> _submitWithdraw(int amount) async {
     setState(() => _isSubmitting = true);
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -580,7 +566,9 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
       final body = jsonDecode(res.body);
       if (res.statusCode == 200 && body['success'] == true) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(body['message']), backgroundColor: Colors.green));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(body['message']), backgroundColor: Colors.green),
+          );
           Navigator.pop(context, true);
         }
       } else {
@@ -591,6 +579,18 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  Widget _infoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(child: Text(label)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
   }
 
   void _showMsg(String msg) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
@@ -634,13 +634,12 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
           TextField(
               controller: _accountNameController,
               textCapitalization: TextCapitalization.characters,
-              decoration: const InputDecoration(labelText: "Tên chủ tài khoản (viết hoa không dấu)")
-          ),
+              decoration: const InputDecoration(labelText: "Tên chủ tài khoản (viết hoa không dấu)")),
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _isSubmitting ? null : _handleWithdraw,
+              onPressed: _isSubmitting ? null : _confirmWithdraw,
               style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
               child: _isSubmitting ? const CircularProgressIndicator(color: Colors.white) : const Text("GỬI YÊU CẦU RÚT TIỀN"),
             ),

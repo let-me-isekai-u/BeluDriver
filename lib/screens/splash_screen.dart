@@ -61,12 +61,29 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     // Thêm delay 1.5 giây để người dùng kịp thấy Splash Screen
     await Future.delayed(const Duration(milliseconds: 1500));
 
-    // BƯỚC 1: KIỂM TRA ACCESS TOKEN
+    // BƯỚC 1: CÓ ACCESS TOKEN → VERIFY
     if (accessToken != null) {
-      // Có Access Token -> Vào Home ngay (Flow nhanh)
-      appLog('AUTH', 'Found Access Token -> Go to Home.');
-      _goToHome();
-      return;
+      appLog('AUTH', 'Found Access Token -> Verifying...');
+
+      try {
+        final res = await ApiService.getDriverProfile(accessToken: accessToken);
+
+        if (res.statusCode == 200) {
+          appLog('AUTH', 'Access Token VALID -> Go to Home.');
+          _goToHome();
+          return;
+        }
+
+        // Token sai / hết hạn
+        if (res.statusCode == 401) {
+          appLog('AUTH', 'Access Token EXPIRED -> Try Refresh.');
+          await prefs.remove("accessToken");
+          // rơi xuống bước refresh
+        }
+      } catch (e) {
+        appLog('AUTH', 'Verify token ERROR: $e');
+        await prefs.remove("accessToken");
+      }
     }
 
     // BƯỚC 2: KIỂM TRA REFRESH TOKEN

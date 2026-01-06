@@ -337,14 +337,17 @@ class ApiService {
   }
 
   //lấy danh sách đơn chưa có tài xế nhận
-  static Future<http.Response> getWaitingRides({
+  static Future<http.Response> getWaitingRidesPaged({
     required String accessToken,
+    required int page,
+    int pageSize = 20,
   }) async {
     final url = Uri.parse(
-      "https://belucar.belugaexpress.com/api/rideapi/waiting",
+      "https://belucar.belugaexpress.com/api/rideapi/waiting"
+          "?page=$page&pageSize=$pageSize",
     );
 
-    print("🔵 [API] GET WAITING RIDES → $url");
+    print("🔵 [API] GET WAITING RIDES PAGED → $url");
 
     try {
       final res = await http.get(
@@ -364,6 +367,7 @@ class ApiService {
       return _errorResponse(e);
     }
   }
+
 
   //lấy danh sách chuyến xe mà tài xế đang dùng app đã nhận
   static Future<http.Response> getAcceptedRides({
@@ -702,6 +706,42 @@ class ApiService {
     } catch (e) {
       return _errorResponse(e);
     }
+  }
+
+  // 19. Tìm chuyến đi theo tỉnh đi
+  static Future<http.Response> searchRideByFromProvince({
+    required String accessToken,
+    required int fromProvinceId,
+  }) async {
+    final url = Uri.parse(
+      "https://belucar.belugaexpress.com/api/rideapi/search"
+          "?fromProvinceId=$fromProvinceId",
+    );
+
+    return await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+      },
+    );
+  }
+
+  // 19.5 Lấy số đơn của các tỉnh
+  static Future<http.Response> getRideCountByProvince({
+    required String accessToken,
+  }) async {
+    final url = Uri.parse(
+      "https://belucar.belugaexpress.com/api/rideapi/ride-count-by-province",
+    );
+
+    return await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+      },
+    );
   }
 
 }
