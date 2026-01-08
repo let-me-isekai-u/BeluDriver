@@ -28,6 +28,11 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProv
   List<dynamic> provinces = [];
   int? selectedProvinceId;
 
+  // districts cho province đã chọn
+  // mỗi phần tử dạng: { "districtId": 1, "districtName": "Quận X", "totalRides": 0 }
+  List<dynamic> districts = [];
+  int? selectedDistrictId;
+
   // Tab 2 (Đơn đã nhận) - Hiện tại vẫn dùng Map theo yêu cầu giữ nguyên logic cũ
   List<Map<String, dynamic>> acceptedRides = [];
   bool _isLoadingAcceptedRides = false;
@@ -69,11 +74,11 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProv
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('accessToken') ?? '';
 
-      // Nếu có filter theo tỉnh đón (selectedProvinceId != null) thì gọi API search theo tỉnh
-      if (selectedProvinceId != null) {
-        final res = await ApiService.searchRideByFromProvince(
+      // Nếu có filter theo huyện đón (selectedDistrictId != null) thì gọi API search theo huyện
+      if (selectedDistrictId != null) {
+        final res = await ApiService.searchRideByFromDistrict(
           accessToken: token,
-          fromProvinceId: selectedProvinceId!,
+          fromDistrictId: selectedDistrictId!,
         );
 
         if (res.statusCode == 200) {
@@ -84,18 +89,22 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProv
                 .map<WaitingRide>((json) => WaitingRide.fromJson(json as Map<String, dynamic>))
                 .toList();
 
-            // Khi filter bằng tỉnh, API trả về toàn bộ danh sách => xử lý như single page
+            // Khi filter bằng huyện, API trả về toàn bộ danh sách => xử lý như single page
             _pagingController.appendLastPage(items);
             return;
           } else {
-            _pagingController.error = "Không thể tải dữ liệu (filter theo tỉnh)";
+            _pagingController.error = "Không thể tải dữ liệu (filter theo huyện)";
             return;
           }
         } else {
-          _pagingController.error = "Không thể tải dữ liệu từ máy chủ (filter theo tỉnh)";
+          _pagingController.error = "Không thể tải dữ liệu từ máy chủ (filter theo huyện)";
           return;
         }
       }
+
+      // LƯU Ý: API search theo tỉnh đã bị loại bỏ, nên ở đây nếu chỉ chọn tỉnh mà không chọn huyện
+      // client sẽ không gọi search theo tỉnh (server-side). Thay vào đó ta sẽ load phân trang bình thường.
+      // (Flow chọn tỉnh hiện tại sẽ tự động mở modal chọn huyện; nếu user hủy chọn huyện, tỉnh sẽ bị clear.)
 
       // Nếu không có filter, dùng API phân trang cũ
       final res = await ApiService.getWaitingRidesPaged(
@@ -181,7 +190,7 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProv
   }
 
   void _applyFilter() {
-    // Làm mới danh sách phân trang khi đổi tỉnh
+    // Làm mới danh sách phân trang khi đổi tỉnh/huyện
     _pagingController.refresh();
   }
 
@@ -256,6 +265,47 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProv
     return '';
   }
 
+  // Helper: lấy giá trị (dynamic) từ Map với nhiều key khả dĩ
+  dynamic _extractDynamicFromMap(Map m, List<String> keys) {
+    for (final k in keys) {
+      if (m.containsKey(k)) {
+        final v = m[k];
+        if (v != null) return v;
+      }
+    }
+    return null;
+  }
+
+  String _formatPickupTime(dynamic value) {
+    if (value == null) return '';
+    try {
+      // Nếu là số nguyên (int) -> xem là timestamp (giây hoặc ms)
+      if (value is int) {
+        final int v = value;
+        final int ms = v.abs() > 1000000000000 ? v : v * 1000; // >1e12 coi là ms
+        return DateFormat('HH:mm dd/MM').format(DateTime.fromMillisecondsSinceEpoch(ms));
+      }
+
+      final s = value.toString().trim();
+      if (s.isEmpty) return '';
+
+      // Nếu là chuỗi chỉ chứa chữ số -> timestamp string
+      if (RegExp(r'^\d+$').hasMatch(s)) {
+        final int v = int.parse(s);
+        final int ms = v.abs() > 1000000000000 ? v : v * 1000;
+        return DateFormat('HH:mm dd/MM').format(DateTime.fromMillisecondsSinceEpoch(ms));
+      }
+
+      // Thử parse ISO / standard datetime string
+      final DateTime dt = DateTime.parse(s);
+      return DateFormat('HH:mm dd/MM').format(dt);
+    } catch (e) {
+      // Fallback: trả về nguyên chuỗi (đỡ mất thông tin), hoặc '' nếu muốn ẩn
+      return value.toString();
+    }
+  }
+
+
   // Helper: ghép address + province, tránh dấu phẩy thừa
   String _buildAddressWithProvince(String? address, String? province) {
     final a = (address ?? '').toString().trim();
@@ -265,8 +315,21 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProv
     if (a.isEmpty) return p;
     return '$a, $p';
   }
+  String _buildFullAddress(String? address, String? district, String? province) {
+    final a = (address ?? '').toString().trim();
+    final d = (district ?? '').toString().trim();
+    final p = (province ?? '').toString().trim();
+
+    final parts = <String>[];
+    if (a.isNotEmpty) parts.add(a);
+    if (d.isNotEmpty) parts.add(d);
+    if (p.isNotEmpty) parts.add(p);
+
+    return parts.join(', ');
+  }
 
   // ====================== UI COMPONENTS ======================
+
 
   @override
   Widget build(BuildContext context) {
@@ -340,6 +403,14 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProv
       orElse: () => null,
     );
 
+    // Tìm object district đang được chọn để hiển thị tên
+    final selectedDistrict = selectedDistrictId == null
+        ? null
+        : districts.cast<dynamic?>().firstWhere(
+          (d) => d != null && (d['districtId'].toString() == selectedDistrictId.toString()),
+      orElse: () => null,
+    );
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       decoration: BoxDecoration(
@@ -397,23 +468,56 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProv
                         color: selected != null ? Colors.green[800] : Colors.blue,
                       ),
                     ),
+                    if (selectedDistrict != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        "Huyện: ${selectedDistrict['districtName']} (${selectedDistrict['totalRides'] ?? 0})",
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
                   ],
                 ),
               ),
-              if (selectedProvinceId != null)
-                GestureDetector(
-                  onTap: () {
-                    setState(() => selectedProvinceId = null);
-                    _applyFilter();
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      shape: BoxShape.circle,
+              if (selectedProvinceId != null || selectedDistrictId != null)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (selectedDistrictId != null)
+                      GestureDetector(
+                        onTap: () {
+                          setState(() => selectedDistrictId = null);
+                          _applyFilter();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.close, size: 16, color: Colors.grey),
+                        ),
+                      ),
+                    GestureDetector(
+                      onTap: () {
+                        // Clear both province and district when clearing province
+                        setState(() {
+                          selectedProvinceId = null;
+                          selectedDistrictId = null;
+                          districts = [];
+                        });
+                        _applyFilter();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.close, size: 16, color: Colors.grey),
+                      ),
                     ),
-                    child: const Icon(Icons.close, size: 16, color: Colors.grey),
-                  ),
+                  ],
                 )
               else
                 Icon(Icons.unfold_more_rounded, color: Colors.grey[400]),
@@ -527,10 +631,165 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProv
     );
 
     if (!mounted) return;
-    if (result != selectedProvinceId) { // Chỉ refresh nếu giá trị thay đổi
-      setState(() => selectedProvinceId = result);
+
+    // Nếu user chọn "Tất cả" (null) thì clear filter và refresh
+    if (result == null) {
+      setState(() {
+        selectedProvinceId = null;
+        selectedDistrictId = null;
+        districts = [];
+      });
       _applyFilter();
+      return;
     }
+
+    // Nếu user chọn 1 tỉnh cụ thể thì mở modal chọn huyện.
+    final int pid = result;
+    // Lưu districts (được set trong _showDistrictPicker) và lấy kết quả huyện đã chọn
+    final int? did = await _showDistrictPicker(context, pid);
+
+    if (!mounted) return;
+
+    if (did == null) {
+      // Nếu user hủy chọn huyện -> rollback (clear tỉnh)
+      setState(() {
+        selectedProvinceId = null;
+        selectedDistrictId = null;
+        districts = [];
+      });
+    } else {
+      // Commit cả tỉnh và huyện
+      setState(() {
+        selectedProvinceId = pid;
+        selectedDistrictId = did;
+      });
+    }
+
+    _applyFilter();
+  }
+
+  // Mở modal để chọn huyện cho tỉnh đã chọn
+  // Trả về int? = districtId được chọn, hoặc null nếu user cancel
+  Future<int?> _showDistrictPicker(BuildContext context, int provinceId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('accessToken') ?? '';
+
+    try {
+      final res = await ApiService.getRideCountByDistrict(accessToken: token, provinceId: provinceId);
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body);
+        if (body['success'] == true) {
+          final List<dynamic> data = body['data'] ?? [];
+          // Lưu districts vào state để hiển thị tên khi cần
+          setState(() => districts = data);
+
+          final result = await showModalBottomSheet<int?>(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (ctx) {
+              return Container(
+                height: MediaQuery.of(context).size.height * 0.65,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 12),
+                      height: 4,
+                      width: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Text(
+                        "Chọn huyện của ${provinces.firstWhere((p) => p['provinceId'].toString() == provinceId.toString())['provinceName'] ?? ''}",
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    Expanded(
+                      child: data.isEmpty
+                          ? const Center(child: Text("Không có huyện"))
+                          : ListView.separated(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        itemCount: data.length + 1,
+                        separatorBuilder: (context, index) => const Divider(height: 1, indent: 20, endIndent: 20),
+                        itemBuilder: (context, index) {
+                          final bool isAll = index == 0;
+                          String name = "";
+                          int total = 0;
+                          int? did;
+
+                          if (isAll) {
+                            name = "Tất cả các huyện";
+                            total = data.fold<int>(0, (s, d) => s + (int.tryParse(d['totalRides'].toString()) ?? 0));
+                            did = null;
+                          } else {
+                            final d = data[index - 1];
+                            name = d['districtName'] ?? '';
+                            total = int.tryParse(d['totalRides'].toString()) ?? 0;
+                            did = d['districtId'] is int ? d['districtId'] : int.tryParse(d['districtId'].toString()) ?? 0;
+                          }
+
+                          final bool isSelected = selectedDistrictId == did;
+
+                          return ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                            leading: Icon(
+                              isAll ? Icons.map : Icons.location_city,
+                              color: isSelected ? Colors.blue : Colors.grey[400],
+                            ),
+                            title: Text(
+                              name,
+                              style: TextStyle(
+                                color: isSelected ? Colors.blue[700] : Colors.blue[600],
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                fontSize: 16,
+                              ),
+                            ),
+                            trailing: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                total.toString(),
+                                style: const TextStyle(
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            onTap: () => Navigator.pop(ctx, did),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+
+          return result;
+        } else {
+          debugPrint("Lỗi load districts: success == false");
+        }
+      } else {
+        debugPrint("Lỗi load districts: status ${res.statusCode}");
+      }
+    } catch (e) {
+      debugPrint("Lỗi load districts: $e");
+    }
+    return null;
   }
 
   Widget _buildRideCard(dynamic ride, bool isNew) {
@@ -538,30 +797,37 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProv
 
     // Ép kiểu linh hoạt để dùng chung 1 UI cho cả 2 Tab
     final String code = (ride is WaitingRide) ? (ride.code ?? '---') : (ride['code'] ?? '---');
-    final String? pickupTime = (ride is WaitingRide) ? ride.pickupTime : ride['pickupTime'];
+    final dynamic pickupTime = (ride is WaitingRide)
+        ? ride.pickupTime
+        : _extractDynamicFromMap(ride, ['pickupTime', 'pickup_time', 'pickupAt', 'pickup_at', 'pickuptime', 'pickupDate', 'pickup_date']);
 
     // Lấy address và province một cách an toàn, tránh dấu phẩy dư thừa khi province rỗng
     String fromAddressRaw = '';
+    String fromDistrictRaw = '';
     String fromProvinceRaw = '';
     String toAddressRaw = '';
+    String toDistrictRaw = '';
     String toProvinceRaw = '';
 
     if (ride is WaitingRide) {
       fromAddressRaw = ride.fromAddress ?? '';
+      fromDistrictRaw = ride.fromDistrict ?? '';
       fromProvinceRaw = ride.fromProvince ?? '';
       toAddressRaw = ride.toAddress ?? '';
+      toDistrictRaw = ride.toDistrict ?? '';
       toProvinceRaw = ride.toProvince ?? '';
     } else if (ride is Map) {
       fromAddressRaw = ride['fromAddress']?.toString() ?? '';
-      // thử nhiều key khả dĩ cho province trong Map
+      fromDistrictRaw = _extractProvinceFromMap(ride, ['fromDistrict', 'fromDistrictName', 'from_district', 'from_district_name']);
       fromProvinceRaw = _extractProvinceFromMap(ride, ['fromProvince', 'fromProvinceName', 'from_province', 'from_province_name']);
       toAddressRaw = ride['toAddress']?.toString() ?? '';
+      toDistrictRaw = _extractProvinceFromMap(ride, ['toDistrict', 'toDistrictName', 'to_district', 'to_district_name']);
       toProvinceRaw = _extractProvinceFromMap(ride, ['toProvince', 'toProvinceName', 'to_province', 'to_province_name']);
     }
 
-    final String fromText = _buildAddressWithProvince(fromAddressRaw, fromProvinceRaw);
-    final String toText = _buildAddressWithProvince(toAddressRaw, toProvinceRaw);
-
+    final String fromText = _buildFullAddress(fromAddressRaw, fromDistrictRaw, fromProvinceRaw);
+    final String toText = _buildFullAddress(toAddressRaw, toDistrictRaw, toProvinceRaw);
+    final String pickupText = _formatPickupTime(pickupTime);
     final double price = (ride is WaitingRide) ? ride.price : (double.tryParse((ride['price'] ?? '0').toString()) ?? 0);
 
     return Card(
@@ -575,15 +841,27 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProv
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(code, style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text(
-                  pickupTime != null ? DateFormat('HH:mm dd/MM').format(DateTime.parse(pickupTime)) : '',
-                  style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
-                ),
+                Row(
+                  children: [
+                    Text("Giờ đón: ",
+                      style: TextStyle(
+                        color: Colors.blueAccent,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      pickupText,
+                      style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                )
+
               ],
             ),
             const Divider(),
             _buildLocationRow(Icons.circle, Colors.green, fromText),
-            const SizedBox(height: 8),
             _buildLocationRow(Icons.location_on, Colors.red, toText),
             const Divider(),
             _buildCardFooter(ride, theme, isNew, price),
@@ -599,7 +877,7 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProv
         Expanded(
           child: Text(
             "${NumberFormat('#,###').format(price)}đ",
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.orange),
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.green),
           ),
         ),
         const SizedBox(width: 8),
@@ -631,7 +909,7 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProv
       children: [
         Icon(icon, size: 16, color: color),
         const SizedBox(width: 8),
-        Expanded(child: Text(address, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis)),
+        Expanded(child: Text(address, style: const TextStyle(fontSize: 13), maxLines: 2, overflow: TextOverflow.ellipsis)),
       ],
     );
   }

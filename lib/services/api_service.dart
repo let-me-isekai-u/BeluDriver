@@ -708,24 +708,38 @@ class ApiService {
     }
   }
 
-  // 19. Tìm chuyến đi theo tỉnh đi
-  static Future<http.Response> searchRideByFromProvince({
+
+  static Future<http.Response> searchRideByFromDistrict({
     required String accessToken,
-    required int fromProvinceId,
+    required int fromDistrictId,
   }) async {
     final url = Uri.parse(
-      "https://belucar.belugaexpress.com/api/rideapi/search"
-          "?fromProvinceId=$fromProvinceId",
-    );
+      "https://belucar.belugaexpress.com/api/rideapi/search",
+    ).replace(queryParameters: {
+      "fromDistrictId": fromDistrictId.toString(),
+    });
 
-    return await http.get(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $accessToken',
-      },
-    );
+    print("🔵 [API] SEARCH RIDE BY DISTRICT → $url");
+
+    try {
+      final res = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Accept': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 20));
+
+      print("📥 [API] STATUS: ${res.statusCode}");
+      print("📥 [API] BODY: ${res.body}");
+
+      return res;
+    } catch (e) {
+      print("❌ [API] SEARCH RIDE ERROR: $e");
+      return _errorResponse(e);
+    }
   }
+
 
   // 19.5 Lấy số đơn của các tỉnh
   static Future<http.Response> getRideCountByProvince({
@@ -743,5 +757,36 @@ class ApiService {
       },
     );
   }
+
+  static Future<http.Response> getRideCountByDistrict({
+    required String accessToken,
+    required int provinceId,
+  }) async {
+    final url = Uri.parse(
+      "https://belucar.belugaexpress.com/api/rideapi/ride-count-by-district/$provinceId",
+    );
+
+    print("🔵 [API] GET RIDE COUNT BY DISTRICT → $url");
+
+    try {
+      final res = await http.get(
+        url,
+        headers: {
+          "Authorization": "Bearer $accessToken",
+          "Accept": "application/json",
+        },
+      ).timeout(const Duration(seconds: 20));
+
+      print("📥 [API] STATUS: ${res.statusCode}");
+      print("📥 [API] BODY: ${res.body}");
+
+      return res;
+    } catch (e) {
+      print("❌ [API] GET RIDE COUNT BY DISTRICT ERROR: $e");
+      return _errorResponse(e);
+    }
+
+  }
+
 
 }

@@ -240,7 +240,11 @@ class _ActivityScreenState extends State<ActivityScreen> with SingleTickerProvid
                 ],
               ),
               const Divider(height: 24),
-              _buildLocationLine(ride.fromAddress, ride.toAddress),
+              // Hiển thị thêm huyện: province - district - address
+              _buildLocationLine(
+                '${ride.fromProvince} - ${ride.fromDistrict} - ${ride.fromAddress}',
+                '${ride.toProvince} - ${ride.toDistrict} - ${ride.toAddress}',
+              ),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

@@ -7,6 +7,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../services/api_service.dart';
 import '../../models/driver/ride_detail_model.dart';
 
+import '../../dashed_line_vertical.dart';
+
+
 class RideDetailScreen extends StatefulWidget {
   final int rideId;
   const RideDetailScreen({super.key, required this.rideId});
@@ -177,35 +180,61 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
     );
   }
 
+  Widget _routePointText({required String title, required String district, required String address}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text("$title - $district", style: const TextStyle(fontWeight: FontWeight.w600)),
+        Text(address),
+      ],
+    );
+  }
+
   Widget _buildRouteCard() {
     return _buildInfoCard(
       title: "Lộ trình",
       icon: Icons.route_outlined,
-      child: Column(
-        children: [
-          _buildLocationStep(
-            Icons.radio_button_checked,
-            Colors.green,
-            "Điểm đón",
-            "${_ride!.fromAddress}, ${_ride!.fromProvince}",
-          ),
-          const Padding(
-            padding: EdgeInsets.only(left: 11),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Icon(Icons.more_vert, size: 16, color: Colors.grey),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Column(
+              children: [
+                Icon(Icons.circle, color: Colors.green, size: 18),
+                DashedLineVertical(height: 40, color: Colors.brown),
+                Icon(Icons.location_on, color: Colors.red, size: 18),
+              ],
             ),
-          ),
-          _buildLocationStep(
-            Icons.location_on,
-            Colors.red,
-            "Điểm đến",
-            "${_ride!.toAddress}, ${_ride!.toProvince}",
-          ),
-        ],
+            const SizedBox(width: 10),
+            // cột bên phải: text
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildLocationStep(
+                          Icons.radio_button_checked,
+                          Colors.green,
+                          "Điểm đón",
+                          "${_ride!.fromAddress}, ${_ride!.fromProvince}",
+                        ),
+                  const SizedBox(height: 8),
+              _buildLocationStep(
+                        Icons.location_on,
+                        Colors.red,
+                        "Điểm đến",
+                        "${_ride!.toAddress}, ${_ride!.toProvince}",
+                      ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
+
+
 
   Widget _buildExtraInfoCard() {
     return _buildInfoCard(
