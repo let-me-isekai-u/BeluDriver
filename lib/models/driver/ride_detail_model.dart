@@ -17,6 +17,9 @@ class RideDetailModel {
   final String toAddress;
   final String toProvince;
 
+  final String fromDistrict;
+  final String toDistrict;
+
   RideDetailModel({
     required this.id,
     required this.code,
@@ -32,6 +35,8 @@ class RideDetailModel {
     required this.fromProvince,
     required this.toAddress,
     required this.toProvince,
+    required this.fromDistrict,
+    required this.toDistrict,
   });
 
   factory RideDetailModel.fromJson(Map<String, dynamic> json) {
@@ -50,6 +55,8 @@ class RideDetailModel {
       fromProvince: json['fromProvince'] ?? '',
       toAddress: json['toAddress'] ?? '',
       toProvince: json['toProvince'] ?? '',
+      fromDistrict: json['fromDistrict'],
+      toDistrict: json['toDistrict'],
     );
   }
 

@@ -180,14 +180,11 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
     );
   }
 
-  Widget _routePointText({required String title, required String district, required String address}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text("$title - $district", style: const TextStyle(fontWeight: FontWeight.w600)),
-        Text(address),
-      ],
-    );
+  //định dạng địa chỉ
+  String _formatAddress(String? address, String? district, String? province) {
+    return [address, district, province]
+        .where((s) => s != null && s.trim().isNotEmpty)
+        .join(', ');
   }
 
   Widget _buildRouteCard() {
@@ -196,41 +193,66 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
       icon: Icons.route_outlined,
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Column(
-              children: [
-                Icon(Icons.circle, color: Colors.green, size: 18),
-                DashedLineVertical(height: 40, color: Colors.brown),
-                Icon(Icons.location_on, color: Colors.red, size: 18),
-              ],
+            _buildLocationStep(
+              Icons.radio_button_checked,
+              Colors.green,
+              "Điểm đón",
+              _formatAddress(_ride!.fromAddress, _ride!.fromDistrict, _ride!.fromProvince),
+              isLast: false,
             ),
-            const SizedBox(width: 10),
-            // cột bên phải: text
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildLocationStep(
-                          Icons.radio_button_checked,
-                          Colors.green,
-                          "Điểm đón",
-                          "${_ride!.fromAddress}, ${_ride!.fromProvince}",
-                        ),
-                  const SizedBox(height: 8),
-              _buildLocationStep(
-                        Icons.location_on,
-                        Colors.red,
-                        "Điểm đến",
-                        "${_ride!.toAddress}, ${_ride!.toProvince}",
-                      ),
-                ],
-              ),
+            const SizedBox(height: 8),
+            _buildLocationStep(
+              Icons.location_on,
+              Colors.red,
+              "Điểm đến",
+              _formatAddress(_ride!.toAddress, _ride!.toDistrict, _ride!.toProvince),
+              isLast: true,
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildLocationStep(
+      IconData icon,
+      Color color,
+      String label,
+      String address, {
+        bool isLast = false,
+      }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Column chứa icon và (nếu chưa phải step cuối) đường dọc nối
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 18),
+            if (!isLast) ...[
+              const SizedBox(height: 4),
+              // Thay bằng widget DashedLineVertical của bạn
+              DashedLineVertical(height: 40, color: Colors.brown),
+            ],
+          ],
+        ),
+
+        const SizedBox(width: 12),
+
+        // Phần nội dung (label + address)
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              Text(address, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -309,21 +331,6 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
     );
   }
 
-  Widget _buildLocationStep(IconData icon, Color color, String label, String address) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 22, color: color),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-            Text(address, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-          ]),
-        ),
-      ],
-    );
-  }
 
   Widget _buildDetailRow(String label, String value, {bool isLast = false}) {
     return Padding(
