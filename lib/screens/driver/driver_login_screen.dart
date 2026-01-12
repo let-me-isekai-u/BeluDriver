@@ -90,9 +90,9 @@ class _LoginScreenState extends State<DriverLoginScreen> with TickerProviderStat
 
         _showSnack("Đăng nhập thành công!", color: const Color(0xFF4CD7A7));
 
-        Navigator.pushReplacement(
-          context,
+        Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const DriverHomeScreen()),
+              (Route<dynamic> route) => false,
         );
       } else {
         final err = jsonDecode(res.body);

@@ -90,6 +90,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       toolbarHeight: 80,
       backgroundColor: theme.colorScheme.primary,
       elevation: 0,
+      automaticallyImplyLeading: false,
       title: Row(
         children: [
           CircleAvatar(
