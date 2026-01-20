@@ -58,7 +58,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
   }
 
   Future<void> _openZalo() async {
-    final Uri zaloUrl = Uri.parse('https://zalo.me/0823416820');
+    final Uri zaloUrl = Uri.parse('https://zalo.me/037 9550130');
     if (await canLaunchUrl(zaloUrl)) {
       await launchUrl(zaloUrl, mode: LaunchMode.externalApplication);
     }
