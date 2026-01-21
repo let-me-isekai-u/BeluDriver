@@ -23,10 +23,16 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   late AnimationController _logoController;
   late Animation<double> _scaleAnimation;
 
+  static const Duration _minDisplayDuration = Duration(seconds: 3);
+  late final DateTime _splashStart;
+
   @override
   void initState() {
     super.initState();
     appLog('SPLASH', 'initState called. Setting up animations.');
+
+    _splashStart = DateTime.now();
+
 
     // Khởi tạo Animation cho hiệu ứng Logo
     _logoController = AnimationController(
@@ -46,6 +52,13 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   void dispose() {
     _logoController.dispose();
     super.dispose();
+  }
+
+  Future<void> _ensureMinDisplay() async {
+    final elapsed = DateTime.now().difference(_splashStart);
+    if (elapsed < _minDisplayDuration){
+      await Future.delayed(_minDisplayDuration - elapsed);
+    }
   }
 
   // LOGIC KIỂM TRA XÁC THỰC
@@ -70,6 +83,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
         if (res.statusCode == 200) {
           appLog('AUTH', 'Access Token VALID -> Go to Home.');
+          await _ensureMinDisplay();
           _goToHome();
           return;
         }
@@ -112,6 +126,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
           await prefs.setString("accessToken", newAccessToken);
           await prefs.setString("refreshToken", newRefreshToken);
           appLog('AUTH', 'Refresh SUCCESS -> New tokens saved -> Go to Home.');
+          await _ensureMinDisplay();
           _goToHome();
           return;
         } else {
@@ -158,96 +173,14 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   // Trong _SplashScreenState
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final mediaQuery = MediaQuery.of(context);
-    // Xác định khoảng trống trên/dưới logo
-    final verticalPadding = mediaQuery.size.height * 0.15;
-
     return Scaffold(
-        backgroundColor: theme.colorScheme.primary,
-        body: Center(
-          // Bỏ SingleChildScrollView vì đây là màn hình cố định
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Spacer ở trên (tạo cân bằng thị giác)
-                SizedBox(height: verticalPadding),
-
-                // 1. Khu vực Logo với hiệu ứng Scale
-                ScaleTransition(
-                  scale: _scaleAnimation, // Sử dụng Animation đã khai báo
-                  child: Container(
-                    width: 140,
-                    height: 140,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20), // Bo góc lớn hơn
-                      color: Colors.white,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.4), // Bóng đậm hơn
-                          blurRadius: 20,
-                          spreadRadius: 3,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: Image.asset(
-                        'lib/assets/icons/BeluCar_logo.jpg',
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-
-                // 2. Tên Ứng dụng
-                Text(
-                  "BeluDriver",
-                  style: theme.textTheme.headlineLarge!.copyWith(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 32, // Đảm bảo kích thước lớn và rõ ràng
-                    color: Colors.white,
-                    letterSpacing: 4, // Tăng khoảng cách chữ cho sự nổi bật
-                    shadows: [
-                      Shadow(
-                        color: Colors.black.withOpacity(0.4),
-                        offset: const Offset(3, 3),
-                        blurRadius: 5,
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                // Spacer ở giữa (đẩy Indicator xuống dưới)
-                const Spacer(),
-
-                // 4. Indicator (Được đẩy xuống gần cuối màn hình hơn)
-                SizedBox(
-                  width: 40, // Kích thước nhỏ gọn hơn
-                  height: 40,
-                  child: CircularProgressIndicator(
-                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                    strokeWidth: 3, // Giảm độ dày
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Spacer ở dưới (tạo cân bằng thị giác)
-                SizedBox(height: verticalPadding / 2),
-              ],
-            ),
-          ),
-        )
+      body: SizedBox.expand(
+        child: Image.asset(
+          'lib/assets/tet_splash.png',
+          fit: BoxFit.cover,
+        ),
+      ),
     );
-    }
+  }
 
 }
