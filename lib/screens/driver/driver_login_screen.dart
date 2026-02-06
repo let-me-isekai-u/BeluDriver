@@ -183,7 +183,7 @@ class _LoginScreenState extends State<DriverLoginScreen> with TickerProviderStat
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: Image.asset(
-                'lib/assets/icons/BeluCar_logo.jpg',
+                'lib/assets/icons/BeluDriver_launcher.png',
                 fit: BoxFit.contain,
               ),
             ),

@@ -70,19 +70,20 @@ flutter:
     - lib/assets/icons/BeluCar_logo.jpg
     - lib/assets/icons/ActivityLogo.png
     - lib/assets/tet_splash.png
+    - lib/assets/icons/BeluDriver_launcher.png
 
 
 flutter_icons:
   android: true
   ios: true
-  image_path: "lib/assets/icons/BeluCar_logo.jpg"
+  image_path: "lib/assets/icons/BeluDriver_launcher.png"
   adaptive_icon_background: "#ffffff"
-  adaptive_icon_foreground: "lib/assets/icons/BeluCar_logo.jpg"
+  adaptive_icon_foreground: "lib/assets/icons/BeluDriver_launcher.png"
 
 
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "lib/assets/icons/BeluCar_logo.jpg"
+  image_path: "lib/assets/icons/BeluDriver_launcher.png"
   min_sdk_android: 21
 
