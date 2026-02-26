@@ -880,18 +880,22 @@ class ApiService {
     }
   }
 
-  // API #25: Huỷ chuyến đã đẩy lên
-// POST https://belucar.com/api/rideapi/cancel-broker/{rideId}
-// Bearer Token: Access Token
+///huỷ chuyển đã bắn (API 25)
   static Future<http.Response> cancelBrokerRide({
     required String accessToken,
     required int rideId,
   }) async {
-    final url = Uri.parse("https://belucar.com/api/rideapi/cancel-broker/$rideId");
+    final url = Uri.parse(
+        "https://belucar.com/api/rideapi/cancel-broker/$rideId");
+
+    print("=== CANCEL BROKER RIDE ===");
+    print("URL: $url");
+    print("RideId: $rideId");
+    print("Token: ${accessToken.substring(0, 20)}...");
 
     try {
-      return await http
-          .post(
+      final response = await http
+          .put(
         url,
         headers: {
           "Accept": "application/json",
@@ -899,7 +903,14 @@ class ApiService {
         },
       )
           .timeout(const Duration(seconds: 20));
+
+      print("StatusCode: ${response.statusCode}");
+      print("ResponseBody: ${response.body}");
+      print("=== END CANCEL ===");
+
+      return response;
     } catch (e) {
+      print("ERROR CANCEL BROKER: $e");
       return _errorResponse(e);
     }
   }

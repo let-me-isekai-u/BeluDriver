@@ -331,7 +331,7 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab>
     }
   }
 
-  // ✅ THÊM: Huỷ đơn mình đã đẩy (API #25)
+  //THÊM: Huỷ đơn mình đã đẩy (API #25)
   Future<void> _cancelMyBrokerRide(dynamic ride) async {
     final theme = Theme.of(context);
 
@@ -347,16 +347,19 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab>
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text("Huỷ đơn đã đẩy"),
-        content: Text("Bạn chắc chắn muốn huỷ chuyến ($rideId) ?"),
+        content: Text("Bạn chắc chắn muốn huỷ chuyến?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFFD700), // gold
+            ),
             child: const Text("Không"),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: theme.colorScheme.error),
-            child: const Text("Huỷ"),
+            child: const Text("Huỷ",),
           ),
         ],
       ),
