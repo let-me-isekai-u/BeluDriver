@@ -10,6 +10,9 @@ import 'dart:async';
 import 'withdrawal_history_screen.dart';
 import 'package:intl/intl.dart';
 
+// ✅ CHỈ THÊM: import màn hình tab mới (đẩy đơn / tạo đơn)
+import 'driver_booking_screen.dart';
+
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
 
@@ -18,7 +21,8 @@ class DriverHomeScreen extends StatefulWidget {
 }
 
 class _DriverHomeScreenState extends State<DriverHomeScreen> {
-  int _currentIndex = 0;
+  // Thay đổi: Mặc định là 2 vì Home Dashboard đã chuyển vào giữa list screens
+  int _currentIndex = 2;
   DriverProfileModel? _profile;
   bool _isLoadingProfile = true;
 
@@ -52,102 +56,136 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final goldColor = theme.colorScheme.secondary;
 
+    // ✅ Sắp xếp lại list để Home nằm ở giữa (vị trí index 2)
     final List<Widget> screens = [
+      const ReceiveOrderTab(), // Index 0
+
+      // ✅ FIX: DriverBookingScreen KHÔNG còn onSubmit nữa
+      const DriverBookingScreen(), // Index 1
+
+      // Trang chủ Dashboard (Index 2 - Ở giữa)
       _HomeDashboard(
         profile: _profile,
         isLoading: _isLoadingProfile,
         onNavigate: (index) => setState(() => _currentIndex = index),
         onRefreshProfile: _fetchProfile,
       ),
-      const ReceiveOrderTab(),
-      const ActivityScreen(),
-      const DriverProfileScreen(),
+
+      const ActivityScreen(), // Index 3
+      const DriverProfileScreen(), // Index 4
     ];
 
     return Scaffold(
-      appBar: _currentIndex == 0 ? _buildCustomAppBar(theme) : null,
+      extendBody: true, // Cho phép body hiển thị dưới bottom bar để bo góc đẹp
+      appBar: _currentIndex == 2 ? _buildCustomAppBar(theme) : null,
       body: screens[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: theme.colorScheme.primary,
-        unselectedItemColor: Colors.grey,
-        onTap: (index) => setState(() => _currentIndex = index),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Trang chủ'),
-          BottomNavigationBarItem(icon: Icon(Icons.assignment_turned_in), label: 'Nhận đơn'),
-          BottomNavigationBarItem(icon: Icon(Icons.history_rounded), label: 'Hoạt động'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Cá nhân'),
-        ],
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          boxShadow: [
+            BoxShadow(color: Colors.black12, blurRadius: 10, spreadRadius: 1),
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          onTap: (index) => setState(() => _currentIndex = index),
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: goldColor,
+          unselectedItemColor: Colors.grey,
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
+          items: [
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.assignment_turned_in_rounded),
+              label: 'Nhận đơn',
+            ),
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.upload_file_rounded),
+              label: 'Đẩy đơn',
+            ),
+
+            // ✅ Nút HOME ở giữa với UI đặc biệt (to hơn, bo tròn)
+            BottomNavigationBarItem(
+              icon: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: _currentIndex == 2 ? goldColor : Colors.grey.shade200,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    if (_currentIndex == 2)
+                      BoxShadow(
+                        color: goldColor.withOpacity(0.4),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.home_rounded,
+                  size: 30,
+                  color: _currentIndex == 2 ? Colors.white : Colors.grey.shade600,
+                ),
+              ),
+              label: 'Trang chủ',
+            ),
+
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.access_time_rounded),
+              label: 'Hoạt động',
+            ),
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.person_rounded),
+              label: 'Cá nhân',
+            ),
+          ],
+        ),
       ),
     );
   }
 
   PreferredSizeWidget _buildCustomAppBar(ThemeData theme) {
     return AppBar(
-      toolbarHeight: 90,
+      toolbarHeight: 95,
       backgroundColor: theme.colorScheme.primary,
       elevation: 0,
       automaticallyImplyLeading: false,
-      flexibleSpace: Stack(
+      titleSpacing: 16,
+      title: Row(
         children: [
-          // Họa tiết lồng đèn trang trí góc AppBar
-          Positioned(
-            right: -10,
-            top: 0,
-            child: Opacity(
-              opacity: 0.2,
-              child: Icon(Icons.festival, size: 100, color: Colors.yellowAccent),
-            ),
+          CircleAvatar(
+            radius: 26,
+            backgroundColor: Colors.white.withOpacity(0.2),
+            foregroundImage: (_profile != null && _profile!.avatarUrl.isNotEmpty)
+                ? NetworkImage(_profile!.avatarUrl)
+                : null,
+            child: (_profile == null || _profile!.avatarUrl.isEmpty)
+                ? const Icon(Icons.person, size: 26, color: Colors.white)
+                : null,
           ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.yellowAccent.withOpacity(0.6), width: 2),
-                    ),
-                    child: CircleAvatar(
-                      radius: 28,
-                      backgroundColor: Colors.white.withOpacity(0.2),
-                      foregroundImage: (_profile != null && _profile!.avatarUrl.isNotEmpty)
-                          ? NetworkImage(_profile!.avatarUrl)
-                          : null,
-                      child: (_profile == null || _profile!.avatarUrl.isEmpty)
-                          ? const Icon(Icons.person, size: 28, color: Colors.white)
-                          : null,
-                    ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _isLoadingProfile ? "Đang tải..." : (_profile?.fullName ?? "Tài xế"),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Chúc bạn một ngày làm việc an toàn ",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.secondary, // GOLD
+                    fontWeight: FontWeight.w700,
                   ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        _isLoadingProfile ? "Đang tải..." : (_profile?.fullName ?? "Tài xế"),
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.redAccent.withOpacity(0.9),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.yellowAccent, width: 0.5),
-                        ),
-                        child: const Text(
-                          "🧧 CHÚC MỪNG NĂM MỚI",
-                          style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],
@@ -175,41 +213,38 @@ class _HomeDashboard extends StatelessWidget {
     return SingleChildScrollView(
       child: Column(
         children: [
-          // Banner Header Tết
-          Stack(
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary,
-                  borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(30),
-                      bottomRight: Radius.circular(30)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary,
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(30),
+                bottomRight: Radius.circular(30),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Sẵn sàng nhận chuyến?",
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.colorScheme.secondary,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("Vạn sự như ý! ✨",
-                        style: TextStyle(color: Colors.yellowAccent, fontSize: 16, fontWeight: FontWeight.w500)),
-                    SizedBox(height: 8),
-                    Text("Khai xuân nhận chuyến,\nrước lộc về nhà!",
-                        style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-                  ],
+                const SizedBox(height: 8),
+                Text(
+                  "Vào tab Nhận đơn để bắt đầu làm việc",
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: theme.colorScheme.secondary,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              Positioned(
-                right: 20,
-                bottom: -10,
-                child: Opacity(
-                  opacity: 0.15,
-                  child: Icon(Icons.brightness_7, color: Colors.yellowAccent, size: 80),
-                ),
-              )
-            ],
+                const SizedBox(height: 14),
+              ],
+            ),
           ),
-
           Padding(
             padding: const EdgeInsets.all(20.0),
             child: GridView.count(
@@ -220,14 +255,45 @@ class _HomeDashboard extends StatelessWidget {
               crossAxisSpacing: 16,
               childAspectRatio: 1.3,
               children: [
-                _buildMenuCard(context, "NHẬN ĐƠN MỚI", Icons.near_me_rounded, Colors.orange,
-                        () => onNavigate(1), isSpecial: true),
-                _buildMenuCard(context, "LỊCH SỬ CHUYẾN", Icons.assignment_rounded, Colors.blue,
-                        () => onNavigate(2)),
-                _buildMenuCard(context, "NẠP TIỀN VÍ", Icons.account_balance_wallet_rounded, Colors.green,
-                        () => _showDepositDialog(context, theme)),
-                _buildMenuCard(context, "RÚT TIỀN", Icons.payments_outlined, Colors.redAccent,
-                        () => _showWithdrawDialog(context)),
+                // Nhận đơn chuyển về Index 0
+                _buildMenuCard(
+                  context,
+                  "NHẬN ĐƠN MỚI",
+                  Icons.near_me_rounded,
+                  Colors.orange,
+                      () => onNavigate(0),
+                ),
+
+                // Đẩy đơn chuyển về Index 1
+                _buildMenuCard(
+                  context,
+                  "ĐẨY ĐƠN",
+                  Icons.upload_file_rounded,
+                  theme.colorScheme.secondary,
+                      () => onNavigate(1),
+                ),
+
+                _buildMenuCard(
+                  context,
+                  "LỊCH SỬ CHUYẾN",
+                  Icons.assignment_rounded,
+                  Colors.blue,
+                      () => onNavigate(3),
+                ),
+                _buildMenuCard(
+                  context,
+                  "NẠP TIỀN VÍ",
+                  Icons.account_balance_wallet_rounded,
+                  Colors.green,
+                      () => _showDepositDialog(context, theme),
+                ),
+                _buildMenuCard(
+                  context,
+                  "RÚT TIỀN",
+                  Icons.payments_outlined,
+                  Colors.redAccent,
+                      () => _showWithdrawDialog(context),
+                ),
                 _buildMenuCard(
                   context,
                   "LỊCH SỬ RÚT",
@@ -241,27 +307,31 @@ class _HomeDashboard extends StatelessWidget {
               ],
             ),
           ),
-
-          // Thêm một dòng chữ nhỏ cuối trang
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 10),
-            child: Text("Chúc bạn một năm mới bình an trên mọi nẻo đường!",
-                style: TextStyle(color: Colors.grey, fontSize: 12, fontStyle: FontStyle.italic)),
-          ),
+          const SizedBox(height: 80), // Padding cho BottomBar
         ],
       ),
     );
   }
 
-  Widget _buildMenuCard(BuildContext context, String title, IconData icon, Color color, VoidCallback onTap, {bool isSpecial = false}) {
+  // ✅ Cập nhật Widget Card: Tất cả đều có viền Gold
+  Widget _buildMenuCard(
+      BuildContext context,
+      String title,
+      IconData icon,
+      Color color,
+      VoidCallback onTap,
+      ) {
+    final goldColor = Theme.of(context).colorScheme.secondary;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Card(
-        elevation: isSpecial ? 6 : 3,
+        elevation: 4,
+        shadowColor: goldColor.withOpacity(0.2),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: isSpecial ? const BorderSide(color: Colors.redAccent, width: 1.5) : BorderSide.none,
+          // ✅ Tất cả các nút giờ đều có viền Gold
+          side: BorderSide(color: goldColor, width: 1.5),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -269,15 +339,15 @@ class _HomeDashboard extends StatelessWidget {
             Stack(
               alignment: Alignment.center,
               children: [
-                if (isSpecial)
-                  const Icon(Icons.circle, color: Colors.yellowAccent, size: 45),
+                Icon(Icons.circle, color: goldColor.withOpacity(0.15), size: 45),
                 Icon(icon, size: 38, color: color),
               ],
             ),
             const SizedBox(height: 8),
-            Text(title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             ),
           ],
         ),
@@ -285,13 +355,13 @@ class _HomeDashboard extends StatelessWidget {
     );
   }
 
-  // --- Giữ nguyên các hàm Dialog của bạn ---
+  // --- Giữ nguyên 100% logic Dialog nạp tiền của bạn ---
   void _showDepositDialog(BuildContext parentContext, ThemeData theme) {
     final TextEditingController amountController = TextEditingController();
     showDialog(
       context: parentContext,
       builder: (dialogContext) => AlertDialog(
-        title: const Text("🧧 Nạp tiền khai xuân"),
+        title: const Text("Nạp tiền vào ví"),
         content: TextField(
           controller: amountController,
           keyboardType: TextInputType.number,
@@ -334,7 +404,8 @@ class _HomeDashboard extends StatelessWidget {
     );
     if (confirmed != true) return;
 
-    final qrUrl = "https://img.vietqr.io/image/MB-246878888-compact2.png?amount=${amount.toStringAsFixed(0)}&addInfo=$content&accountName=CTY%20CP%20CN%20VA%20DV%20TT%20THE%20BELUGAS";
+    final qrUrl =
+        "https://img.vietqr.io/image/MB-246878888-compact2.png?amount=${amount.toStringAsFixed(0)}&addInfo=$content&accountName=CTY%20CP%20CN%20VA%20DV%20TT%20THE%20BELUGAS";
     int countdown = 300;
     Timer? countdownTimer;
     Timer? pollTimer;
@@ -414,7 +485,7 @@ class _HomeDashboard extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("🧧 Rút lộc may mắn"),
+        title: const Text("Rút tiền"),
         content: WithdrawDialogContent(
           currentWallet: profile!.wallet.toDouble(),
           driverId: profile!.id,
@@ -426,7 +497,7 @@ class _HomeDashboard extends StatelessWidget {
   }
 }
 
-// Giữ nguyên lớp WithdrawDialogContent và logic rút tiền của bạn
+// --- Giữ nguyên 100% logic rút tiền của bạn ---
 class WithdrawDialogContent extends StatefulWidget {
   final double currentWallet;
   final int driverId;
@@ -436,7 +507,6 @@ class WithdrawDialogContent extends StatefulWidget {
 }
 
 class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
-  // ... Giữ nguyên toàn bộ code logic của WithdrawDialogContent cũ ...
   final _amountController = TextEditingController();
   final _accountNumberController = TextEditingController();
   final _accountNameController = TextEditingController();
@@ -549,8 +619,10 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('accessToken') ?? '';
       final res = await ApiService.createWithdrawal(
-        accessToken: token, amount: amount,
-        bankCode: _selectedBankCode!, bankName: _selectedBankName!,
+        accessToken: token,
+        amount: amount,
+        bankCode: _selectedBankCode!,
+        bankName: _selectedBankName!,
         accountNumber: _accountNumberController.text,
         accountName: _accountNameController.text.toUpperCase(),
       );

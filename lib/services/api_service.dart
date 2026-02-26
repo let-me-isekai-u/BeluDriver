@@ -2,6 +2,7 @@
 ///https://docs.google.com/document/d/1MD5Tx42I-CpFgTNwrrwUhB8FsdQFhiiqAN_Xy0kUfAc/edit?tab=t.d9q2g56xpd8j
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 
 class ApiService {
   static dynamic safeDecode(String? body) {
@@ -399,12 +400,14 @@ class ApiService {
   }
 
   //xác nhận đơn của tài xế POST
+  // xác nhận đơn của tài xế POST
   static Future<http.Response> acceptRide({
     required String accessToken,
-    required int id, // id của đơn trạng thái 1
+    required int id,          // id của đơn
+    required int rideSource,  // 1 = hệ thống, 2 = đơn đẩy tài xế
   }) async {
     final url = Uri.parse(
-      "https://belucar.com/api/rideapi/accept/$id",
+      "https://belucar.com/api/rideapi/accept/$id/$rideSource",
     );
 
     print("🔵 [API] ACCEPT RIDE → $url");
@@ -482,23 +485,42 @@ class ApiService {
     }
   }
 
+  //Lấy huyện theo tỉnh
+  static Future<List<dynamic>> getDistricts({
+    required int  provinceId,
+  })
+  async{
+    final url = Uri.parse("https://belucar.com/api/provinceapi/district/$provinceId",
+    );
+
+    try{
+      final response = await http.get(url).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200){
+        final data = jsonDecode(response.body);
+        if (data is List){
+          return data;
+        }
+      }
+
+      print("⚠️ getDistricts: Unexpected response ${response.statusCode}");
+      return [];
+    } catch (e) {
+      print("🔥 getDistricts() ERROR: $e");
+      return [];
+    }
+  }
+
 
 //Lấy chi tiết chuyến xe
   static Future<http.Response> getRideDetail({
     required String accessToken,
     required int rideId,
+    required int rideSource, // 👈 thêm
   }) async {
     final url = Uri.parse(
-      "https://belucar.com/api/driverapi/ride-detail/$rideId",
+      "https://belucar.com/api/driverapi/ride-detail/$rideId/$rideSource",
     );
-
-    // 🔍 LOG TRƯỚC KHI CALL API
-    print("══════════════════════════════════════");
-    print("🚀 [API] GET RIDE DETAIL");
-    print("➡️ URL: $url");
-    print("➡️ rideId: $rideId");
-    print("➡️ Token: ${accessToken.isNotEmpty ? "OK" : "EMPTY"}");
-    print("══════════════════════════════════════");
 
     try {
       final res = await http.get(
@@ -509,31 +531,21 @@ class ApiService {
         },
       ).timeout(const Duration(seconds: 20));
 
-      // 📥 LOG RESPONSE
-      print("📥 [API] RESPONSE STATUS: ${res.statusCode}");
-      print("📥 [API] RESPONSE BODY:");
-      print(res.body);
-      print("══════════════════════════════════════");
-
       return res;
     } catch (e) {
-      print("❌ [API] GET RIDE DETAIL ERROR: $e");
-      print("══════════════════════════════════════");
       return _errorResponse(e);
     }
   }
-
 
   // Bắt đầu chuyến đi
   static Future<http.Response> startRide({
     required String accessToken,
     required int rideId,
+    required int rideSource, // 👈 thêm
   }) async {
     final url = Uri.parse(
-      "https://belucar.com/api/driverapi/start/$rideId",
+      "https://belucar.com/api/driverapi/start/$rideId/$rideSource",
     );
-
-    print("🔵 [API] START RIDE → $url");
 
     try {
       final res = await http.put(
@@ -544,12 +556,8 @@ class ApiService {
         },
       ).timeout(const Duration(seconds: 20));
 
-      print("📥 [API] STATUS: ${res.statusCode}");
-      print("📥 [API] BODY: ${res.body}");
-
       return res;
     } catch (e) {
-      print("❌ [API] START RIDE ERROR: $e");
       return _errorResponse(e);
     }
   }
@@ -558,12 +566,11 @@ class ApiService {
   static Future<http.Response> completeRide({
     required String accessToken,
     required int rideId,
+    required int rideSource, // 👈 thêm
   }) async {
     final url = Uri.parse(
-      "https://belucar.com/api/driverapi/complete/$rideId",
+      "https://belucar.com/api/driverapi/complete/$rideId/$rideSource",
     );
-
-    print("🔵 [API] COMPLETE RIDE → $url");
 
     try {
       final res = await http.put(
@@ -574,12 +581,8 @@ class ApiService {
         },
       ).timeout(const Duration(seconds: 20));
 
-      print("📥 [API] STATUS: ${res.statusCode}");
-      print("📥 [API] BODY: ${res.body}");
-
       return res;
     } catch (e) {
-      print("❌ [API] COMPLETE RIDE ERROR: $e");
       return _errorResponse(e);
     }
   }
@@ -788,5 +791,116 @@ class ApiService {
 
   }
 
+// API #23: Tạo đơn / Đẩy đơn (create-broker)
+// POST https://belucar.com/api/rideapi/create-broker
+// Bearer Token: Access Token
+  static Future<http.Response> createBrokerRide({
+    required String accessToken,
+    required int fromDistrictId,
+    required int toDistrictId,
+    required String fromAddress,
+    required String toAddress,
+    required int type,
+    required String customerPhone,
+    required int quantity,
+    required String pickupTime,
+    required num offerPrice,
+    required num creatorEarn,
+    String note = "",
+  }) async {
+    final url = Uri.parse("https://belucar.com/api/rideapi/create-broker");
 
+    try {
+      final payload = {
+        "fromDistrictId": fromDistrictId,
+        "toDistrictId": toDistrictId,
+        "fromAddress": fromAddress,
+        "toAddress": toAddress,
+        "type": type,
+        "customerPhone": customerPhone,
+        "quantity": quantity,
+        "pickupTime": pickupTime,
+        "offerPrice": offerPrice,
+        "creatorEarn": creatorEarn,
+        "note": note,
+      };
+
+      final body = jsonEncode(payload);
+
+      // ✅ LOG REQUEST
+      debugPrint("➡️ [createBrokerRide] POST $url");
+      debugPrint("➡️ [createBrokerRide] headers: Authorization=Bearer(${accessToken.isEmpty ? 'EMPTY' : '***'})");
+      debugPrint("➡️ [createBrokerRide] body: $body");
+
+      final res = await http
+          .post(
+        url,
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $accessToken",
+        },
+        body: body,
+      )
+          .timeout(const Duration(seconds: 30));
+
+      // ✅ LOG RESPONSE
+      debugPrint("⬅️ [createBrokerRide] status: ${res.statusCode}");
+      debugPrint("⬅️ [createBrokerRide] response headers: ${res.headers}");
+      debugPrint("⬅️ [createBrokerRide] response body: ${res.body}");
+
+      return res;
+    } catch (e, st) {
+      debugPrint("🔥 [createBrokerRide] ERROR: $e");
+      debugPrint("🔥 [createBrokerRide] STACK: $st");
+      return _errorResponse(e);
+    }
+  }
+
+  // API #24: Lấy danh sách các chuyến đã đẩy lên (status = 1,2,3)
+// GET https://belucar.com/api/rideapi/ride-broker
+// Bearer Token: Access Token
+  static Future<http.Response> getBrokerRides({
+    required String accessToken,
+  }) async {
+    final url = Uri.parse("https://belucar.com/api/rideapi/ride-broker");
+
+    try {
+      return await http
+          .get(
+        url,
+        headers: {
+          "Accept": "application/json",
+          "Authorization": "Bearer $accessToken",
+        },
+      )
+          .timeout(const Duration(seconds: 20));
+    } catch (e) {
+      return _errorResponse(e);
+    }
+  }
+
+  // API #25: Huỷ chuyến đã đẩy lên
+// POST https://belucar.com/api/rideapi/cancel-broker/{rideId}
+// Bearer Token: Access Token
+  static Future<http.Response> cancelBrokerRide({
+    required String accessToken,
+    required int rideId,
+  }) async {
+    final url = Uri.parse("https://belucar.com/api/rideapi/cancel-broker/$rideId");
+
+    try {
+      return await http
+          .post(
+        url,
+        headers: {
+          "Accept": "application/json",
+          "Authorization": "Bearer $accessToken",
+        },
+      )
+          .timeout(const Duration(seconds: 20));
+    } catch (e) {
+      return _errorResponse(e);
+    }
+  }
 }

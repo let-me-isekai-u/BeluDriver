@@ -15,7 +15,8 @@ class DriverLoginScreen extends StatefulWidget {
   State<DriverLoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<DriverLoginScreen> with TickerProviderStateMixin {
+class _LoginScreenState extends State<DriverLoginScreen>
+    with TickerProviderStateMixin {
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   bool _obscurePassword = true;
@@ -40,13 +41,20 @@ class _LoginScreenState extends State<DriverLoginScreen> with TickerProviderStat
     super.dispose();
   }
 
-  void _showSnack(String message, {Color color = Colors.red}) {
+  void _showSnack(String message, {Color? color}) {
+    final theme = Theme.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: color,
+        content: Text(
+          message,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onInverseSurface,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        backgroundColor: color ?? theme.colorScheme.error,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -88,7 +96,8 @@ class _LoginScreenState extends State<DriverLoginScreen> with TickerProviderStat
         await prefs.setString("refreshToken", refreshToken);
         await prefs.setString("fullName", fullName);
 
-        _showSnack("Đăng nhập thành công!", color: const Color(0xFF4CD7A7));
+        // dùng secondary (gold) cho success cho đúng palette
+        _showSnack("Đăng nhập thành công!", color: Theme.of(context).colorScheme.secondary);
 
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const DriverHomeScreen()),
@@ -106,11 +115,17 @@ class _LoginScreenState extends State<DriverLoginScreen> with TickerProviderStat
   }
 
   void _goToRegister() {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterScreen()));
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const RegisterScreen()),
+    );
   }
 
   void _goToForgotPassword() {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()));
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+    );
   }
 
   @override
@@ -121,13 +136,16 @@ class _LoginScreenState extends State<DriverLoginScreen> with TickerProviderStat
     return Scaffold(
       body: Stack(
         children: [
-          // 1. NỀN XANH NGỌC CỦA DRIVER
+          // 1) Background top banner theo theme (dark green)
           Container(
-            height: size.height * 0.4,
+            height: size.height * 0.38,
             width: double.infinity,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
+                colors: [
+                  theme.colorScheme.primary,
+                  theme.colorScheme.surface,
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -138,15 +156,15 @@ class _LoginScreenState extends State<DriverLoginScreen> with TickerProviderStat
             ),
           ),
 
-          // 2. NỘI DUNG CHÍNH
+          // 2) Content
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
                   const SizedBox(height: 40),
-                  _buildLogoSection(),
-                  const SizedBox(height: 30),
+                  _buildLogoSection(theme),
+                  const SizedBox(height: 28),
                   _buildLoginFormCard(theme),
                   const SizedBox(height: 24),
                 ],
@@ -158,7 +176,7 @@ class _LoginScreenState extends State<DriverLoginScreen> with TickerProviderStat
     );
   }
 
-  Widget _buildLogoSection() {
+  Widget _buildLogoSection(ThemeData theme) {
     return Column(
       children: [
         ScaleTransition(
@@ -166,14 +184,15 @@ class _LoginScreenState extends State<DriverLoginScreen> with TickerProviderStat
             CurvedAnimation(parent: _logoController, curve: Curves.easeInOut),
           ),
           child: Container(
-            width: 120, // Kích thước nhỏ hơn 1 chút
+            width: 120,
             height: 120,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20), // Bo góc nhiều hơn
-              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              // logo nền sáng để nổi bật, nhưng dùng scheme cho hợp theme
+              color: theme.colorScheme.onPrimary,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.4), // Bóng đậm hơn
+                  color: Colors.black.withOpacity(0.35),
                   blurRadius: 20,
                   spreadRadius: 3,
                   offset: const Offset(0, 10),
@@ -190,13 +209,12 @@ class _LoginScreenState extends State<DriverLoginScreen> with TickerProviderStat
           ),
         ),
         const SizedBox(height: 16),
-        const Text(
+        Text(
           "BeluDriver",
-          style: TextStyle(
-            color: Colors.white,
+          style: theme.textTheme.headlineLarge?.copyWith(
             fontSize: 28,
-            fontWeight: FontWeight.w900,
             letterSpacing: 2,
+            color: theme.colorScheme.secondary,
           ),
         ),
       ],
@@ -205,63 +223,99 @@ class _LoginScreenState extends State<DriverLoginScreen> with TickerProviderStat
 
   Widget _buildLoginFormCard(ThemeData theme) {
     return Card(
-      elevation: 10,
-      shadowColor: Colors.black26,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+      // dùng cardTheme (mà bạn đã set màu + border)
+      elevation: theme.cardTheme.elevation ?? 0,
+      shape: theme.cardTheme.shape,
       child: Padding(
-        padding: const EdgeInsets.all(32.0),
+        padding: const EdgeInsets.all(28.0),
         child: Column(
           children: [
             Text(
               "Chào Tài Xế!",
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: theme.colorScheme.secondary,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               "Đăng nhập để bắt đầu nhận chuyến",
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
+              style: theme.textTheme.bodyMedium,
             ),
-            const SizedBox(height: 32),
-            _buildTextField(phoneController, "Số điện thoại", Icons.phone_android, false),
-            const SizedBox(height: 20),
-            _buildTextField(passwordController, "Mật khẩu", Icons.lock_outline, true),
-            const SizedBox(height: 12),
+            const SizedBox(height: 28),
+
+            _buildTextField(
+              controller: phoneController,
+              hint: "Số điện thoại",
+              icon: Icons.phone_android,
+              isPassword: false,
+            ),
+            const SizedBox(height: 16),
+            _buildTextField(
+              controller: passwordController,
+              hint: "Mật khẩu",
+              icon: Icons.lock_outline,
+              isPassword: true,
+            ),
+            const SizedBox(height: 10),
 
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: _goToForgotPassword,
-                child: Text("Quên mật khẩu?", style: TextStyle(color: theme.colorScheme.primary)),
+                child: Text(
+                  "Quên mật khẩu?",
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.secondary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ),
 
-            const SizedBox(height: 20),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 55),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                elevation: 5,
+            const SizedBox(height: 16),
+
+            // Button dùng ElevatedButtonTheme (brightYellow)
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _login,
+                child: _isLoading
+                    ? SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: theme.colorScheme.primary,
+                  ),
+                )
+                    : const Text(
+                  "BẮT ĐẦU LÀM VIỆC",
+                  style: TextStyle(letterSpacing: 1.1),
+                ),
               ),
-              onPressed: _isLoading ? null : _login,
-              child: _isLoading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text("BẮT ĐẦU LÀM VIỆC", style: TextStyle(fontSize: 16, letterSpacing: 1.1)),
             ),
-            const SizedBox(height: 24),
+
+            const SizedBox(height: 18),
+
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text("Chưa có tài khoản?"),
+                Text(
+                  "Chưa có tài khoản?",
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.9),
+                  ),
+                ),
                 TextButton(
                   onPressed: _goToRegister,
                   child: Text(
                     "Đăng ký ngay",
-                    style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.secondary),
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: theme.colorScheme.secondary,
+                    ),
                   ),
                 ),
               ],
@@ -272,21 +326,62 @@ class _LoginScreenState extends State<DriverLoginScreen> with TickerProviderStat
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String hint, IconData icon, bool isPassword) {
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    required bool isPassword,
+  }) {
     final theme = Theme.of(context);
+
     return TextField(
       controller: controller,
+      cursorColor: theme.colorScheme.secondary,
       obscureText: isPassword ? _obscurePassword : false,
       keyboardType: isPassword ? TextInputType.text : TextInputType.phone,
+      style: theme.textTheme.bodyLarge?.copyWith(
+        color: theme.colorScheme.onSurface,
+      ),
       decoration: InputDecoration(
         hintText: hint,
-        prefixIcon: Icon(icon, color: theme.colorScheme.primary),
+        labelText: hint,
+        labelStyle: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurface.withOpacity(0.75),
+        ),
+        hintStyle: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurface.withOpacity(0.60),
+        ),
+        filled: true,
+        fillColor: theme.colorScheme.surface.withOpacity(0.65),
+        prefixIcon: Icon(icon, color: theme.colorScheme.secondary),
         suffixIcon: isPassword
             ? IconButton(
-          icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
+          icon: Icon(
+            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+            color: theme.colorScheme.onSurface.withOpacity(0.7),
+          ),
           onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
         )
             : null,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: theme.colorScheme.onSurface.withOpacity(0.12),
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: theme.colorScheme.onSurface.withOpacity(0.12),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: theme.colorScheme.secondary,
+            width: 1.8,
+          ),
+        ),
       ),
     );
   }

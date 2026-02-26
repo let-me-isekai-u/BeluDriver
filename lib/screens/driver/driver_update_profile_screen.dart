@@ -13,7 +13,8 @@ class DriverUpdateProfileScreen extends StatefulWidget {
   const DriverUpdateProfileScreen({super.key, required this.profile});
 
   @override
-  State<DriverUpdateProfileScreen> createState() => _DriverUpdateProfileScreenState();
+  State<DriverUpdateProfileScreen> createState() =>
+      _DriverUpdateProfileScreenState();
 }
 
 class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
@@ -29,7 +30,8 @@ class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
     super.initState();
     _fullNameController = TextEditingController(text: widget.profile.fullName);
     _emailController = TextEditingController(text: widget.profile.email);
-    _licenseNumberController = TextEditingController(text: widget.profile.licenseNumber);
+    _licenseNumberController =
+        TextEditingController(text: widget.profile.licenseNumber);
   }
 
   @override
@@ -76,7 +78,7 @@ class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
 
     if (res.statusCode == 200) {
       _showSnack('Cập nhật thông tin thành công');
-      Navigator.pop(context, true); // trả về để reload profile
+      if (mounted) Navigator.pop(context, true);
     } else {
       try {
         final json = jsonDecode(res.body);
@@ -89,12 +91,22 @@ class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
+    final theme = Theme.of(context);
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Cập nhật hồ sơ'),
+        title: Text(
+          'Cập nhật hồ sơ',
+          style: TextStyle(
+            color: theme.colorScheme.secondary, // ✅ gold like sample
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         centerTitle: true,
+        elevation: 0,
+        backgroundColor: theme.colorScheme.primary,
+        iconTheme: IconThemeData(color: theme.colorScheme.secondary),
       ),
       body: Stack(
         children: [
@@ -106,15 +118,21 @@ class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
                 Stack(
                   children: [
                     CircleAvatar(
-                      radius: 55,
-                      backgroundColor: primary.withOpacity(0.15),
+                      radius: 60,
+                      backgroundColor:
+                      theme.colorScheme.secondary.withOpacity(0.15),
                       backgroundImage: _avatar != null
                           ? FileImage(File(_avatar!.path))
                           : (widget.profile.avatarUrl.isNotEmpty
                           ? NetworkImage(widget.profile.avatarUrl)
                           : null) as ImageProvider?,
-                      child: (_avatar == null && widget.profile.avatarUrl.isEmpty)
-                          ? Icon(Icons.person, size: 55, color: primary)
+                      child: (_avatar == null &&
+                          widget.profile.avatarUrl.isEmpty)
+                          ? Icon(
+                        Icons.person,
+                        size: 70,
+                        color: theme.colorScheme.secondary,
+                      )
                           : null,
                     ),
                     Positioned(
@@ -124,8 +142,9 @@ class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
                         onTap: _loading ? null : _pickAvatar,
                         child: CircleAvatar(
                           radius: 18,
-                          backgroundColor: primary,
-                          child: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
+                          backgroundColor: theme.colorScheme.secondary,
+                          child: const Icon(Icons.camera_alt,
+                              size: 18, color: Colors.black87),
                         ),
                       ),
                     ),
@@ -133,25 +152,51 @@ class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
                 ),
                 const SizedBox(height: 30),
 
-                _buildTextField(_fullNameController, 'Họ và tên', Icons.badge),
+                _buildTextField(
+                  controller: _fullNameController,
+                  label: 'Họ và tên',
+                  icon: Icons.badge,
+                ),
                 const SizedBox(height: 16),
-                _buildTextField(_emailController, 'Email', Icons.email),
+                _buildTextField(
+                  controller: _emailController,
+                  label: 'Email',
+                  icon: Icons.email,
+                ),
                 const SizedBox(height: 16),
-                _buildTextField(_licenseNumberController, 'Biển số xe', Icons.directions_car),
+                _buildTextField(
+                  controller: _licenseNumberController,
+                  label: 'Biển số xe',
+                  icon: Icons.directions_car,
+                ),
 
                 const SizedBox(height: 30),
                 SizedBox(
                   height: 50,
                   width: double.infinity,
-                  child: FilledButton(
+                  child: ElevatedButton(
                     onPressed: _loading ? null : _handleUpdate,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.secondary,
+                      foregroundColor: Colors.black87,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
                     child: _loading
                         ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.black87,
+                      ),
                     )
-                        : const Text('Lưu thay đổi'),
+                        : const Text(
+                      'Lưu thay đổi',
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 )
               ],
@@ -160,30 +205,45 @@ class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
 
           if (_loading)
             Container(
-              color: Colors.black12,
-              child: const Center(child: CircularProgressIndicator()),
+              color: Colors.black26,
+              child: Center(
+                child: CircularProgressIndicator(
+                  color: theme.colorScheme.secondary,
+                ),
+              ),
             )
         ],
       ),
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label, IconData icon) {
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+  }) {
     final theme = Theme.of(context);
+
     return TextField(
       controller: controller,
+      style: TextStyle(color: theme.colorScheme.onSurface),
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: theme.colorScheme.primary),
+        labelStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+        prefixIcon: Icon(icon, color: theme.colorScheme.secondary),
         filled: true,
-        fillColor: Colors.grey.shade100,
+        fillColor: theme.colorScheme.surface, // ✅ no grey[100]
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.12)),
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.12)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+          borderSide: BorderSide(color: theme.colorScheme.secondary, width: 2),
         ),
       ),
     );

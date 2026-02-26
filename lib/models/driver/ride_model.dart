@@ -18,6 +18,8 @@ class RideModel {
   final int status;
   final String paymentMethod;
 
+  final int rideSource; // 👈 thêm
+
   RideModel({
     required this.id,
     required this.code,
@@ -31,22 +33,28 @@ class RideModel {
     required this.price,
     required this.status,
     required this.paymentMethod,
+    required this.rideSource, // 👈 thêm
   });
 
   factory RideModel.fromJson(Map<String, dynamic> json) {
     return RideModel(
-      id: json['rideId'] ?? 0,
+      id: json['rideId'] ?? json['id'] ?? 0,
       code: json['code'] ?? '',
       createdAt: json['createdAt'] ?? DateTime.now().toIso8601String(),
+
       fromProvince: json['fromProvince'] ?? '',
       fromDistrict: json['fromDistrict'] ?? '',
       fromAddress: json['fromAddress'] ?? '',
+
       toProvince: json['toProvince'] ?? '',
       toDistrict: json['toDistrict'] ?? '',
       toAddress: json['toAddress'] ?? '',
+
       price: (json['price'] as num?)?.toDouble() ?? 0,
       status: json['status'] ?? -1,
       paymentMethod: json['paymentMethod'] ?? '',
+
+      rideSource: json['rideSource'] ?? 1, // 👈 thêm
     );
   }
 
@@ -58,23 +66,21 @@ class RideModel {
       final dt = DateTime.parse(createdAt);
       return DateFormat('dd/MM/yyyy HH:mm').format(dt);
     } catch (_) {
-      // Nếu không parse được thì trả về nguyên chuỗi gốc (hoặc bạn có thể trả '')
       return createdAt;
     }
   }
 
-  // Format price as Vietnamese dong, e.g. "1.234.000 ₫"
+  // Format price as Vietnamese dong
   String get formattedPrice {
     try {
       final fmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
       return fmt.format(price);
     } catch (_) {
-      // fallback đơn giản
       return '${price.toStringAsFixed(0)} ₫';
     }
   }
 
-  // Map status (int) -> readable text (tuỳ bạn chỉnh theo backend)
+  // Map status -> readable text
   String get statusText {
     switch (status) {
       case 0:
@@ -94,7 +100,7 @@ class RideModel {
     }
   }
 
-  // Map status -> Color (tuỳ chỉnh theo thiết kế của bạn)
+  // Map status -> Color
   Color get statusColor {
     switch (status) {
       case 0:

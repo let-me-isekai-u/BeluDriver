@@ -9,6 +9,9 @@ import '../../models/paged_response_model.dart';
 import '../../models/waiting_ride_model.dart';
 import 'ride_detail_screen.dart';
 
+// ✅ THÊM: model API #24
+import '../../models/driver/broker_rides_model.dart';
+
 class ReceiveOrderTab extends StatefulWidget {
   const ReceiveOrderTab({super.key});
 
@@ -16,27 +19,27 @@ class ReceiveOrderTab extends StatefulWidget {
   State<ReceiveOrderTab> createState() => _ReceiveOrderTabState();
 }
 
-class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProviderStateMixin {
+class _ReceiveOrderTabState extends State<ReceiveOrderTab>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // Cấu hình phân trang
   static const _pageSize = 20;
-  final PagingController<int, WaitingRide> _pagingController = PagingController(firstPageKey: 1);
+  final PagingController<int, WaitingRide> _pagingController =
+  PagingController(firstPageKey: 1);
 
-  // provinces sẽ chứa kết quả từ API ride-count-by-province
-  // mỗi phần tử dạng: { "provinceId": 1, "provinceName": "TP Hà Nội", "totalRides": 0 }
   List<dynamic> provinces = [];
   int? selectedProvinceId;
 
-  // districts cho province đã chọn
-  // mỗi phần tử dạng: { "districtId": 1, "districtName": "Quận X", "totalRides": 0 }
   List<dynamic> districts = [];
   int? selectedDistrictId;
 
-  // Tab 2 (Đơn đã nhận) - Hiện tại vẫn dùng Map theo yêu cầu giữ nguyên logic cũ
   List<Map<String, dynamic>> acceptedRides = [];
   bool _isLoadingAcceptedRides = false;
   bool _isAcceptedLoaded = false;
+
+  // ✅ THÊM: danh sách rideId do tài xế này đã đẩy (API #24)
+  final Set<int> _myBrokerRideIds = <int>{};
+  bool _loadingMyBrokerRides = false;
 
   @override
   void initState() {
@@ -44,8 +47,8 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProv
     _tabController = TabController(length: 2, vsync: this);
 
     _loadProvinces();
+    _loadMyBrokerRideIds(); // ✅ THÊM
 
-    // Đăng ký listener để tự động load trang khi cuộn
     _pagingController.addPageRequestListener((pageKey) {
       _fetchNewRidesPage(pageKey);
     });
@@ -67,6 +70,75 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProv
     super.dispose();
   }
 
+  // ====================== Ride source helpers ======================
+
+  String _rideSourceText(int rideSource) {
+    switch (rideSource) {
+      case 1:
+        return "Đơn BeluCar";
+      case 2:
+        return "Đơn cộng đồng";
+      default:
+        return "Không xác định";
+    }
+  }
+
+  Color _rideSourceColor(int rideSource, ThemeData theme) {
+    switch (rideSource) {
+      case 1:
+        return Colors.blue;
+      case 2:
+        return Colors.purple;
+      default:
+        return theme.colorScheme.onSurface.withOpacity(0.55);
+    }
+  }
+
+  Widget _rideSourceChip(int rideSource, ThemeData theme) {
+    final color = _rideSourceColor(rideSource, theme);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withOpacity(0.35)),
+      ),
+      child: Text(
+        _rideSourceText(rideSource),
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w700,
+          fontSize: 12.5,
+        ),
+      ),
+    );
+  }
+
+  int _extractRideSource(dynamic ride) {
+    if (ride is WaitingRide) return ride.rideSource;
+    if (ride is Map) {
+      return int.tryParse(
+        ride['rideSource']?.toString() ??
+            ride['ride_source']?.toString() ??
+            '1',
+      ) ??
+          1;
+    }
+    return 1;
+  }
+
+  // ✅ THÊM: biết 1 đơn có phải do mình đẩy không
+  bool _isMyBrokerRide(dynamic ride) {
+    final int rideId = (ride is WaitingRide)
+        ? ride.id
+        : (int.tryParse(
+      ride['rideId']?.toString() ?? ride['id']?.toString() ?? '0',
+    ) ??
+        0);
+    if (rideId == 0) return false;
+    return _myBrokerRideIds.contains(rideId);
+  }
+
   // ====================== LOGIC API & PHÂN TRANG ======================
 
   Future<void> _fetchNewRidesPage(int pageKey) async {
@@ -74,7 +146,6 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProv
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('accessToken') ?? '';
 
-      // Nếu có filter theo huyện đón (selectedDistrictId != null) thì gọi API search theo huyện
       if (selectedDistrictId != null) {
         final res = await ApiService.searchRideByFromDistrict(
           accessToken: token,
@@ -86,27 +157,24 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProv
           if (body['success'] == true) {
             final List<dynamic> list = body['data'] ?? [];
             final items = list
-                .map<WaitingRide>((json) => WaitingRide.fromJson(json as Map<String, dynamic>))
+                .map<WaitingRide>((json) =>
+                WaitingRide.fromJson(json as Map<String, dynamic>))
                 .toList();
 
-            // Khi filter bằng huyện, API trả về toàn bộ danh sách => xử lý như single page
             _pagingController.appendLastPage(items);
             return;
           } else {
-            _pagingController.error = "Không thể tải dữ liệu (filter theo huyện)";
+            _pagingController.error =
+            "Không thể tải dữ liệu (filter theo huyện)";
             return;
           }
         } else {
-          _pagingController.error = "Không thể tải dữ liệu từ máy chủ (filter theo huyện)";
+          _pagingController.error =
+          "Không thể tải dữ liệu từ máy chủ (filter theo huyện)";
           return;
         }
       }
 
-      // LƯU Ý: API search theo tỉnh đã bị loại bỏ, nên ở đây nếu chỉ chọn tỉnh mà không chọn huyện
-      // client sẽ không gọi search theo tỉnh (server-side). Thay vào đó ta sẽ load phân trang bình thường.
-      // (Flow chọn tỉnh hiện tại sẽ tự động mở modal chọn huyện; nếu user hủy chọn huyện, tỉnh sẽ bị clear.)
-
-      // Nếu không có filter, dùng API phân trang cũ
       final res = await ApiService.getWaitingRidesPaged(
         accessToken: token,
         page: pageKey,
@@ -115,7 +183,6 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProv
 
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
-
         final dynamic pagedData = body['data'] ?? body;
 
         final pagedResponse = PagedResponse<WaitingRide>.fromJson(
@@ -140,24 +207,52 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProv
     }
   }
 
+  // ✅ THÊM: load danh sách đơn mình đẩy (API #24)
+  Future<void> _loadMyBrokerRideIds() async {
+    if (!mounted) return;
+    setState(() => _loadingMyBrokerRides = true);
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('accessToken') ?? '';
+      if (token.isEmpty) return;
+
+      final res = await ApiService.getBrokerRides(accessToken: token);
+      if (res.statusCode == 200) {
+        final parsed = BrokerRidesResponse.fromRawJson(res.body);
+        if (parsed.success) {
+          final ids = parsed.data.map((e) => e.rideId).toSet();
+          if (!mounted) return;
+          setState(() {
+            _myBrokerRideIds
+              ..clear()
+              ..addAll(ids);
+          });
+        }
+      } else {
+        debugPrint("getBrokerRides() status=${res.statusCode} body=${res.body}");
+      }
+    } catch (e) {
+      debugPrint("Lỗi load broker rides: $e");
+    } finally {
+      if (mounted) setState(() => _loadingMyBrokerRides = false);
+    }
+  }
+
   Future<void> _loadProvinces() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('accessToken') ?? '';
 
-      // Gọi API ride-count-by-province để lấy tên tỉnh + tổng số đơn
       final res = await ApiService.getRideCountByProvince(accessToken: token);
 
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
         if (body['success'] == true) {
           final List<dynamic> data = body['data'] ?? [];
+          if (!mounted) return;
           setState(() => provinces = data);
-        } else {
-          debugPrint("Lỗi load provinces: success == false");
         }
-      } else {
-        debugPrint("Lỗi load provinces: status ${res.statusCode}");
       }
     } catch (e) {
       debugPrint("Lỗi load provinces: $e");
@@ -176,8 +271,12 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProv
         final body = jsonDecode(res.body);
         if (body['success'] == true) {
           final List<dynamic> ridesData = body['data'] ?? [];
+          if (!mounted) return;
           setState(() {
-            acceptedRides = ridesData.map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e)).toList();
+            acceptedRides = ridesData
+                .map<Map<String, dynamic>>(
+                    (e) => Map<String, dynamic>.from(e))
+                .toList();
             _isAcceptedLoaded = true;
           });
         }
@@ -190,82 +289,191 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProv
   }
 
   void _applyFilter() {
-    // Làm mới danh sách phân trang khi đổi tỉnh/huyện
     _pagingController.refresh();
   }
 
   Future<void> _acceptRide(WaitingRide ride) async {
+    final theme = Theme.of(context);
+
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('accessToken') ?? '';
     if (token.isEmpty) return;
 
-    final res = await ApiService.acceptRide(accessToken: token, id: ride.id);
+    final res = await ApiService.acceptRide(
+      accessToken: token,
+      id: ride.id,
+      rideSource: ride.rideSource,
+    );
 
     if (res.statusCode == 200) {
       final body = jsonDecode(res.body);
 
-      // Xóa item khỏi UI cục bộ để tạo cảm giác mượt mà
       final currentItems = _pagingController.itemList ?? [];
       currentItems.removeWhere((item) => item.id == ride.id);
       _pagingController.itemList = List.from(currentItems);
 
-      // Đánh dấu Tab 2 cần tải lại vì dữ liệu đã thay đổi
       _isAcceptedLoaded = false;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(body['message'] ?? "Nhận đơn thành công"), backgroundColor: Colors.green),
+        SnackBar(
+          content: Text(body['message'] ?? "Nhận đơn thành công"),
+          backgroundColor: theme.colorScheme.secondary,
+        ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Đơn đã được nhận bởi tài xế khác!"), backgroundColor: Colors.red),
+        SnackBar(
+          content: const Text("Đơn đã được nhận bởi tài xế khác!"),
+          backgroundColor: theme.colorScheme.error,
+        ),
       );
       _pagingController.refresh();
+    }
+  }
+
+  // ✅ THÊM: Huỷ đơn mình đã đẩy (API #25)
+  Future<void> _cancelMyBrokerRide(dynamic ride) async {
+    final theme = Theme.of(context);
+
+    final int rideId = (ride is WaitingRide)
+        ? ride.id
+        : (int.tryParse(
+      ride['rideId']?.toString() ?? ride['id']?.toString() ?? '0',
+    ) ??
+        0);
+    if (rideId == 0) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Huỷ đơn đã đẩy"),
+        content: Text("Bạn chắc chắn muốn huỷ chuyến ($rideId) ?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Không"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: theme.colorScheme.error),
+            child: const Text("Huỷ"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('accessToken') ?? '';
+    if (token.isEmpty) return;
+
+    final res =
+    await ApiService.cancelBrokerRide(accessToken: token, rideId: rideId);
+
+    if (!mounted) return;
+
+    if (res.statusCode == 200) {
+      setState(() {
+        _myBrokerRideIds.remove(rideId);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Huỷ đơn thành công"), backgroundColor: Colors.green),
+      );
+
+      _pagingController.refresh();
+      await _loadMyBrokerRideIds();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Huỷ đơn thất bại (${res.statusCode})"),
+          backgroundColor: theme.colorScheme.error,
+        ),
+      );
     }
   }
 
   Future<void> _startRide(dynamic ride) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('accessToken') ?? '';
+    if (token.isEmpty) return;
 
-    // Xử lý ID linh hoạt cho cả Model và Map
     final int rideId = (ride is WaitingRide)
         ? ride.id
-        : (int.tryParse(ride['rideId']?.toString() ?? ride['id']?.toString() ?? '0') ?? 0);
+        : (int.tryParse(
+      ride['rideId']?.toString() ?? ride['id']?.toString() ?? '0',
+    ) ??
+        0);
 
     if (rideId == 0) return;
 
-    final res = await ApiService.startRide(accessToken: token, rideId: rideId);
+    final int rideSource = _extractRideSource(ride);
+
+    final res = await ApiService.startRide(
+      accessToken: token,
+      rideId: rideId,
+      rideSource: rideSource,
+    );
 
     if (res.statusCode == 200) {
+      final theme = Theme.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Bắt đầu chuyến đi thành công"), backgroundColor: Colors.green),
+        SnackBar(
+          content: const Text("Bắt đầu chuyến đi thành công"),
+          backgroundColor: theme.colorScheme.secondary,
+        ),
       );
-      Navigator.push(context, MaterialPageRoute(builder: (_) => RideDetailScreen(rideId: rideId)));
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RideDetailScreen(
+            rideId: rideId,
+            rideSource: rideSource,
+          ),
+        ),
+      );
     }
   }
 
   void _navigateToDetail(dynamic ride) {
     final int rideId = (ride is WaitingRide)
         ? ride.id
-        : (int.tryParse(ride['rideId']?.toString() ?? ride['id']?.toString() ?? '0') ?? 0);
+        : (int.tryParse(
+      ride['rideId']?.toString() ?? ride['id']?.toString() ?? '0',
+    ) ??
+        0);
+
+    final int rideSource = _extractRideSource(ride);
 
     if (rideId != 0) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => RideDetailScreen(rideId: rideId)));
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RideDetailScreen(
+            rideId: rideId,
+            rideSource: rideSource,
+          ),
+        ),
+      );
     }
   }
 
-  // Helper: lấy giá trị province từ nhiều key khả dĩ trong Map
+  // ====================== Helpers ======================
+
   String _extractProvinceFromMap(Map m, List<String> keys) {
     for (final k in keys) {
       if (m.containsKey(k)) {
         final v = m[k];
-        if (v != null && v.toString().trim().isNotEmpty) return v.toString().trim();
+        if (v != null && v.toString().trim().isNotEmpty) {
+          return v.toString().trim();
+        }
       }
     }
     return '';
   }
 
-  // Helper: lấy giá trị (dynamic) từ Map với nhiều key khả dĩ
   dynamic _extractDynamicFromMap(Map m, List<String> keys) {
     for (final k in keys) {
       if (m.containsKey(k)) {
@@ -279,42 +487,30 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProv
   String _formatPickupTime(dynamic value) {
     if (value == null) return '';
     try {
-      // Nếu là số nguyên (int) -> xem là timestamp (giây hoặc ms)
       if (value is int) {
         final int v = value;
-        final int ms = v.abs() > 1000000000000 ? v : v * 1000; // >1e12 coi là ms
-        return DateFormat('HH:mm dd/MM').format(DateTime.fromMillisecondsSinceEpoch(ms));
+        final int ms = v.abs() > 1000000000000 ? v : v * 1000;
+        return DateFormat('HH:mm dd/MM')
+            .format(DateTime.fromMillisecondsSinceEpoch(ms));
       }
 
       final s = value.toString().trim();
       if (s.isEmpty) return '';
 
-      // Nếu là chuỗi chỉ chứa chữ số -> timestamp string
       if (RegExp(r'^\d+$').hasMatch(s)) {
         final int v = int.parse(s);
         final int ms = v.abs() > 1000000000000 ? v : v * 1000;
-        return DateFormat('HH:mm dd/MM').format(DateTime.fromMillisecondsSinceEpoch(ms));
+        return DateFormat('HH:mm dd/MM')
+            .format(DateTime.fromMillisecondsSinceEpoch(ms));
       }
 
-      // Thử parse ISO / standard datetime string
       final DateTime dt = DateTime.parse(s);
       return DateFormat('HH:mm dd/MM').format(dt);
-    } catch (e) {
-      // Fallback: trả về nguyên chuỗi (đỡ mất thông tin), hoặc '' nếu muốn ẩn
+    } catch (_) {
       return value.toString();
     }
   }
 
-
-  // Helper: ghép address + province, tránh dấu phẩy thừa
-  String _buildAddressWithProvince(String? address, String? province) {
-    final a = (address ?? '').toString().trim();
-    final p = (province ?? '').toString().trim();
-    if (a.isEmpty && p.isEmpty) return '';
-    if (p.isEmpty) return a;
-    if (a.isEmpty) return p;
-    return '$a, $p';
-  }
   String _buildFullAddress(String? address, String? district, String? province) {
     final a = (address ?? '').toString().trim();
     final d = (district ?? '').toString().trim();
@@ -328,480 +524,123 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProv
     return parts.join(', ');
   }
 
-  // ====================== UI COMPONENTS ======================
-
+  // ====================== UI ======================
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
+    final bottomPadding = 12.0 + 24.0 + bottomSafe;
+
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text("Chuyến xe của bạn"),
+        title: Text(
+          "Nhận đơn",
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: theme.colorScheme.secondary,
+          ),
+        ),
+        elevation: 0,
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: Colors.white,
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.white,
+          labelColor: theme.colorScheme.secondary,
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
           unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+          indicatorColor: theme.colorScheme.secondary,
+          indicatorWeight: 5.5,
           tabs: const [
-            Tab(text: "ĐƠN MỚI", icon: Icon(Icons.fiber_new)),
-            Tab(text: "ĐƠN ĐÃ NHẬN", icon: Icon(Icons.assignment_turned_in)),
+            Tab(text: "ĐƠN MỚI", icon: Icon(Icons.fiber_new_rounded)),
+            Tab(text: "ĐƠN ĐÃ NHẬN", icon: Icon(Icons.assignment_turned_in_rounded)),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
-          // TAB 1: ĐƠN MỚI (PHÂN TRANG VỚI MODEL)
           Column(
             children: [
               _buildLocationFilter(),
               Expanded(
                 child: RefreshIndicator(
-                  onRefresh: () => Future.sync(() => _pagingController.refresh()),
-                  child: PagedListView<int, WaitingRide>(
-                    pagingController: _pagingController,
-                    padding: const EdgeInsets.all(12),
-                    builderDelegate: PagedChildBuilderDelegate<WaitingRide>(
-                      itemBuilder: (context, item, index) => _buildRideCard(item, true),
-                      noItemsFoundIndicatorBuilder: (_) => _buildEmptyPlaceholder(),
+                  onRefresh: () async {
+                    await _loadMyBrokerRideIds();
+                    _pagingController.refresh();
+                  },
+                  child: SafeArea(
+                    bottom: true,
+                    child: PagedListView<int, WaitingRide>(
+                      pagingController: _pagingController,
+                      padding: EdgeInsets.fromLTRB(12, 12, 12, bottomPadding),
+                      physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
+                      ),
+                      builderDelegate: PagedChildBuilderDelegate<WaitingRide>(
+                        itemBuilder: (context, item, index) =>
+                            _buildRideCard(item, true),
+
+                        noItemsFoundIndicatorBuilder: (_) => _buildEmptyPlaceholder(),
+                      ),
                     ),
                   ),
                 ),
               ),
             ],
           ),
-          // TAB 2: ĐƠN ĐÃ NHẬN (LOGIC CŨ)
           _isLoadingAcceptedRides
-              ? const Center(child: CircularProgressIndicator())
-              : Column(
-            children: [
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: _loadAcceptedRides,
-                  child: _buildOldOrderList(
-                    acceptedRides.where((ride) => (int.tryParse(ride['status'].toString()) ?? 0) == 2).toList(),
-                  ),
-                ),
+              ? Center(
+            child: CircularProgressIndicator(color: theme.colorScheme.secondary),
+          )
+              : RefreshIndicator(
+            onRefresh: _loadAcceptedRides,
+            child: SafeArea(
+              bottom: true,
+              child: _buildOldOrderList(
+                acceptedRides
+                    .where((ride) =>
+                (int.tryParse(ride['status'].toString()) ?? 0) == 2)
+                    .toList(),
               ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLocationFilter() {
-    final theme = Theme.of(context);
-    // Tìm object province đang được chọn để lấy tên và số lượng đơn
-    final selected = selectedProvinceId == null
-        ? null
-        : provinces.cast<dynamic?>().firstWhere(
-          (p) => p != null && (p['provinceId'].toString() == selectedProvinceId.toString()),
-      orElse: () => null,
-    );
-
-    // Tìm object district đang được chọn để hiển thị tên
-    final selectedDistrict = selectedDistrictId == null
-        ? null
-        : districts.cast<dynamic?>().firstWhere(
-          (d) => d != null && (d['districtId'].toString() == selectedDistrictId.toString()),
-      orElse: () => null,
-    );
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: InkWell(
-        onTap: () => _showProvincePicker(context),
-        borderRadius: BorderRadius.circular(12),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            // Nếu đã chọn tỉnh thì đổi viền sang màu xanh lá nhạt
-            color: selected != null ? Colors.green.withOpacity(0.05) : Colors.grey[50],
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: selected != null ? Colors.green.withOpacity(0.3) : Colors.grey[200]!,
-              width: 1,
             ),
           ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.explore_outlined,
-                color: selected != null ? Colors.green : Colors.grey[600],
-                size: 22,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Khu vực đón khách",
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[500],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Text(
-                      selected != null
-                          ? "${selected['provinceName']} (${selected['totalRides'] ?? 0})"
-                          : "Chọn tỉnh đón khách",
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: selected != null ? FontWeight.bold : FontWeight.w500,
-                        color: selected != null ? Colors.green[800] : Colors.blue,
-                      ),
-                    ),
-                    if (selectedDistrict != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        "Huyện: ${selectedDistrict['districtName']} (${selectedDistrict['totalRides'] ?? 0})",
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (selectedProvinceId != null || selectedDistrictId != null)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (selectedDistrictId != null)
-                      GestureDetector(
-                        onTap: () {
-                          setState(() => selectedDistrictId = null);
-                          _applyFilter();
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          margin: const EdgeInsets.only(right: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.close, size: 16, color: Colors.grey),
-                        ),
-                      ),
-                    GestureDetector(
-                      onTap: () {
-                        // Clear both province and district when clearing province
-                        setState(() {
-                          selectedProvinceId = null;
-                          selectedDistrictId = null;
-                          districts = [];
-                        });
-                        _applyFilter();
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.close, size: 16, color: Colors.grey),
-                      ),
-                    ),
-                  ],
-                )
-              else
-                Icon(Icons.unfold_more_rounded, color: Colors.grey[400]),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }
 
-  // Thay thế hàm _showProvincePicker cũ bằng hàm này
-  Future<void> _showProvincePicker(BuildContext context) async {
-    final theme = Theme.of(context);
-    final result = await showModalBottomSheet<int?>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent, // Để làm viền bo tròn đẹp hơn
-      builder: (ctx) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.75,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-          ),
-          child: Column(
-            children: [
-              // Thanh gạch ngang nhỏ trên đầu modal (Handle bar)
-              Container(
-                margin: const EdgeInsets.only(top: 12),
-                height: 4,
-                width: 40,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const Padding(
-                padding: EdgeInsets.all(20),
-                child: Text(
-                  "Chọn tỉnh đón khách",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: provinces.isEmpty
-                    ? const Center(child: CircularProgressIndicator())
-                    : ListView.separated(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  itemCount: provinces.length + 1,
-                  separatorBuilder: (context, index) => const Divider(height: 1, indent: 20, endIndent: 20),
-                  itemBuilder: (context, index) {
-                    final bool isAll = index == 0;
-                    String name = "";
-                    int total = 0;
-                    int? pid;
-
-                    if (isAll) {
-                      name = "Tất cả các tỉnh";
-                      total = provinces.fold<int>(0, (s, p) => s + (int.tryParse(p['totalRides'].toString()) ?? 0));
-                      pid = null;
-                    } else {
-                      final p = provinces[index - 1];
-                      name = p['provinceName'] ?? '';
-                      total = int.tryParse(p['totalRides'].toString()) ?? 0;
-                      pid = p['provinceId'] is int ? p['provinceId'] : int.tryParse(p['provinceId'].toString()) ?? 0;
-                    }
-
-                    // Kiểm tra xem có đang được chọn không
-                    final bool isSelected = selectedProvinceId == pid;
-
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-                      leading: Icon(
-                        isAll ? Icons.map : Icons.location_on_outlined,
-                        color: isSelected ? Colors.blue : Colors.grey[400],
-                      ),
-                      title: Text(
-                        name,
-                        style: TextStyle(
-                          // Chuyển chữ thành màu xanh lá khi được chọn, hoặc xanh nhạt hơn cho danh sách
-                          color: isSelected ? Colors.blue[700] : Colors.blue[600],
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                          fontSize: 16,
-                        ),
-                      ),
-                      trailing: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          total.toString(),
-                          style: const TextStyle(
-                            color: Colors.blue,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                      onTap: () => Navigator.pop(ctx, pid),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-
-    if (!mounted) return;
-
-    // Nếu user chọn "Tất cả" (null) thì clear filter và refresh
-    if (result == null) {
-      setState(() {
-        selectedProvinceId = null;
-        selectedDistrictId = null;
-        districts = [];
-      });
-      _applyFilter();
-      return;
-    }
-
-    // Nếu user chọn 1 tỉnh cụ thể thì mở modal chọn huyện.
-    final int pid = result;
-    // Lưu districts (được set trong _showDistrictPicker) và lấy kết quả huyện đã chọn
-    final int? did = await _showDistrictPicker(context, pid);
-
-    if (!mounted) return;
-
-    if (did == null) {
-      // Nếu user hủy chọn huyện -> rollback (clear tỉnh)
-      setState(() {
-        selectedProvinceId = null;
-        selectedDistrictId = null;
-        districts = [];
-      });
-    } else {
-      // Commit cả tỉnh và huyện
-      setState(() {
-        selectedProvinceId = pid;
-        selectedDistrictId = did;
-      });
-    }
-
-    _applyFilter();
+  // ====================== Filter UI ======================
+  Widget _buildLocationFilter() {
+    return const SizedBox.shrink();
   }
 
-  // Mở modal để chọn huyện cho tỉnh đã chọn
-  // Trả về int? = districtId được chọn, hoặc null nếu user cancel
-  Future<int?> _showDistrictPicker(BuildContext context, int provinceId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('accessToken') ?? '';
-
-    try {
-      final res = await ApiService.getRideCountByDistrict(accessToken: token, provinceId: provinceId);
-      if (res.statusCode == 200) {
-        final body = jsonDecode(res.body);
-        if (body['success'] == true) {
-          final List<dynamic> data = body['data'] ?? [];
-          // Lưu districts vào state để hiển thị tên khi cần
-          setState(() => districts = data);
-
-          final result = await showModalBottomSheet<int?>(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            builder: (ctx) {
-              return Container(
-                height: MediaQuery.of(context).size.height * 0.65,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-                ),
-                child: Column(
-                  children: [
-                    Container(
-                      margin: const EdgeInsets.only(top: 12),
-                      height: 4,
-                      width: 40,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Text(
-                        "Chọn huyện của ${provinces.firstWhere((p) => p['provinceId'].toString() == provinceId.toString())['provinceName'] ?? ''}",
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const Divider(height: 1),
-                    Expanded(
-                      child: data.isEmpty
-                          ? const Center(child: Text("Không có huyện"))
-                          : ListView.separated(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        itemCount: data.length + 1,
-                        separatorBuilder: (context, index) => const Divider(height: 1, indent: 20, endIndent: 20),
-                        itemBuilder: (context, index) {
-                          final bool isAll = index == 0;
-                          String name = "";
-                          int total = 0;
-                          int? did;
-
-                          if (isAll) {
-                            name = "Tất cả các huyện";
-                            total = data.fold<int>(0, (s, d) => s + (int.tryParse(d['totalRides'].toString()) ?? 0));
-                            did = null;
-                          } else {
-                            final d = data[index - 1];
-                            name = d['districtName'] ?? '';
-                            total = int.tryParse(d['totalRides'].toString()) ?? 0;
-                            did = d['districtId'] is int ? d['districtId'] : int.tryParse(d['districtId'].toString()) ?? 0;
-                          }
-
-                          final bool isSelected = selectedDistrictId == did;
-
-                          return ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-                            leading: Icon(
-                              isAll ? Icons.map : Icons.location_city,
-                              color: isSelected ? Colors.blue : Colors.grey[400],
-                            ),
-                            title: Text(
-                              name,
-                              style: TextStyle(
-                                color: isSelected ? Colors.blue[700] : Colors.blue[600],
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                fontSize: 16,
-                              ),
-                            ),
-                            trailing: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                total.toString(),
-                                style: const TextStyle(
-                                  color: Colors.blue,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                            onTap: () => Navigator.pop(ctx, did),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          );
-
-          return result;
-        } else {
-          debugPrint("Lỗi load districts: success == false");
-        }
-      } else {
-        debugPrint("Lỗi load districts: status ${res.statusCode}");
-      }
-    } catch (e) {
-      debugPrint("Lỗi load districts: $e");
-    }
-    return null;
-  }
+  // ====================== Cards/List rendering ======================
 
   Widget _buildRideCard(dynamic ride, bool isNew) {
     final theme = Theme.of(context);
 
-    // Ép kiểu linh hoạt để dùng chung 1 UI cho cả 2 Tab
-    final String code = (ride is WaitingRide) ? (ride.code ?? '---') : (ride['code'] ?? '---');
+    final int rideSource = _extractRideSource(ride);
+
+    final String code =
+    (ride is WaitingRide) ? (ride.code ?? '---') : (ride['code'] ?? '---');
+
     final dynamic pickupTime = (ride is WaitingRide)
         ? ride.pickupTime
-        : _extractDynamicFromMap(ride, ['pickupTime', 'pickup_time', 'pickupAt', 'pickup_at', 'pickuptime', 'pickupDate', 'pickup_date']);
+        : _extractDynamicFromMap(ride, [
+      'pickupTime',
+      'pickup_time',
+      'pickupAt',
+      'pickup_at',
+      'pickuptime',
+      'pickupDate',
+      'pickup_date'
+    ]);
 
-    // Lấy address và province một cách an toàn, tránh dấu phẩy dư thừa khi province rỗng
     String fromAddressRaw = '';
     String fromDistrictRaw = '';
     String fromProvinceRaw = '';
@@ -818,137 +657,235 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab> with SingleTickerProv
       toProvinceRaw = ride.toProvince ?? '';
     } else if (ride is Map) {
       fromAddressRaw = ride['fromAddress']?.toString() ?? '';
-      fromDistrictRaw = _extractProvinceFromMap(ride, ['fromDistrict', 'fromDistrictName', 'from_district', 'from_district_name']);
-      fromProvinceRaw = _extractProvinceFromMap(ride, ['fromProvince', 'fromProvinceName', 'from_province', 'from_province_name']);
+      fromDistrictRaw = _extractProvinceFromMap(ride, [
+        'fromDistrict',
+        'fromDistrictName',
+        'from_district',
+        'from_district_name'
+      ]);
+      fromProvinceRaw = _extractProvinceFromMap(ride, [
+        'fromProvince',
+        'fromProvinceName',
+        'from_province',
+        'from_province_name'
+      ]);
       toAddressRaw = ride['toAddress']?.toString() ?? '';
-      toDistrictRaw = _extractProvinceFromMap(ride, ['toDistrict', 'toDistrictName', 'to_district', 'to_district_name']);
-      toProvinceRaw = _extractProvinceFromMap(ride, ['toProvince', 'toProvinceName', 'to_province', 'to_province_name']);
+      toDistrictRaw = _extractProvinceFromMap(ride, [
+        'toDistrict',
+        'toDistrictName',
+        'to_district',
+        'to_district_name'
+      ]);
+      toProvinceRaw = _extractProvinceFromMap(ride, [
+        'toProvince',
+        'toProvinceName',
+        'to_province',
+        'to_province_name'
+      ]);
     }
 
-    final String fromText = _buildFullAddress(fromAddressRaw, fromDistrictRaw, fromProvinceRaw);
-    final String toText = _buildFullAddress(toAddressRaw, toDistrictRaw, toProvinceRaw);
+    final String fromText =
+    _buildFullAddress(fromAddressRaw, fromDistrictRaw, fromProvinceRaw);
+    final String toText =
+    _buildFullAddress(toAddressRaw, toDistrictRaw, toProvinceRaw);
     final String pickupText = _formatPickupTime(pickupTime);
-    final double price = (ride is WaitingRide) ? ride.price : (double.tryParse((ride['price'] ?? '0').toString()) ?? 0);
+    final double price = (ride is WaitingRide)
+        ? ride.price
+        : (double.tryParse((ride['price'] ?? '0').toString()) ?? 0);
+
+    // ✅ NEW RULE:
+    // - Tab "đơn mới" (isNew==true): không cho xem chi tiết => onTap = null
+    // - Tab "đơn đã nhận" (isNew==false): vẫn cho xem chi tiết
+    final VoidCallback? onTapCard = isNew ? null : () => _navigateToDetail(ride);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      color: theme.colorScheme.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTapCard,
+          borderRadius: BorderRadius.circular(12),
+          // ✅ nếu không cho tap thì cũng không highlight
+          splashColor: isNew ? Colors.transparent : null,
+          highlightColor: isNew ? Colors.transparent : null,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
               children: [
-                Text(code, style: const TextStyle(fontWeight: FontWeight.bold)),
                 Row(
                   children: [
-                    Text("Giờ đón: ",
+                    Expanded(
+                      child: Text(
+                        code,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    _rideSourceChip(rideSource, theme),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      "Giờ đón: ",
                       style: TextStyle(
-                        color: Colors.blueAccent,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(width: 4),
                     Text(
                       pickupText,
-                      style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: theme.colorScheme.secondary,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
-                )
-
+                ),
+                Divider(color: theme.colorScheme.onSurface.withOpacity(0.12)),
+                _buildLocationRow(Icons.circle, Colors.green, fromText),
+                _buildLocationRow(Icons.location_on, Colors.red, toText),
+                Divider(color: theme.colorScheme.onSurface.withOpacity(0.12)),
+                _buildCardFooter(ride, theme, isNew, price),
               ],
             ),
-            const Divider(),
-            _buildLocationRow(Icons.circle, Colors.green, fromText),
-            _buildLocationRow(Icons.location_on, Colors.red, toText),
-            const Divider(),
-            _buildCardFooter(ride, theme, isNew, price),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildCardFooter(dynamic ride, ThemeData theme, bool isNew, double price) {
+  Widget _buildCardFooter(
+      dynamic ride,
+      ThemeData theme,
+      bool isNew,
+      double price,
+      ) {
+    final bool isMyBrokerRide = _isMyBrokerRide(ride);
+    final int rideSource = _extractRideSource(ride);
+
     return Row(
       children: [
         Expanded(
           child: Text(
             "${NumberFormat('#,###').format(price)}đ",
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.green),
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.secondary,
+            ),
           ),
         ),
         const SizedBox(width: 8),
-        isNew
-            ? ElevatedButton(
-          onPressed: () => _acceptRide(ride as WaitingRide),
-          child: const Text("NHẬN ĐƠN"),
-        )
-            : Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            OutlinedButton(
-              onPressed: () => _navigateToDetail(ride),
-              child: const Text("CHI TIẾT"),
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: () => _startRide(ride),
-              child: const Text("XUẤT PHÁT"),
-            ),
-          ],
-        ),
+        if (isNew && rideSource == 2 && isMyBrokerRide) ...[
+          ElevatedButton(
+            onPressed:
+            _loadingMyBrokerRides ? null : () => _cancelMyBrokerRide(ride),
+            style:
+            ElevatedButton.styleFrom(backgroundColor: theme.colorScheme.error),
+            child: const Text("HUỶ ĐƠN"),
+          ),
+        ] else if (isNew) ...[
+          ElevatedButton(
+            onPressed: () => _acceptRide(ride as WaitingRide),
+            child: const Text("NHẬN ĐƠN"),
+          ),
+        ] else ...[
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              OutlinedButton(
+                onPressed: () => _navigateToDetail(ride),
+                child: const Text("CHI TIẾT"),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () => _startRide(ride),
+                child: const Text("XUẤT PHÁT"),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
 
   Widget _buildLocationRow(IconData icon, Color color, String address) {
+    final theme = Theme.of(context);
     return Row(
       children: [
         Icon(icon, size: 16, color: color),
         const SizedBox(width: 8),
-        Expanded(child: Text(address, style: const TextStyle(fontSize: 13), maxLines: 2, overflow: TextOverflow.ellipsis)),
+        Expanded(
+          child: Text(
+            address,
+            style: TextStyle(
+              fontSize: 13,
+              color: theme.colorScheme.onSurface,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
       ],
     );
   }
 
   Widget _buildOldOrderList(List<Map<String, dynamic>> rides) {
     if (rides.isEmpty) return _buildEmptyList();
+
+    final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
+    final bottomPadding = 12.0 + 24.0 + bottomSafe;
+
     return ListView.builder(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(12),
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+      padding: EdgeInsets.fromLTRB(12, 12, 12, bottomPadding),
       itemCount: rides.length,
       itemBuilder: (context, index) => _buildRideCard(rides[index], false),
     );
   }
 
-  // Non-scrollable placeholder for PagedListView.noItemsFoundIndicatorBuilder
   Widget _buildEmptyPlaceholder() {
+    final theme = Theme.of(context);
     return SizedBox(
       height: 200,
       child: Center(
-        child: const Text(
+        child: Text(
           "Không có đơn hàng nào.\nVuốt xuống để cập nhật mới.",
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.grey),
+          style: TextStyle(
+            color: theme.colorScheme.secondary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );
   }
 
-  // Scrollable empty view so RefreshIndicator can work in tab 2
   Widget _buildEmptyList() {
+    final theme = Theme.of(context);
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.5,
+        height: 320,
         child: Center(
-          child: const Text(
+          child: Text(
             "Không có đơn hàng nào.\nVuốt xuống để cập nhật mới.",
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey),
+            style: TextStyle(
+              color: theme.colorScheme.secondary,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ),

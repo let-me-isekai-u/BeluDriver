@@ -1,5 +1,6 @@
 class WaitingRide {
   final int id;
+  final int rideSource; // 👈 thêm dòng này
   final String? code;
   final String? fromAddress;
   final String? fromDistrict;
@@ -13,6 +14,7 @@ class WaitingRide {
 
   WaitingRide({
     required this.id,
+    required this.rideSource, // 👈 thêm
     this.code,
     this.fromAddress,
     this.fromProvince,
@@ -28,6 +30,7 @@ class WaitingRide {
   factory WaitingRide.fromJson(Map<String, dynamic> json) {
     return WaitingRide(
       id: json['id'] ?? 0,
+      rideSource: json['rideSource'] ?? 1, // 👈 thêm (default 1 cho an toàn)
       code: json['code'],
       fromAddress: json['fromAddress'],
       fromProvince: json['fromProvince'],

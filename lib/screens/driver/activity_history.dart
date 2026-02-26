@@ -12,7 +12,8 @@ class ActivityScreen extends StatefulWidget {
   State<ActivityScreen> createState() => _ActivityScreenState();
 }
 
-class _ActivityScreenState extends State<ActivityScreen> with SingleTickerProviderStateMixin {
+class _ActivityScreenState extends State<ActivityScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   List<RideModel> ongoingRides = [];
@@ -27,15 +28,11 @@ class _ActivityScreenState extends State<ActivityScreen> with SingleTickerProvid
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
 
-    // Chỉ gọi API Đang diễn ra khi khởi tạo
     _fetchOngoingRides();
-
-    // Lắng nghe sự kiện đổi tab để gọi API Lịch sử
     _tabController.addListener(_handleTabChange);
   }
 
   void _handleTabChange() {
-    // index == 1 là tab Lịch sử
     if (_tabController.index == 1 && !_isHistoryLoaded) {
       _fetchHistoryRides();
     }
@@ -54,7 +51,7 @@ class _ActivityScreenState extends State<ActivityScreen> with SingleTickerProvid
   }
 
   // ======================
-  // API TAB 1: ĐANG DIỄN RA
+  // TAB 1: ĐANG DIỄN RA
   // ======================
   Future<void> _fetchOngoingRides() async {
     if (!mounted) return;
@@ -62,11 +59,14 @@ class _ActivityScreenState extends State<ActivityScreen> with SingleTickerProvid
     try {
       final token = await _getToken();
       final res = await ApiService.getProcessingRides(accessToken: token);
+
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
         if (body['success'] == true) {
+          if (!mounted) return;
           setState(() {
-            ongoingRides = (body['data'] as List).map((e) => RideModel.fromJson(e)).toList();
+            ongoingRides =
+                (body['data'] as List).map((e) => RideModel.fromJson(e)).toList();
           });
         }
       }
@@ -78,7 +78,7 @@ class _ActivityScreenState extends State<ActivityScreen> with SingleTickerProvid
   }
 
   // ======================
-  // API TAB 2: LỊCH SỬ
+  // TAB 2: LỊCH SỬ
   // ======================
   Future<void> _fetchHistoryRides() async {
     if (!mounted) return;
@@ -86,11 +86,14 @@ class _ActivityScreenState extends State<ActivityScreen> with SingleTickerProvid
     try {
       final token = await _getToken();
       final res = await ApiService.getRideHistory(accessToken: token);
+
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
         if (body['success'] == true) {
+          if (!mounted) return;
           setState(() {
-            historyRides = (body['data'] as List).map((e) => RideModel.fromJson(e)).toList();
+            historyRides =
+                (body['data'] as List).map((e) => RideModel.fromJson(e)).toList();
             _isHistoryLoaded = true;
           });
         }
@@ -103,9 +106,10 @@ class _ActivityScreenState extends State<ActivityScreen> with SingleTickerProvid
   }
 
   // ======================
-  // LOGIC XỬ LÝ
+  // COMPLETE RIDE
   // ======================
-  Future<void> _handleCompleteRide(int rideId, String code) async {
+  Future<void> _handleCompleteRide(RideModel ride) async {
+    final theme = Theme.of(context);
     final token = await _getToken();
     if (token.isEmpty) return;
 
@@ -115,27 +119,43 @@ class _ActivityScreenState extends State<ActivityScreen> with SingleTickerProvid
       builder: (_) => const Center(child: CircularProgressIndicator()),
     );
 
-    final res = await ApiService.completeRide(accessToken: token, rideId: rideId);
+    final res = await ApiService.completeRide(
+      accessToken: token,
+      rideId: ride.id,
+      rideSource: ride.rideSource,
+    );
+
     if (mounted) Navigator.pop(context);
 
     if (res.statusCode == 200) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Chuyến xe $code đã hoàn thành!"), backgroundColor: Colors.green),
+        SnackBar(
+          content: Text("Chuyến xe ${ride.code} đã hoàn thành!"),
+          backgroundColor: Colors.green,
+        ),
       );
-      // Khi xong 1 chuyến, cần làm mới cả 2 tab để dữ liệu nhảy từ Ongoing sang History
-      _fetchOngoingRides();
-      _fetchHistoryRides();
+
+      await _fetchOngoingRides();
+      await _fetchHistoryRides();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Không thể cập nhật trạng thái."), backgroundColor: Colors.red),
+        SnackBar(
+          content: const Text("Không thể cập nhật trạng thái."),
+          backgroundColor: theme.colorScheme.error,
+        ),
       );
     }
   }
 
-  void _navigateToDetail(int rideId) {
+  void _navigateToDetail(RideModel ride) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => RideDetailScreen(rideId: rideId)),
+      MaterialPageRoute(
+        builder: (_) => RideDetailScreen(
+          rideId: ride.id,
+          rideSource: ride.rideSource,
+        ),
+      ),
     ).then((_) {
       _fetchOngoingRides();
       if (_isHistoryLoaded) _fetchHistoryRides();
@@ -143,7 +163,7 @@ class _ActivityScreenState extends State<ActivityScreen> with SingleTickerProvid
   }
 
   // ======================
-  // UI CHÍNH
+  // UI
   // ======================
   @override
   Widget build(BuildContext context) {
@@ -152,15 +172,25 @@ class _ActivityScreenState extends State<ActivityScreen> with SingleTickerProvid
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text("Hoạt động chuyến xe"),
+        title: Text(
+          "Hoạt động chuyến xe",
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: theme.colorScheme.secondary, // GOLD
+          ),
+        ),
+        elevation: 0,
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: Colors.white,
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.white,
+          labelColor: theme.colorScheme.secondary, // GOLD
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
           unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
-          indicatorWeight: 3,
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+          indicatorColor: theme.colorScheme.secondary,
+          indicatorWeight: 5.5,
           tabs: const [
             Tab(text: "ĐANG DIỄN RA"),
             Tab(text: "LỊCH SỬ"),
@@ -178,45 +208,129 @@ class _ActivityScreenState extends State<ActivityScreen> with SingleTickerProvid
   }
 
   Widget _buildOngoingTab(ThemeData theme) {
-    if (_isLoadingOngoing) return const Center(child: CircularProgressIndicator());
+    if (_isLoadingOngoing) {
+      return Center(
+        child: CircularProgressIndicator(color: theme.colorScheme.secondary),
+      );
+    }
     return RefreshIndicator(
       onRefresh: _fetchOngoingRides,
-      child: _buildList(ongoingRides, theme),
+      child: _buildList(
+        ongoingRides,
+        theme,
+        emptyMessage: "Hiện tại bạn không có chuyến xe nào.",
+      ),
     );
   }
 
   Widget _buildHistoryTab(ThemeData theme) {
-    if (_isLoadingHistory) return const Center(child: CircularProgressIndicator());
+    if (_isLoadingHistory) {
+      return Center(
+        child: CircularProgressIndicator(color: theme.colorScheme.secondary),
+      );
+    }
     return RefreshIndicator(
       onRefresh: _fetchHistoryRides,
-      child: _buildList(historyRides, theme),
+      child: _buildList(
+        historyRides,
+        theme,
+        emptyMessage: "Hiện tại bạn không có lịch sử chuyến xe nào.",
+      ),
     );
   }
 
-  Widget _buildList(List<RideModel> rides, ThemeData theme) {
+  Widget _buildList(
+      List<RideModel> rides,
+      ThemeData theme, {
+        required String emptyMessage,
+      }) {
+    // ✅ FIX iOS: chừa đáy để item cuối không sát mép dưới (tránh bounce làm khó bấm)
+    final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
+    final bottomPadding = 12.0 + 24.0 + bottomSafe;
+
     if (rides.isEmpty) {
-      return ListView( //trả về ListView để kéo được
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 200), // Đẩy text xuống giữa
-          Center(child: Text("Không có dữ liệu chuyến xe")),
-        ],
+      return SafeArea(
+        bottom: true,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(12, 12, 12, bottomPadding),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.65,
+            child: _buildEmptyState(emptyMessage),
+          ),
+        ),
       );
     }
-    return ListView.builder(
-      physics: const AlwaysScrollableScrollPhysics(), // Đảm bảo luôn kéo được
-      padding: const EdgeInsets.all(12),
-      itemCount: rides.length,
-      itemBuilder: (context, index) => _buildRideCard(rides[index], theme),
+
+    return SafeArea(
+      bottom: true,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.06,
+              child: Image.asset(
+                'lib/assets/icons/ActivityLogo.png',
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ),
+          ),
+          ListView.builder(
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
+            ),
+            padding: EdgeInsets.fromLTRB(12, 12, 12, bottomPadding),
+            itemCount: rides.length,
+            itemBuilder: (context, index) => _buildRideCard(rides[index], theme),
+          ),
+        ],
+      ),
     );
   }
+
+  Widget _buildEmptyState(String message) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              'lib/assets/icons/ActivityLogo.png',
+              width: 140,
+              height: 140,
+              errorBuilder: (_, __, ___) => Icon(
+                Icons.history_rounded,
+                size: 90,
+                color: theme.colorScheme.secondary.withOpacity(0.6),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: theme.colorScheme.secondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildRideCard(RideModel ride, ThemeData theme) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
+      elevation: 3,
+      color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
-        onTap: () => _navigateToDetail(ride.id),
+        onTap: () => _navigateToDetail(ride),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -225,22 +339,29 @@ class _ActivityScreenState extends State<ActivityScreen> with SingleTickerProvid
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(ride.formattedDate, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                  Text(
+                    ride.formattedDate,
+                    style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: ride.statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: ride.statusColor.withOpacity(0.45)),
                     ),
                     child: Text(
                       ride.statusText,
-                      style: TextStyle(color: ride.statusColor, fontSize: 11, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: ride.statusColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
               ),
               const Divider(height: 24),
-              // Hiển thị thêm huyện: province - district - address
               _buildLocationLine(
                 '${ride.fromProvince} - ${ride.fromDistrict} - ${ride.fromAddress}',
                 '${ride.toProvince} - ${ride.toDistrict} - ${ride.toAddress}',
@@ -252,14 +373,27 @@ class _ActivityScreenState extends State<ActivityScreen> with SingleTickerProvid
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(ride.code, style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.blueGrey)),
+                      Text(
+                        ride.code,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: Colors.blueGrey,
+                        ),
+                      ),
                       const SizedBox(height: 2),
-                      Text(ride.formattedPrice, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                      Text(
+                        ride.formattedPrice,
+                        style: const TextStyle(fontSize: 11, color: Colors.grey),
+                      ),
                     ],
                   ),
                   Text(
                     ride.formattedPrice,
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.primary,
+                    ),
                   ),
                 ],
               ),
@@ -268,17 +402,23 @@ class _ActivityScreenState extends State<ActivityScreen> with SingleTickerProvid
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () => _handleCompleteRide(ride.id, ride.code),
+                    onPressed: () => _handleCompleteRide(ride),
                     icon: const Icon(Icons.check_circle_outline),
-                    label: const Text("XÁC NHẬN ĐẾN NƠI", style: TextStyle(fontWeight: FontWeight.bold)),
+                    label: const Text(
+                      "XÁC NHẬN ĐẾN NƠI",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
                 ),
-              ]
+              ],
             ],
           ),
         ),
@@ -293,21 +433,38 @@ class _ActivityScreenState extends State<ActivityScreen> with SingleTickerProvid
           children: [
             const Icon(Icons.radio_button_checked, size: 16, color: Colors.green),
             const SizedBox(width: 12),
-            Expanded(child: Text(from, style: const TextStyle(fontSize: 14), overflow: TextOverflow.ellipsis)),
+            Expanded(
+              child: Text(
+                from,
+                style: const TextStyle(fontSize: 14, color: Colors.black87),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+              ),
+            ),
           ],
         ),
         const Align(
           alignment: Alignment.centerLeft,
           child: Padding(
             padding: EdgeInsets.only(left: 7.5),
-            child: SizedBox(height: 12, child: VerticalDivider(width: 1, thickness: 1, color: Colors.grey)),
+            child: SizedBox(
+              height: 12,
+              child: VerticalDivider(width: 1, thickness: 1, color: Colors.grey),
+            ),
           ),
         ),
         Row(
           children: [
             const Icon(Icons.location_on, size: 16, color: Colors.red),
             const SizedBox(width: 12),
-            Expanded(child: Text(to, style: const TextStyle(fontSize: 14), overflow: TextOverflow.ellipsis)),
+            Expanded(
+              child: Text(
+                to,
+                style: const TextStyle(fontSize: 14, color: Colors.black87),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+              ),
+            ),
           ],
         ),
       ],

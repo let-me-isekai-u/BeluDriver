@@ -6,8 +6,6 @@ import 'package:image_picker/image_picker.dart';
 import '../../services/api_service.dart';
 import 'dart:convert';
 
-
-
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -22,8 +20,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _confirmPhoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _licenseNumberController = TextEditingController();
-  final TextEditingController _confirmPasswordController =
-  TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+
   XFile? _avatar;
 
   bool _agreeTerms = false;
@@ -32,13 +30,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
-  void _showSnack(String msg) {
+  void _showSnack(String msg, {Color? color}) {
+    final theme = Theme.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg)),
+      SnackBar(
+        content: Text(
+          msg,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onInverseSurface,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        backgroundColor: color ?? theme.colorScheme.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
     );
   }
-
-
 
   Future<void> _pickAvatar() async {
     try {
@@ -49,17 +57,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
     } catch (e) {
       _showSnack("Không thể chọn ảnh: $e");
-
     }
   }
-
-
 
   bool _validateForm() {
     final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
     final phoneRegex = RegExp(r'^[0-9]{9,11}$');
     final strongPassRegex = RegExp(
-        r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$');
+      r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$',
+    );
 
     if (_fullNameController.text.trim().isEmpty) {
       _showSnack("Họ tên không được để trống");
@@ -82,13 +88,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     if (!strongPassRegex.hasMatch(_passwordController.text.trim())) {
-      _showSnack(
-          "Mật khẩu quá yếu (phải gồm chữ hoa, chữ thường, số, ký tự đặc biệt)");
+      _showSnack("Mật khẩu quá yếu (phải gồm chữ hoa, chữ thường, số, ký tự đặc biệt)");
       return false;
     }
 
-    if (_passwordController.text.trim() !=
-        _confirmPasswordController.text.trim()) {
+    if (_passwordController.text.trim() != _confirmPasswordController.text.trim()) {
       _showSnack("Mật khẩu nhập lại không trùng");
       return false;
     }
@@ -98,16 +102,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return false;
     }
 
-    if(_licenseNumberController.text.trim().isEmpty){
+    if (_licenseNumberController.text.trim().isEmpty) {
       _showSnack("Biển số xe không được để trống");
       return false;
     }
 
-    if(_avatar == null){
+    if (_avatar == null) {
       _showSnack("Yêu cầu tài xế phải có ảnh đại diên chân dung");
       return false;
     }
-
 
     return true;
   }
@@ -115,9 +118,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _handleRegister() async {
     if (!_validateForm()) return;
 
-
     setState(() => _loading = true);
-
 
     final res = await ApiService.driverRegister(
       fullName: _fullNameController.text.trim(),
@@ -126,16 +127,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
       password: _passwordController.text.trim(),
       avatarFilePath: _avatar!.path,
       licenseNumber: _licenseNumberController.text.trim(),
-
     );
 
     setState(() => _loading = false);
 
     if (res.statusCode == 200 || res.statusCode == 201) {
-      _showSnack("Đăng ký thành công!");
+      _showSnack("Đăng ký thành công!", color: Theme.of(context).colorScheme.secondary);
       Future.delayed(const Duration(seconds: 1), () {
         Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => const DriverLoginScreen()));
+          context,
+          MaterialPageRoute(builder: (_) => const DriverLoginScreen()),
+        );
       });
     } else {
       try {
@@ -147,17 +149,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-
-  // Trong _RegisterScreenState
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Đăng ký Tài khoản"), // Tiêu đề thân thiện hơn
+        title: Text(
+          "Đăng ký Tài khoản",
+          style: theme.appBarTheme.titleTextStyle?.copyWith(
+            color: theme.colorScheme.secondary, // GOLD title
+          ),
+        ),
         centerTitle: true,
-        elevation: 0, // Bỏ bóng AppBar
+        elevation: 0,
       ),
       body: SafeArea(
         child: Stack(
@@ -166,53 +171,71 @@ class _RegisterScreenState extends State<RegisterScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Column(
                 children: [
-                  // 1. ẢNH AVATAR (GIỮ NGUYÊN)
-                  _buildAvatarSection(primary),
+                  _buildAvatarSection(theme),
                   const SizedBox(height: 24),
 
-                  // 2. NHÓM THÔNG TIN CÁ NHÂN (Họ tên, Email)
                   _buildInfoCard(
+                    theme: theme,
                     title: "Thông tin cá nhân",
                     children: [
-                      _buildTextField(_fullNameController, "Họ và tên", Icons.badge, false, false),
-                      const SizedBox(height: 16),
-                      _buildTextField(_emailController, "Email", Icons.email, false, false),
+                      _buildTextField(
+                        controller: _fullNameController,
+                        hint: "Họ và tên",
+                        icon: Icons.badge,
+                        isPhone: false,
+                      ),
                       const SizedBox(height: 16),
                       _buildTextField(
-                        _licenseNumberController,
-                        "Biển số xe",
-                        Icons.directions_car,
-                        false,
-                        false,
+                        controller: _emailController,
+                        hint: "Email",
+                        icon: Icons.email,
+                        isPhone: false,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        controller: _licenseNumberController,
+                        hint: "Biển số xe",
+                        icon: Icons.directions_car,
+                        isPhone: false,
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
 
-                  // 3. NHÓM THÔNG TIN LIÊN HỆ (SĐT)
                   _buildInfoCard(
+                    theme: theme,
                     title: "Thông tin liên hệ",
                     children: [
-                      _buildTextField(_phoneController, "Số điện thoại", Icons.phone, false, true),
+                      _buildTextField(
+                        controller: _phoneController,
+                        hint: "Số điện thoại",
+                        icon: Icons.phone,
+                        isPhone: true,
+                      ),
                       const SizedBox(height: 16),
-                      _buildTextField(_confirmPhoneController, "Nhập lại số điện thoại", Icons.phone_android, false, true),
+                      _buildTextField(
+                        controller: _confirmPhoneController,
+                        hint: "Nhập lại số điện thoại",
+                        icon: Icons.phone_android,
+                        isPhone: true,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
 
-                  // 4. NHÓM BẢO MẬT (Mật khẩu)
                   _buildInfoCard(
+                    theme: theme,
                     title: "Bảo mật",
                     children: [
-                      // MẬT KHẨU CÓ TOGGLE
                       _buildPasswordTextField(
+                        theme: theme,
                         controller: _passwordController,
                         hint: "Mật khẩu",
                         isConfirm: false,
                       ),
                       const SizedBox(height: 16),
-                      // NHẬP LẠI MẬT KHẨU CÓ TOGGLE
                       _buildPasswordTextField(
+                        theme: theme,
                         controller: _confirmPasswordController,
                         hint: "Nhập lại mật khẩu",
                         isConfirm: true,
@@ -222,12 +245,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                   const SizedBox(height: 20),
 
-                  // 5. ĐIỀU KHOẢN VÀ ĐĂNG KÝ
-                  _buildTermsAndButton(primary),
+                  _buildTermsAndButton(theme),
 
                   const SizedBox(height: 25),
 
-                  // 6. LIÊN KẾT QUAY LẠI LOGIN
                   TextButton(
                     onPressed: () {
                       Navigator.pushReplacement(
@@ -237,45 +258,43 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                     child: Text(
                       "Bạn đã có tài khoản? Quay về đăng nhập",
-                      style: TextStyle(
-                        color: primary,
-                        fontWeight: FontWeight.w600,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.secondary, // GOLD link
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20), // Đảm bảo padding dưới cùng
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
 
-            // LOADING OVERLAY (GIỮ NGUYÊN)
             if (_loading)
               Container(
-                color: Colors.black12,
-                child: const Center(
-                  child: CircularProgressIndicator(),
+                color: theme.colorScheme.scrim.withOpacity(0.35),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: theme.colorScheme.secondary,
+                  ),
                 ),
-              )
+              ),
           ],
         ),
       ),
     );
   }
 
-// ================= WIDGET CON MỚI =================
-
-// Widget con cho phần Avatar
-  Widget _buildAvatarSection(Color primary) {
+  // Avatar section
+  Widget _buildAvatarSection(ThemeData theme) {
     return Center(
       child: Stack(
         children: [
           CircleAvatar(
             radius: 55,
-            backgroundColor: primary.withOpacity(.15),
-            backgroundImage:
-            _avatar != null ? FileImage(File(_avatar!.path)) : null,
+            backgroundColor: theme.colorScheme.surface.withOpacity(0.6),
+            backgroundImage: _avatar != null ? FileImage(File(_avatar!.path)) : null,
             child: _avatar == null
-                ? const Icon(Icons.person, size: 55, color: Colors.black54)
+                ? Icon(Icons.person, size: 55, color: theme.colorScheme.onSurface.withOpacity(0.6))
                 : null,
           ),
           Positioned(
@@ -285,13 +304,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
               onTap: _loading ? null : _pickAvatar,
               child: CircleAvatar(
                 radius: 18,
-                backgroundColor: _loading
-                    ? Colors.grey
-                    : primary,
-                child: const Icon(
+                backgroundColor: _loading ? theme.disabledColor : theme.colorScheme.secondary,
+                child: Icon(
                   Icons.camera_alt,
                   size: 18,
-                  color: Colors.white,
+                  color: theme.colorScheme.onSecondary, // theo scheme (black)
                 ),
               ),
             ),
@@ -301,11 +318,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-// Widget con cho việc phân nhóm các TextField
-  Widget _buildInfoCard({required String title, required List<Widget> children}) {
+  // Group card
+  Widget _buildInfoCard({
+    required ThemeData theme,
+    required String title,
+    required List<Widget> children,
+  }) {
     return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      elevation: theme.cardTheme.elevation ?? 0,
+      shape: theme.cardTheme.shape,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -313,57 +334,73 @@ class _RegisterScreenState extends State<RegisterScreen> {
           children: [
             Text(
               title,
-              style: TextStyle(
+              style: theme.textTheme.headlineSmall?.copyWith(
                 fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
+                color: theme.colorScheme.secondary, // GOLD section title
               ),
             ),
-            const Divider(height: 20),
-            ...children, // Thêm các TextField
+            Divider(
+              height: 20,
+              color: theme.colorScheme.onSurface.withOpacity(0.12),
+            ),
+            ...children,
           ],
         ),
       ),
     );
   }
 
-// Widget con TextField đã tối ưu
-  Widget _buildTextField(
-      TextEditingController controller,
-      String hint,
-      IconData icon,
-      bool isPassword,
-      bool isPhone,
-      ) {
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    required bool isPhone,
+  }) {
     final theme = Theme.of(context);
+
     return TextField(
       controller: controller,
       keyboardType: isPhone ? TextInputType.phone : TextInputType.text,
+      style: theme.textTheme.bodyLarge?.copyWith(
+        color: theme.colorScheme.onSurface,
+      ),
       decoration: InputDecoration(
         labelText: hint,
-        prefixIcon: Icon(icon, color: theme.colorScheme.primary),
-        // Dùng kiểu Filled và bo góc nhẹ
+        labelStyle: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurface.withOpacity(0.75),
+        ),
         filled: true,
-        fillColor: Colors.grey.shade100,
+        fillColor: theme.colorScheme.surface.withOpacity(0.65),
+        prefixIcon: Icon(icon, color: theme.colorScheme.secondary),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: theme.colorScheme.onSurface.withOpacity(0.12),
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: theme.colorScheme.onSurface.withOpacity(0.12),
+          ),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: theme.colorScheme.secondary,
+            width: 1.8,
+          ),
         ),
       ),
     );
   }
 
-// Widget con cho Mật khẩu (có Toggle)
   Widget _buildPasswordTextField({
+    required ThemeData theme,
     required TextEditingController controller,
     required String hint,
     required bool isConfirm,
   }) {
-    final theme = Theme.of(context);
     final isObscure = isConfirm ? _obscureConfirmPassword : _obscurePassword;
     final toggleObscure = isConfirm
         ? () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword)
@@ -372,32 +409,48 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return TextField(
       controller: controller,
       obscureText: isObscure,
+      style: theme.textTheme.bodyLarge?.copyWith(
+        color: theme.colorScheme.onSurface,
+      ),
       decoration: InputDecoration(
         labelText: hint,
-        prefixIcon: Icon(Icons.lock, color: theme.colorScheme.primary),
+        labelStyle: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurface.withOpacity(0.75),
+        ),
+        prefixIcon: Icon(Icons.lock, color: theme.colorScheme.secondary),
         suffixIcon: IconButton(
           icon: Icon(
             isObscure ? Icons.visibility_off : Icons.visibility,
-            color: theme.colorScheme.secondary,
+            color: theme.colorScheme.onSurface.withOpacity(0.7),
           ),
           onPressed: toggleObscure,
         ),
         filled: true,
-        fillColor: Colors.grey.shade100,
+        fillColor: theme.colorScheme.surface.withOpacity(0.65),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: theme.colorScheme.onSurface.withOpacity(0.12),
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: theme.colorScheme.onSurface.withOpacity(0.12),
+          ),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: theme.colorScheme.secondary,
+            width: 1.8,
+          ),
         ),
       ),
     );
   }
 
-// Widget con cho Điều khoản và Nút Đăng ký
-  Widget _buildTermsAndButton(Color primary) {
+  Widget _buildTermsAndButton(ThemeData theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -405,9 +458,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
           children: [
             Checkbox(
               value: _agreeTerms,
-              onChanged: (v) {
-                setState(() => _agreeTerms = v!);
-              },
+              activeColor: theme.colorScheme.secondary,
+              checkColor: theme.colorScheme.onSecondary,
+              side: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.5)),
+              onChanged: (v) => setState(() => _agreeTerms = v ?? false),
             ),
             Expanded(
               child: GestureDetector(
@@ -419,31 +473,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 },
                 child: Text(
                   "Tôi đồng ý với Chính sách & Điều khoản sử dụng",
-                  style: TextStyle(
+                  style: theme.textTheme.bodyMedium?.copyWith(
                     decoration: TextDecoration.underline,
-                    color: primary,
+                    color: theme.colorScheme.secondary,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-            )
+            ),
           ],
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
         SizedBox(
-          height: 50, // Chiều cao cố định cho nút lớn
-          child: FilledButton(
-            style: FilledButton.styleFrom(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)
-            ),
+          height: 52,
+          child: ElevatedButton(
             onPressed: _loading ? null : _handleRegister,
             child: _loading
-                ? const SizedBox(
-              width: 20,
-              height: 20,
+                ? SizedBox(
+              width: 22,
+              height: 22,
               child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
+                strokeWidth: 2.5,
+                color: theme.colorScheme.primary,
               ),
             )
                 : const Text("Đăng ký"),
