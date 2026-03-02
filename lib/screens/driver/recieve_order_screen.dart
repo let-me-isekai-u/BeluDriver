@@ -9,7 +9,6 @@ import '../../models/paged_response_model.dart';
 import '../../models/waiting_ride_model.dart';
 import 'ride_detail_screen.dart';
 
-// ✅ THÊM: model API #24
 import '../../models/driver/broker_rides_model.dart';
 
 class ReceiveOrderTab extends StatefulWidget {
@@ -37,7 +36,6 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab>
   bool _isLoadingAcceptedRides = false;
   bool _isAcceptedLoaded = false;
 
-  // ✅ THÊM: danh sách rideId do tài xế này đã đẩy (API #24)
   final Set<int> _myBrokerRideIds = <int>{};
   bool _loadingMyBrokerRides = false;
 
@@ -47,7 +45,7 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab>
     _tabController = TabController(length: 2, vsync: this);
 
     _loadProvinces();
-    _loadMyBrokerRideIds(); // ✅ THÊM
+    _loadMyBrokerRideIds();
 
     _pagingController.addPageRequestListener((pageKey) {
       _fetchNewRidesPage(pageKey);
@@ -127,7 +125,6 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab>
     return 1;
   }
 
-  // ✅ THÊM: biết 1 đơn có phải do mình đẩy không
   bool _isMyBrokerRide(dynamic ride) {
     final int rideId = (ride is WaitingRide)
         ? ride.id
@@ -207,7 +204,6 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab>
     }
   }
 
-  // ✅ THÊM: load danh sách đơn mình đẩy (API #24)
   Future<void> _loadMyBrokerRideIds() async {
     if (!mounted) return;
     setState(() => _loadingMyBrokerRides = true);
@@ -696,9 +692,6 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab>
         ? ride.price
         : (double.tryParse((ride['price'] ?? '0').toString()) ?? 0);
 
-    // ✅ NEW RULE:
-    // - Tab "đơn mới" (isNew==true): không cho xem chi tiết => onTap = null
-    // - Tab "đơn đã nhận" (isNew==false): vẫn cho xem chi tiết
     final VoidCallback? onTapCard = isNew ? null : () => _navigateToDetail(ride);
 
     return Card(
@@ -711,7 +704,6 @@ class _ReceiveOrderTabState extends State<ReceiveOrderTab>
         child: InkWell(
           onTap: onTapCard,
           borderRadius: BorderRadius.circular(12),
-          // ✅ nếu không cho tap thì cũng không highlight
           splashColor: isNew ? Colors.transparent : null,
           highlightColor: isNew ? Colors.transparent : null,
           child: Padding(

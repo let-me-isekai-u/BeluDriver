@@ -12,11 +12,14 @@ class DriverBookingConfirmScreen extends StatefulWidget {
   final int fromProvinceId;
   final int toProvinceId;
 
+  final VoidCallback? onGoToPushedOrdersTab;
+
   const DriverBookingConfirmScreen({
     super.key,
     required this.request,
     required this.fromProvinceId,
     required this.toProvinceId,
+    this.onGoToPushedOrdersTab,
   });
 
   @override
@@ -247,7 +250,7 @@ class _DriverBookingConfirmScreenState extends State<DriverBookingConfirmScreen>
         );
 
         if (ok) {
-          // Nếu bạn muốn quay lại tab trước hoặc home:
+          widget.onGoToPushedOrdersTab?.call();
           Navigator.pop(context);
         }
       } else {
@@ -301,8 +304,7 @@ class _DriverBookingConfirmScreenState extends State<DriverBookingConfirmScreen>
           final fromProvinceName = await _getProvinceName(widget.fromProvinceId);
           final toProvinceName = await _getProvinceName(widget.toProvinceId);
 
-          final fromDistrictName =
-          await _getDistrictName(widget.fromProvinceId, req.fromDistrictId);
+          final fromDistrictName = await _getDistrictName(widget.fromProvinceId, req.fromDistrictId);
           final toDistrictName = await _getDistrictName(widget.toProvinceId, req.toDistrictId);
 
           return _ConfirmLocationNames(

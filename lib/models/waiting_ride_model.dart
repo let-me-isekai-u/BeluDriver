@@ -30,7 +30,7 @@ class WaitingRide {
   factory WaitingRide.fromJson(Map<String, dynamic> json) {
     return WaitingRide(
       id: json['id'] ?? 0,
-      rideSource: json['rideSource'] ?? 1, // 👈 thêm (default 1 cho an toàn)
+      rideSource: json['rideSource'] ?? 1,
       code: json['code'],
       fromAddress: json['fromAddress'],
       fromProvince: json['fromProvince'],

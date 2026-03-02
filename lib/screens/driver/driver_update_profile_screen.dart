@@ -99,7 +99,7 @@ class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
         title: Text(
           'Cập nhật hồ sơ',
           style: TextStyle(
-            color: theme.colorScheme.secondary, // ✅ gold like sample
+            color: theme.colorScheme.secondary,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -232,7 +232,7 @@ class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
         labelStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
         prefixIcon: Icon(icon, color: theme.colorScheme.secondary),
         filled: true,
-        fillColor: theme.colorScheme.surface, // ✅ no grey[100]
+        fillColor: theme.colorScheme.surface,
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.12)),

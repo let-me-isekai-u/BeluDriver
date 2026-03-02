@@ -10,7 +10,6 @@ import 'dart:async';
 import 'withdrawal_history_screen.dart';
 import 'package:intl/intl.dart';
 
-// ✅ CHỈ THÊM: import màn hình tab mới (đẩy đơn / tạo đơn)
 import 'driver_booking_screen.dart';
 
 class DriverHomeScreen extends StatefulWidget {
@@ -58,12 +57,12 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     final theme = Theme.of(context);
     final goldColor = theme.colorScheme.secondary;
 
-    // ✅ Sắp xếp lại list để Home nằm ở giữa (vị trí index 2)
     final List<Widget> screens = [
       const ReceiveOrderTab(), // Index 0
 
-      // ✅ FIX: DriverBookingScreen KHÔNG còn onSubmit nữa
-      const DriverBookingScreen(), // Index 1
+      DriverBookingScreen(
+        onGoToPushedOrdersTab: () => setState(() => _currentIndex = 3),
+      ), // Index 1
 
       // Trang chủ Dashboard (Index 2 - Ở giữa)
       _HomeDashboard(
@@ -73,7 +72,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         onRefreshProfile: _fetchProfile,
       ),
 
-      const ActivityScreen(), // Index 3
+      const ActivityScreen(initialTabIndex: 2), // Index 3
+
       const DriverProfileScreen(), // Index 4
     ];
 
@@ -105,7 +105,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               label: 'Đẩy đơn',
             ),
 
-            // ✅ Nút HOME ở giữa với UI đặc biệt (to hơn, bo tròn)
             BottomNavigationBarItem(
               icon: Container(
                 padding: const EdgeInsets.all(10),
@@ -313,7 +312,6 @@ class _HomeDashboard extends StatelessWidget {
     );
   }
 
-  // ✅ Cập nhật Widget Card: Tất cả đều có viền Gold
   Widget _buildMenuCard(
       BuildContext context,
       String title,
@@ -330,7 +328,6 @@ class _HomeDashboard extends StatelessWidget {
         shadowColor: goldColor.withOpacity(0.2),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          // ✅ Tất cả các nút giờ đều có viền Gold
           side: BorderSide(color: goldColor, width: 1.5),
         ),
         child: Column(

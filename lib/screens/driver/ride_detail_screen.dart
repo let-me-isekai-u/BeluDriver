@@ -251,7 +251,6 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
             ),
             const SizedBox(height: 10),
 
-            // ✅ NEW: hiển thị nguồn đơn (rideSource)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
@@ -450,7 +449,7 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
           ),
           Divider(height: 20, color: theme.colorScheme.onSurface.withOpacity(0.12)),
           _detailRow("Loại dịch vụ", _ride!.typeText, theme),
-          _detailRow("Nguồn đơn", _rideSourceText, theme), // ✅ NEW: thêm dòng này
+          _detailRow("Nguồn đơn", _rideSourceText, theme),
           _detailRow("Số lượng", _ride!.quantity.toString(), theme),
           _detailRow("Thanh toán", _ride!.paymentMethod, theme),
           _detailRow("Thời gian tạo", _formatDate(_ride!.createdAt), theme),

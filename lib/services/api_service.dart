@@ -827,7 +827,6 @@ class ApiService {
 
       final body = jsonEncode(payload);
 
-      // ✅ LOG REQUEST
       debugPrint("➡️ [createBrokerRide] POST $url");
       debugPrint("➡️ [createBrokerRide] headers: Authorization=Bearer(${accessToken.isEmpty ? 'EMPTY' : '***'})");
       debugPrint("➡️ [createBrokerRide] body: $body");
@@ -844,7 +843,6 @@ class ApiService {
       )
           .timeout(const Duration(seconds: 30));
 
-      // ✅ LOG RESPONSE
       debugPrint("⬅️ [createBrokerRide] status: ${res.statusCode}");
       debugPrint("⬅️ [createBrokerRide] response headers: ${res.headers}");
       debugPrint("⬅️ [createBrokerRide] response body: ${res.body}");

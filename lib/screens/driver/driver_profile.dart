@@ -138,7 +138,6 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
           : SafeArea(
         bottom: true,
         child: SingleChildScrollView(
-          // ✅ FIX iOS: chừa thêm khoảng trống đáy để không bị "bounce" đúng vào vùng nút cuối,
           // giúp bấm nút/gesture ở item cuối ổn định hơn.
           padding: EdgeInsets.fromLTRB(16, 16, 16, 24 + bottomSafe),
           physics: const BouncingScrollPhysics(

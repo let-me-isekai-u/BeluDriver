@@ -1,12 +1,18 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../services/api_service.dart';
 import '../../models/driver/ride_model.dart';
+import '../../models/driver/broker_rides_model.dart';
 import 'ride_detail_screen.dart';
 
 class ActivityScreen extends StatefulWidget {
-  const ActivityScreen({super.key});
+  final int initialTabIndex;
+  const ActivityScreen({
+    super.key,
+    this.initialTabIndex = 0,
+  });
 
   @override
   State<ActivityScreen> createState() => _ActivityScreenState();
@@ -19,6 +25,11 @@ class _ActivityScreenState extends State<ActivityScreen>
   List<RideModel> ongoingRides = [];
   List<RideModel> historyRides = [];
 
+  //TAB 3: ĐƠN ĐÃ ĐẨY (API 24)
+  List<BrokerRideItem> brokerRides = [];
+  bool _isLoadingBroker = false;
+  bool _isBrokerLoaded = false;
+
   bool _isLoadingOngoing = false;
   bool _isLoadingHistory = false;
   bool _isHistoryLoaded = false;
@@ -26,15 +37,27 @@ class _ActivityScreenState extends State<ActivityScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    final safeInitial = widget.initialTabIndex.clamp(0, 2);
+    _tabController = TabController(length: 3, vsync: this, initialIndex: safeInitial);
 
     _fetchOngoingRides();
+
+    if (safeInitial == 1 && !_isHistoryLoaded) {
+      _fetchHistoryRides();
+    }
+    if (safeInitial == 2 && !_isBrokerLoaded) {
+      _fetchBrokerRides();
+    }
+
     _tabController.addListener(_handleTabChange);
   }
 
   void _handleTabChange() {
     if (_tabController.index == 1 && !_isHistoryLoaded) {
       _fetchHistoryRides();
+    }
+    if (_tabController.index == 2 && !_isBrokerLoaded) {
+      _fetchBrokerRides();
     }
   }
 
@@ -102,6 +125,128 @@ class _ActivityScreenState extends State<ActivityScreen>
       debugPrint("🔥 Fetch history error: $e");
     } finally {
       if (mounted) setState(() => _isLoadingHistory = false);
+    }
+  }
+
+  // ======================
+  // TAB 3: ĐƠN ĐÃ ĐẨY (API 24)
+  // ======================
+  Future<void> _fetchBrokerRides() async {
+    if (!mounted) return;
+    setState(() => _isLoadingBroker = true);
+
+    try {
+      final token = await _getToken();
+      if (token.isEmpty) return;
+
+      final res = await ApiService.getBrokerRides(accessToken: token);
+
+      if (res.statusCode == 200) {
+        final parsed = BrokerRidesResponse.fromRawJson(res.body);
+
+        if (!mounted) return;
+        if (parsed.success) {
+          setState(() {
+            brokerRides = parsed.data;
+            _isBrokerLoaded = true;
+          });
+        }
+      } else if (res.statusCode == 404) {
+        // backend có thể trả KeyNotFoundException
+        if (!mounted) return;
+        setState(() {
+          brokerRides = [];
+          _isBrokerLoaded = true;
+        });
+      }
+    } catch (e) {
+      debugPrint("🔥 Fetch broker rides error: $e");
+    } finally {
+      if (mounted) setState(() => _isLoadingBroker = false);
+    }
+  }
+
+  // ======================
+  // HUỶ ĐƠN ĐÃ ĐẨY (API 25)
+  // ======================
+  Future<void> _handleCancelBrokerRide(BrokerRideItem ride) async {
+    final theme = Theme.of(context);
+    final token = await _getToken();
+    if (token.isEmpty) return;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(
+          "Huỷ đơn đã đẩy",
+          style: TextStyle(
+            color: theme.colorScheme.secondary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: Text("Bạn chắc chắn muốn huỷ đơn ${ride.code} không?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white70,
+            ),
+            child: const Text("Không"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.colorScheme.error,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text("Huỷ đơn"),
+          ),
+        ],
+      ),
+    );
+
+    if (ok != true) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final res = await ApiService.cancelBrokerRide(
+        accessToken: token,
+        rideId: ride.rideId,
+      );
+
+      if (!mounted) return;
+      Navigator.pop(context); // close loading
+
+      if (res.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Đã huỷ đơn ${ride.code}."),
+            backgroundColor: Colors.green,
+          ),
+        );
+        await _fetchBrokerRides();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Huỷ đơn thất bại (${res.statusCode})."),
+            backgroundColor: theme.colorScheme.error,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // close loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Có lỗi xảy ra: $e"),
+          backgroundColor: theme.colorScheme.error,
+        ),
+      );
     }
   }
 
@@ -177,7 +322,7 @@ class _ActivityScreenState extends State<ActivityScreen>
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w600,
-            color: theme.colorScheme.secondary, // GOLD
+            color: theme.colorScheme.secondary,
           ),
         ),
         elevation: 0,
@@ -185,7 +330,7 @@ class _ActivityScreenState extends State<ActivityScreen>
         foregroundColor: Colors.white,
         bottom: TabBar(
           controller: _tabController,
-          labelColor: theme.colorScheme.secondary, // GOLD
+          labelColor: theme.colorScheme.secondary,
           labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
           unselectedLabelColor: Colors.white70,
           unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
@@ -194,6 +339,7 @@ class _ActivityScreenState extends State<ActivityScreen>
           tabs: const [
             Tab(text: "ĐANG DIỄN RA"),
             Tab(text: "LỊCH SỬ"),
+            Tab(text: "ĐƠN ĐÃ ĐẨY"),
           ],
         ),
       ),
@@ -202,6 +348,7 @@ class _ActivityScreenState extends State<ActivityScreen>
         children: [
           _buildOngoingTab(theme),
           _buildHistoryTab(theme),
+          _buildBrokerTab(theme),
         ],
       ),
     );
@@ -239,12 +386,72 @@ class _ActivityScreenState extends State<ActivityScreen>
     );
   }
 
+  Widget _buildBrokerTab(ThemeData theme) {
+    if (_isLoadingBroker) {
+      return Center(
+        child: CircularProgressIndicator(color: theme.colorScheme.secondary),
+      );
+    }
+
+    final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
+    final bottomPadding = 12.0 + 24.0 + bottomSafe;
+
+    if (brokerRides.isEmpty) {
+      return SafeArea(
+        bottom: true,
+        child: RefreshIndicator(
+          onRefresh: _fetchBrokerRides,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(12, 12, 12, bottomPadding),
+            child: SizedBox(
+              height: MediaQuery.of(context).size.height * 0.65,
+              child: _buildEmptyState("Hiện tại bạn chưa có đơn nào đã đẩy."),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return SafeArea(
+      bottom: true,
+      child: RefreshIndicator(
+        onRefresh: _fetchBrokerRides,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Opacity(
+                opacity: 0.06,
+                child: Image.asset(
+                  'lib/assets/icons/ActivityLogo.png',
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
+              ),
+            ),
+            ListView.builder(
+              physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
+              ),
+              padding: EdgeInsets.fromLTRB(12, 12, 12, bottomPadding),
+              itemCount: brokerRides.length,
+              itemBuilder: (context, index) =>
+                  _buildBrokerRideCard(brokerRides[index], theme),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ======================
+  // LIST (RideModel) - giữ nguyên
+  // ======================
   Widget _buildList(
       List<RideModel> rides,
       ThemeData theme, {
         required String emptyMessage,
       }) {
-    // ✅ FIX iOS: chừa đáy để item cuối không sát mép dưới (tránh bounce làm khó bấm)
     final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
     final bottomPadding = 12.0 + 24.0 + bottomSafe;
 
@@ -344,11 +551,13 @@ class _ActivityScreenState extends State<ActivityScreen>
                     style: const TextStyle(color: Colors.grey, fontSize: 13),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: ride.statusColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: ride.statusColor.withOpacity(0.45)),
+                      border: Border.all(
+                          color: ride.statusColor.withOpacity(0.45)),
                     ),
                     child: Text(
                       ride.statusText,
@@ -383,7 +592,8 @@ class _ActivityScreenState extends State<ActivityScreen>
                       const SizedBox(height: 2),
                       Text(
                         ride.formattedPrice,
-                        style: const TextStyle(fontSize: 11, color: Colors.grey),
+                        style:
+                        const TextStyle(fontSize: 11, color: Colors.grey),
                       ),
                     ],
                   ),
@@ -426,12 +636,162 @@ class _ActivityScreenState extends State<ActivityScreen>
     );
   }
 
+  // ======================
+  // CARD: BrokerRideItem + nút huỷ (API 25)
+  // ======================
+  Widget _buildBrokerRideCard(BrokerRideItem ride, ThemeData theme) {
+    final statusColor = _brokerStatusColor(ride.status);
+    final statusText = _brokerStatusText(ride.status);
+
+    // Theo tài liệu: API 24 chỉ trả status 1,2,3
+    // Bạn muốn "đúng đơn của tài xế đấy thì có nút huỷ" -> API này theo token đã là đúng tài xế.
+    // Mình hiển thị nút huỷ cho status 1/2/3 luôn.
+    // Nếu nghiệp vụ chỉ cho huỷ khi status == 1 (mới đẩy), bạn đổi điều kiện tại đây.
+    final canCancel = ride.status == 1 || ride.status == 2 || ride.status == 3;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 3,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _formatDateTime(ride.createdAt),
+                  style: const TextStyle(color: Colors.grey, fontSize: 13),
+                ),
+                Container(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: statusColor.withOpacity(0.45)),
+                  ),
+                  child: Text(
+                    statusText,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            _buildLocationLine(
+              '${ride.fromProvince} - ${ride.fromDistrict} - ${ride.fromAddress}',
+              '${ride.toProvince} - ${ride.toDistrict} - ${ride.toAddress}',
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      ride.code,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.blueGrey,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      ride.paymentMethod,
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                  ],
+                ),
+                Text(
+                  _formatMoney(ride.price),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+            if (canCancel) ...[
+              const Divider(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _isLoadingBroker ? null : () => _handleCancelBrokerRide(ride),
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: const Text(
+                    "HUỶ ĐƠN ĐÃ ĐẨY",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.error,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Helpers cho tab broker
+  String _formatMoney(num value) {
+    final v = value.toStringAsFixed(0);
+    return "$v đ";
+  }
+
+  String _formatDateTime(DateTime dt) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return "${two(dt.day)}/${two(dt.month)}/${dt.year} ${two(dt.hour)}:${two(dt.minute)}";
+  }
+
+  Color _brokerStatusColor(int status) {
+    switch (status) {
+      case 1:
+        return Colors.orange;
+      case 2:
+        return Colors.blue;
+      case 3:
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _brokerStatusText(int status) {
+    switch (status) {
+      case 1:
+        return "ĐÃ ĐẨY";
+      case 2:
+        return "ĐANG XỬ LÝ";
+      case 3:
+        return "ĐÃ NHẬN";
+      default:
+        return "KHÁC";
+    }
+  }
+
   Widget _buildLocationLine(String from, String to) {
     return Column(
       children: [
         Row(
           children: [
-            const Icon(Icons.radio_button_checked, size: 16, color: Colors.green),
+            const Icon(Icons.radio_button_checked,
+                size: 16, color: Colors.green),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -449,7 +809,8 @@ class _ActivityScreenState extends State<ActivityScreen>
             padding: EdgeInsets.only(left: 7.5),
             child: SizedBox(
               height: 12,
-              child: VerticalDivider(width: 1, thickness: 1, color: Colors.grey),
+              child: VerticalDivider(
+                  width: 1, thickness: 1, color: Colors.grey),
             ),
           ),
         ),
