@@ -11,6 +11,7 @@ import 'withdrawal_history_screen.dart';
 import 'package:intl/intl.dart';
 
 import 'driver_booking_screen.dart';
+import '../chat_to_order/chat_screen.dart';
 
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
@@ -58,12 +59,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     final goldColor = theme.colorScheme.secondary;
 
     final List<Widget> screens = [
-      const ReceiveOrderTab(), // Index 0
+      const RecieveOrderScreen(), // Index 0
 
       DriverBookingScreen(
         onGoToPushedOrdersTab: () => setState(() => _currentIndex = 3),
       ), // Index 1
-
       // Trang chủ Dashboard (Index 2 - Ở giữa)
       _HomeDashboard(
         profile: _profile,
@@ -93,8 +93,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           type: BottomNavigationBarType.fixed,
           selectedItemColor: goldColor,
           unselectedItemColor: Colors.grey,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
+          selectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 11,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w500,
+            fontSize: 11,
+          ),
           items: [
             const BottomNavigationBarItem(
               icon: Icon(Icons.assignment_turned_in_rounded),
@@ -123,7 +129,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 child: Icon(
                   Icons.home_rounded,
                   size: 30,
-                  color: _currentIndex == 2 ? Colors.white : Colors.grey.shade600,
+                  color: _currentIndex == 2
+                      ? Colors.white
+                      : Colors.grey.shade600,
                 ),
               ),
               label: 'Trang chủ',
@@ -155,7 +163,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           CircleAvatar(
             radius: 26,
             backgroundColor: Colors.white.withOpacity(0.2),
-            foregroundImage: (_profile != null && _profile!.avatarUrl.isNotEmpty)
+            foregroundImage:
+                (_profile != null && _profile!.avatarUrl.isNotEmpty)
                 ? NetworkImage(_profile!.avatarUrl)
                 : null,
             child: (_profile == null || _profile!.avatarUrl.isEmpty)
@@ -169,10 +178,16 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _isLoadingProfile ? "Đang tải..." : (_profile?.fullName ?? "Tài xế"),
+                  _isLoadingProfile
+                      ? "Đang tải..."
+                      : (_profile?.fullName ?? "Tài xế"),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -260,7 +275,7 @@ class _HomeDashboard extends StatelessWidget {
                   "NHẬN ĐƠN MỚI",
                   Icons.near_me_rounded,
                   Colors.orange,
-                      () => onNavigate(0),
+                  () => onNavigate(0),
                 ),
 
                 // Đẩy đơn chuyển về Index 1
@@ -269,7 +284,7 @@ class _HomeDashboard extends StatelessWidget {
                   "ĐẨY ĐƠN",
                   Icons.upload_file_rounded,
                   theme.colorScheme.secondary,
-                      () => onNavigate(1),
+                  () => onNavigate(1),
                 ),
 
                 _buildMenuCard(
@@ -277,30 +292,44 @@ class _HomeDashboard extends StatelessWidget {
                   "LỊCH SỬ CHUYẾN",
                   Icons.assignment_rounded,
                   Colors.blue,
-                      () => onNavigate(3),
+                  () => onNavigate(3),
+                ),
+                _buildMenuCard(
+                  context,
+                  "NHÓM CHAT",
+                  Icons.forum_rounded,
+                  const Color(0xFF145E44),
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const DriverGroupChatScreen(),
+                    ),
+                  ),
                 ),
                 _buildMenuCard(
                   context,
                   "NẠP TIỀN VÍ",
                   Icons.account_balance_wallet_rounded,
                   Colors.green,
-                      () => _showDepositDialog(context, theme),
+                  () => _showDepositDialog(context, theme),
                 ),
                 _buildMenuCard(
                   context,
                   "RÚT TIỀN",
                   Icons.payments_outlined,
                   Colors.redAccent,
-                      () => _showWithdrawDialog(context),
+                  () => _showWithdrawDialog(context),
                 ),
                 _buildMenuCard(
                   context,
                   "LỊCH SỬ RÚT",
                   Icons.history_rounded,
                   Colors.purple,
-                      () => Navigator.push(
+                  () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const WithdrawalHistoryScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const WithdrawalHistoryScreen(),
+                    ),
                   ),
                 ),
               ],
@@ -313,12 +342,12 @@ class _HomeDashboard extends StatelessWidget {
   }
 
   Widget _buildMenuCard(
-      BuildContext context,
-      String title,
-      IconData icon,
-      Color color,
-      VoidCallback onTap,
-      ) {
+    BuildContext context,
+    String title,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
     final goldColor = Theme.of(context).colorScheme.secondary;
     return InkWell(
       onTap: onTap,
@@ -336,7 +365,11 @@ class _HomeDashboard extends StatelessWidget {
             Stack(
               alignment: Alignment.center,
               children: [
-                Icon(Icons.circle, color: goldColor.withOpacity(0.15), size: 45),
+                Icon(
+                  Icons.circle,
+                  color: goldColor.withOpacity(0.15),
+                  size: 45,
+                ),
                 Icon(icon, size: 38, color: color),
               ],
             ),
@@ -368,7 +401,10 @@ class _HomeDashboard extends StatelessWidget {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text("Hủy")),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text("Hủy"),
+          ),
           ElevatedButton(
             onPressed: () {
               final amount = double.tryParse(amountController.text);
@@ -386,16 +422,29 @@ class _HomeDashboard extends StatelessWidget {
     );
   }
 
-  void _showQRDialog(BuildContext parentContext, ThemeData theme, double amount, String content) async {
+  void _showQRDialog(
+    BuildContext parentContext,
+    ThemeData theme,
+    double amount,
+    String content,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: parentContext,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: const Text("Lưu ý quan trọng"),
-        content: const Text("Vui lòng KHÔNG tắt ứng dụng cho đến khi hệ thống xác nhận thành công."),
+        content: const Text(
+          "Vui lòng KHÔNG tắt ứng dụng cho đến khi hệ thống xác nhận thành công.",
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Hủy")),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("Tôi đã hiểu")),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Hủy"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Tôi đã hiểu"),
+          ),
         ],
       ),
     );
@@ -428,7 +477,11 @@ class _HomeDashboard extends StatelessWidget {
                 try {
                   final prefs = await SharedPreferences.getInstance();
                   final token = prefs.getString('accessToken') ?? '';
-                  final res = await ApiService.depositWallet(accessToken: token, amount: amount, content: content);
+                  final res = await ApiService.depositWallet(
+                    accessToken: token,
+                    amount: amount,
+                    content: content,
+                  );
                   if (res.statusCode == 200) {
                     final body = jsonDecode(res.body);
                     if (body['success'] == true) {
@@ -446,18 +499,29 @@ class _HomeDashboard extends StatelessWidget {
             final seconds = (countdown % 60).toString().padLeft(2, '0');
 
             return Dialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text("Quét mã QR để nạp tiền", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Text(
+                      "Quét mã QR để nạp tiền",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     Image.network(qrUrl, height: 280),
                     const SizedBox(height: 8),
                     Text("Số tiền: ${amount.toStringAsFixed(0)} đ"),
-                    Text("Còn lại: $minutes:$seconds", style: const TextStyle(color: Colors.red)),
+                    Text(
+                      "Còn lại: $minutes:$seconds",
+                      style: const TextStyle(color: Colors.red),
+                    ),
                     TextButton(
                       onPressed: () {
                         countdownTimer?.cancel();
@@ -465,7 +529,7 @@ class _HomeDashboard extends StatelessWidget {
                         Navigator.pop(dialogCtx);
                       },
                       child: const Text("Đóng"),
-                    )
+                    ),
                   ],
                 ),
               ),
@@ -498,7 +562,11 @@ class _HomeDashboard extends StatelessWidget {
 class WithdrawDialogContent extends StatefulWidget {
   final double currentWallet;
   final int driverId;
-  const WithdrawDialogContent({super.key, required this.currentWallet, required this.driverId});
+  const WithdrawDialogContent({
+    super.key,
+    required this.currentWallet,
+    required this.driverId,
+  });
   @override
   State<WithdrawDialogContent> createState() => _WithdrawDialogContentState();
 }
@@ -544,7 +612,9 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setModalState) {
@@ -553,20 +623,30 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  const Text("Chọn ngân hàng", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text(
+                    "Chọn ngân hàng",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 12),
                   TextField(
                     decoration: InputDecoration(
                       hintText: "Tìm ngân hàng...",
                       prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     onChanged: (value) {
                       setModalState(() {
                         _filteredBanks = _banks.where((bank) {
                           final q = value.toLowerCase();
-                          return bank['name'].toString().toLowerCase().contains(q) ||
-                              bank['shortName'].toString().toLowerCase().contains(q);
+                          return bank['name'].toString().toLowerCase().contains(
+                                q,
+                              ) ||
+                              bank['shortName']
+                                  .toString()
+                                  .toLowerCase()
+                                  .contains(q);
                         }).toList();
                       });
                     },
@@ -632,11 +712,16 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          TextField(controller: _amountController, decoration: const InputDecoration(labelText: "Số tiền muốn rút")),
+          TextField(
+            controller: _amountController,
+            decoration: const InputDecoration(labelText: "Số tiền muốn rút"),
+          ),
           const SizedBox(height: 12),
           InkWell(
             onTap: () => _showBankPicker(context),
@@ -646,18 +731,26 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
             ),
           ),
           const SizedBox(height: 12),
-          TextField(controller: _accountNumberController, decoration: const InputDecoration(labelText: "Số tài khoản")),
+          TextField(
+            controller: _accountNumberController,
+            decoration: const InputDecoration(labelText: "Số tài khoản"),
+          ),
           const SizedBox(height: 12),
-          TextField(controller: _accountNameController, decoration: const InputDecoration(labelText: "Tên chủ tài khoản")),
+          TextField(
+            controller: _accountNameController,
+            decoration: const InputDecoration(labelText: "Tên chủ tài khoản"),
+          ),
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _isSubmitting ? null : _confirmWithdraw,
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+              ),
               child: const Text("GỬI YÊU CẦU RÚT TIỀN"),
             ),
-          )
+          ),
         ],
       ),
     );

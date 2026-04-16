@@ -8,10 +8,14 @@ import 'driver_booking_confirm.dart';
 
 class DriverBookingScreen extends StatefulWidget {
   final VoidCallback? onGoToPushedOrdersTab;
+  final int? groupId;
+  final bool closeOnSuccess;
 
   const DriverBookingScreen({
     super.key,
     this.onGoToPushedOrdersTab,
+    this.groupId,
+    this.closeOnSuccess = false,
   });
 
   @override
@@ -124,7 +128,10 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                 const SizedBox(width: 8),
                 Text(
                   title,
-                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -139,10 +146,12 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
   int? _tryParseInt(String raw) => int.tryParse(raw.trim());
   num? _tryParseNum(String raw) => num.tryParse(raw.trim());
 
-  String _formatDate(DateTime? date) => date == null ? "" : DateFormat('dd/MM/yyyy').format(date);
+  String _formatDate(DateTime? date) =>
+      date == null ? "" : DateFormat('dd/MM/yyyy').format(date);
 
-  String _formatTime(TimeOfDay? t) =>
-      t == null ? "" : "${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}";
+  String _formatTime(TimeOfDay? t) => t == null
+      ? ""
+      : "${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}";
 
   String? _buildPickupIso() {
     if (_pickupDate == null || _pickupTime == null) return null;
@@ -158,8 +167,8 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
 
   String _getNameById(List<dynamic> items, int? id) {
     if (id == null) return '';
-    final found = items.cast<dynamic?>().firstWhere(
-          (e) => e != null && e['id'].toString() == id.toString(),
+    final found = items.cast<dynamic>().firstWhere(
+      (e) => e != null && e['id'].toString() == id.toString(),
       orElse: () => null,
     );
     return found?['name']?.toString() ?? '';
@@ -201,16 +210,21 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                     Expanded(
                       child: Text(
                         title,
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, null),
                       child: Text(
                         "Đóng",
-                        style: TextStyle(color: Theme.of(context).colorScheme.secondary),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.secondary,
+                        ),
                       ),
-                    )
+                    ),
                   ],
                 ),
               ),
@@ -219,38 +233,52 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                 child: items.isEmpty
                     ? const Center(child: CircularProgressIndicator())
                     : ListView.separated(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  itemCount: items.length,
-                  separatorBuilder: (context, index) =>
-                  const Divider(height: 1, indent: 20, endIndent: 20),
-                  itemBuilder: (context, index) {
-                    final it = items[index];
-                    final id =
-                    it['id'] is int ? it['id'] as int : int.tryParse(it['id'].toString());
-                    final name = it['name']?.toString() ?? '';
-                    final bool isDisabled =
-                    (id != null && disabledId != null && id.toString() == disabledId.toString());
-                    final bool isSelected =
-                    (id != null && selectedId != null && id.toString() == selectedId.toString());
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        itemCount: items.length,
+                        separatorBuilder: (context, index) =>
+                            const Divider(height: 1, indent: 20, endIndent: 20),
+                        itemBuilder: (context, index) {
+                          final it = items[index];
+                          final id = it['id'] is int
+                              ? it['id'] as int
+                              : int.tryParse(it['id'].toString());
+                          final name = it['name']?.toString() ?? '';
+                          final bool isDisabled =
+                              (id != null &&
+                              disabledId != null &&
+                              id.toString() == disabledId.toString());
+                          final bool isSelected =
+                              (id != null &&
+                              selectedId != null &&
+                              id.toString() == selectedId.toString());
 
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-                      leading: Icon(
-                        icon,
-                        color: isDisabled ? Colors.grey[300] : Theme.of(context).colorScheme.secondary,
+                          return ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 4,
+                            ),
+                            leading: Icon(
+                              icon,
+                              color: isDisabled
+                                  ? Colors.grey[300]
+                                  : Theme.of(context).colorScheme.secondary,
+                            ),
+                            title: Text(
+                              name,
+                              style: TextStyle(
+                                color: isDisabled ? Colors.grey : Colors.black,
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
+                                    : FontWeight.w600,
+                                fontSize: 16,
+                              ),
+                            ),
+                            onTap: (id == null || isDisabled)
+                                ? null
+                                : () => Navigator.pop(ctx, id),
+                          );
+                        },
                       ),
-                      title: Text(
-                        name,
-                        style: TextStyle(
-                          color: isDisabled ? Colors.grey : Colors.black,
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                      ),
-                      onTap: (id == null || isDisabled) ? null : () => Navigator.pop(ctx, id),
-                    );
-                  },
-                ),
               ),
             ],
           ),
@@ -270,7 +298,10 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
       builder: (dialogCtx) {
         return Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
+          ),
           child: StatefulBuilder(
             builder: (context, setDialogState) {
               return Container(
@@ -333,20 +364,29 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                         children: [
                           Expanded(
                             child: CupertinoPicker(
-                              scrollController: FixedExtentScrollController(initialItem: selectedHour),
+                              scrollController: FixedExtentScrollController(
+                                initialItem: selectedHour,
+                              ),
                               itemExtent: 40,
                               selectionOverlay: Container(
                                 decoration: BoxDecoration(
                                   border: Border(
-                                    top: BorderSide(color: theme.colorScheme.secondary, width: 1.5),
-                                    bottom: BorderSide(color: theme.colorScheme.secondary, width: 1.5),
+                                    top: BorderSide(
+                                      color: theme.colorScheme.secondary,
+                                      width: 1.5,
+                                    ),
+                                    bottom: BorderSide(
+                                      color: theme.colorScheme.secondary,
+                                      width: 1.5,
+                                    ),
                                   ),
                                 ),
                               ),
-                              onSelectedItemChanged: (index) => setDialogState(() => selectedHour = index),
+                              onSelectedItemChanged: (index) =>
+                                  setDialogState(() => selectedHour = index),
                               children: List.generate(
                                 24,
-                                    (index) => Center(
+                                (index) => Center(
                                   child: Text(
                                     index.toString().padLeft(2, '0'),
                                     style: const TextStyle(
@@ -369,20 +409,29 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                           ),
                           Expanded(
                             child: CupertinoPicker(
-                              scrollController: FixedExtentScrollController(initialItem: selectedMinute),
+                              scrollController: FixedExtentScrollController(
+                                initialItem: selectedMinute,
+                              ),
                               itemExtent: 40,
                               selectionOverlay: Container(
                                 decoration: BoxDecoration(
                                   border: Border(
-                                    top: BorderSide(color: theme.colorScheme.secondary, width: 1.5),
-                                    bottom: BorderSide(color: theme.colorScheme.secondary, width: 1.5),
+                                    top: BorderSide(
+                                      color: theme.colorScheme.secondary,
+                                      width: 1.5,
+                                    ),
+                                    bottom: BorderSide(
+                                      color: theme.colorScheme.secondary,
+                                      width: 1.5,
+                                    ),
                                   ),
                                 ),
                               ),
-                              onSelectedItemChanged: (index) => setDialogState(() => selectedMinute = index),
+                              onSelectedItemChanged: (index) =>
+                                  setDialogState(() => selectedMinute = index),
                               children: List.generate(
                                 60,
-                                    (index) => Center(
+                                (index) => Center(
                                   child: Text(
                                     index.toString().padLeft(2, '0'),
                                     style: const TextStyle(
@@ -410,9 +459,9 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
 
   bool _validateAndShowErrors() {
     void showErr(String msg) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg), backgroundColor: Colors.red),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
     }
 
     if (_phoneController.text.trim().isEmpty) {
@@ -426,12 +475,16 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
       return false;
     }
 
-    if (_fromProvinceId == null || _fromDistrictId == null || _fromAddressController.text.trim().isEmpty) {
+    if (_fromProvinceId == null ||
+        _fromDistrictId == null ||
+        _fromAddressController.text.trim().isEmpty) {
       showErr("Vui lòng nhập đầy đủ điểm đón");
       return false;
     }
 
-    if (_toProvinceId == null || _toDistrictId == null || _toAddressController.text.trim().isEmpty) {
+    if (_toProvinceId == null ||
+        _toDistrictId == null ||
+        _toAddressController.text.trim().isEmpty) {
       showErr("Vui lòng nhập đầy đủ điểm đến");
       return false;
     }
@@ -477,9 +530,10 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
       offerPrice: num.parse(_offerPriceController.text.trim()),
       creatorEarn: num.parse(_creatorEarnController.text.trim()),
       note: _noteController.text.trim(),
+      groupId: widget.groupId,
     );
 
-    Navigator.push(
+    Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => DriverBookingConfirmScreen(
@@ -489,7 +543,11 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
           onGoToPushedOrdersTab: widget.onGoToPushedOrdersTab,
         ),
       ),
-    );
+    ).then((created) {
+      if (created == true && widget.closeOnSuccess && mounted) {
+        Navigator.pop(context, true);
+      }
+    });
   }
 
   @override
@@ -506,7 +564,9 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
       data: theme.copyWith(
         textSelectionTheme: TextSelectionThemeData(
           cursorColor: gold, // màu con trỏ
-          selectionColor: gold.withOpacity(0.25), // (tuỳ chọn) màu highlight
+          selectionColor: gold.withValues(
+            alpha: 0.25,
+          ), // (tuỳ chọn) màu highlight
           selectionHandleColor: gold, // (tuỳ chọn) màu handle kéo
         ),
       ),
@@ -533,11 +593,20 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: "SĐT khách (customerPhone)",
-                      labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                      labelStyle: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
                       border: const OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.phone, color: theme.colorScheme.secondary),
+                      prefixIcon: Icon(
+                        Icons.phone,
+                        color: theme.colorScheme.secondary,
+                      ),
                       focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: theme.colorScheme.secondary, width: 2),
+                        borderSide: BorderSide(
+                          color: theme.colorScheme.secondary,
+                          width: 2,
+                        ),
                       ),
                     ),
                   ),
@@ -548,11 +617,17 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: "Ghi chú (note)",
-                      labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                      labelStyle: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
                       border: const OutlineInputBorder(),
                       alignLabelWithHint: true,
                       focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: theme.colorScheme.secondary, width: 2),
+                        borderSide: BorderSide(
+                          color: theme.colorScheme.secondary,
+                          width: 2,
+                        ),
                       ),
                     ),
                   ),
@@ -569,11 +644,20 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: "Số lượng (quantity)",
-                      labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                      labelStyle: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
                       border: const OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.people, color: theme.colorScheme.secondary),
+                      prefixIcon: Icon(
+                        Icons.people,
+                        color: theme.colorScheme.secondary,
+                      ),
                       focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: theme.colorScheme.secondary, width: 2),
+                        borderSide: BorderSide(
+                          color: theme.colorScheme.secondary,
+                          width: 2,
+                        ),
                       ),
                       helperText: "Nhập số nguyên ≥ 1",
                       helperStyle: const TextStyle(color: Colors.white70),
@@ -590,34 +674,55 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                     onTap: _loadingProvinces || _provinces.isEmpty
                         ? null
                         : () async {
-                      final chosen = await _showPicker(
-                        title: "Chọn tỉnh/TP đón",
-                        items: _provinces,
-                        selectedId: _fromProvinceId,
-                        disabledId: _toProvinceId,
-                        icon: Icons.location_city,
-                      );
-                      if (!mounted || chosen == null) return;
-                      setState(() => _fromProvinceId = chosen);
-                      await _loadDistrictsForFromProvince(chosen);
-                    },
+                            final chosen = await _showPicker(
+                              title: "Chọn tỉnh/TP đón",
+                              items: _provinces,
+                              selectedId: _fromProvinceId,
+                              disabledId: _toProvinceId,
+                              icon: Icons.location_city,
+                            );
+                            if (!mounted || chosen == null) return;
+                            setState(() => _fromProvinceId = chosen);
+                            await _loadDistrictsForFromProvince(chosen);
+                          },
                     child: AbsorbPointer(
                       child: TextFormField(
-                        controller: TextEditingController(text: fromProvinceName),
+                        controller: TextEditingController(
+                          text: fromProvinceName,
+                        ),
                         readOnly: true,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           labelText: "Tỉnh/TP đón",
-                          labelStyle: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w500),
-                          hintText: fromProvinceName.isEmpty ? "Chọn tỉnh/TP" : null,
+                          labelStyle: const TextStyle(
+                            color: Colors.white70,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          hintText: fromProvinceName.isEmpty
+                              ? "Chọn tỉnh/TP"
+                              : null,
                           hintStyle: const TextStyle(color: Colors.white54),
-                          border: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
-                          enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
+                          border: const OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white54),
+                          ),
+                          enabledBorder: const OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white54),
+                          ),
                           isDense: true,
-                          prefixIcon: Icon(Icons.location_city, size: 20, color: theme.colorScheme.secondary),
-                          suffixIcon: const Icon(Icons.unfold_more_rounded, color: Colors.white70),
+                          prefixIcon: Icon(
+                            Icons.location_city,
+                            size: 20,
+                            color: theme.colorScheme.secondary,
+                          ),
+                          suffixIcon: const Icon(
+                            Icons.unfold_more_rounded,
+                            color: Colors.white70,
+                          ),
                           focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: theme.colorScheme.secondary, width: 2),
+                            borderSide: BorderSide(
+                              color: theme.colorScheme.secondary,
+                              width: 2,
+                            ),
                           ),
                         ),
                       ),
@@ -628,33 +733,54 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                     onTap: (_loadingFromDistricts || _fromDistricts.isEmpty)
                         ? null
                         : () async {
-                      final chosen = await _showPicker(
-                        title: "Chọn quận/huyện đón",
-                        items: _fromDistricts,
-                        selectedId: _fromDistrictId,
-                        disabledId: null,
-                        icon: Icons.map,
-                      );
-                      if (!mounted || chosen == null) return;
-                      setState(() => _fromDistrictId = chosen);
-                    },
+                            final chosen = await _showPicker(
+                              title: "Chọn quận/huyện đón",
+                              items: _fromDistricts,
+                              selectedId: _fromDistrictId,
+                              disabledId: null,
+                              icon: Icons.map,
+                            );
+                            if (!mounted || chosen == null) return;
+                            setState(() => _fromDistrictId = chosen);
+                          },
                     child: AbsorbPointer(
                       child: TextFormField(
-                        controller: TextEditingController(text: fromDistrictName),
+                        controller: TextEditingController(
+                          text: fromDistrictName,
+                        ),
                         readOnly: true,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           labelText: "Quận/Huyện đón",
-                          labelStyle: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w500),
-                          hintText: fromDistrictName.isEmpty ? "Chọn quận/huyện" : null,
+                          labelStyle: const TextStyle(
+                            color: Colors.white70,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          hintText: fromDistrictName.isEmpty
+                              ? "Chọn quận/huyện"
+                              : null,
                           hintStyle: const TextStyle(color: Colors.white54),
-                          border: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
-                          enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
+                          border: const OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white54),
+                          ),
+                          enabledBorder: const OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white54),
+                          ),
                           isDense: true,
-                          prefixIcon: Icon(Icons.map, size: 20, color: theme.colorScheme.secondary),
-                          suffixIcon: const Icon(Icons.unfold_more_rounded, color: Colors.white70),
+                          prefixIcon: Icon(
+                            Icons.map,
+                            size: 20,
+                            color: theme.colorScheme.secondary,
+                          ),
+                          suffixIcon: const Icon(
+                            Icons.unfold_more_rounded,
+                            color: Colors.white70,
+                          ),
                           focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: theme.colorScheme.secondary, width: 2),
+                            borderSide: BorderSide(
+                              color: theme.colorScheme.secondary,
+                              width: 2,
+                            ),
                           ),
                         ),
                       ),
@@ -666,12 +792,22 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: "Địa chỉ đón (fromAddress)",
-                      labelStyle: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w500),
-                      border: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
-                      enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
+                      labelStyle: const TextStyle(
+                        color: Colors.white70,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      border: const OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white54),
+                      ),
+                      enabledBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white54),
+                      ),
                       isDense: true,
                       focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: theme.colorScheme.secondary, width: 2),
+                        borderSide: BorderSide(
+                          color: theme.colorScheme.secondary,
+                          width: 2,
+                        ),
                       ),
                     ),
                   ),
@@ -700,7 +836,10 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                               textButtonTheme: TextButtonThemeData(
                                 style: TextButton.styleFrom(
                                   foregroundColor: theme.colorScheme.secondary,
-                                  textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                  textStyle: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
                                 ),
                               ),
                             ),
@@ -712,16 +851,32 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                     },
                     child: AbsorbPointer(
                       child: TextField(
-                        controller: TextEditingController(text: _formatDate(_pickupDate)),
+                        controller: TextEditingController(
+                          text: _formatDate(_pickupDate),
+                        ),
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           labelText: "Ngày đón",
-                          labelStyle: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w500),
-                          border: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
-                          enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
-                          prefixIcon: Icon(Icons.event, size: 20, color: theme.colorScheme.secondary),
+                          labelStyle: const TextStyle(
+                            color: Colors.white70,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          border: const OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white54),
+                          ),
+                          enabledBorder: const OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white54),
+                          ),
+                          prefixIcon: Icon(
+                            Icons.event,
+                            size: 20,
+                            color: theme.colorScheme.secondary,
+                          ),
                           focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: theme.colorScheme.secondary, width: 2),
+                            borderSide: BorderSide(
+                              color: theme.colorScheme.secondary,
+                              width: 2,
+                            ),
                           ),
                         ),
                       ),
@@ -732,21 +887,43 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                     onTap: _pickTimeDialog,
                     child: AbsorbPointer(
                       child: TextField(
-                        controller: TextEditingController(text: _formatTime(_pickupTime)),
+                        controller: TextEditingController(
+                          text: _formatTime(_pickupTime),
+                        ),
                         readOnly: true,
-                        style: const TextStyle(color: Colors.white, fontSize: 18),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                        ),
                         textAlign: TextAlign.center,
                         decoration: InputDecoration(
                           labelText: "Giờ đón",
-                          labelStyle: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w500),
+                          labelStyle: const TextStyle(
+                            color: Colors.white70,
+                            fontWeight: FontWeight.w500,
+                          ),
                           hintText: "HH:MM",
                           hintStyle: const TextStyle(color: Colors.white38),
-                          border: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
-                          enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
-                          prefixIcon: Icon(Icons.access_time, size: 20, color: theme.colorScheme.secondary),
-                          suffixIcon: const Icon(Icons.unfold_more_rounded, color: Colors.white70),
+                          border: const OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white54),
+                          ),
+                          enabledBorder: const OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white54),
+                          ),
+                          prefixIcon: Icon(
+                            Icons.access_time,
+                            size: 20,
+                            color: theme.colorScheme.secondary,
+                          ),
+                          suffixIcon: const Icon(
+                            Icons.unfold_more_rounded,
+                            color: Colors.white70,
+                          ),
                           focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: theme.colorScheme.secondary, width: 2),
+                            borderSide: BorderSide(
+                              color: theme.colorScheme.secondary,
+                              width: 2,
+                            ),
                           ),
                         ),
                       ),
@@ -763,17 +940,17 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                     onTap: _loadingProvinces || _provinces.isEmpty
                         ? null
                         : () async {
-                      final chosen = await _showPicker(
-                        title: "Chọn tỉnh/TP đến",
-                        items: _provinces,
-                        selectedId: _toProvinceId,
-                        disabledId: _fromProvinceId,
-                        icon: Icons.location_city,
-                      );
-                      if (!mounted || chosen == null) return;
-                      setState(() => _toProvinceId = chosen);
-                      await _loadDistrictsForToProvince(chosen);
-                    },
+                            final chosen = await _showPicker(
+                              title: "Chọn tỉnh/TP đến",
+                              items: _provinces,
+                              selectedId: _toProvinceId,
+                              disabledId: _fromProvinceId,
+                              icon: Icons.location_city,
+                            );
+                            if (!mounted || chosen == null) return;
+                            setState(() => _toProvinceId = chosen);
+                            await _loadDistrictsForToProvince(chosen);
+                          },
                     child: AbsorbPointer(
                       child: TextFormField(
                         controller: TextEditingController(text: toProvinceName),
@@ -781,16 +958,35 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           labelText: "Tỉnh/TP đến",
-                          labelStyle: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w500),
-                          hintText: toProvinceName.isEmpty ? "Chọn tỉnh/TP" : null,
+                          labelStyle: const TextStyle(
+                            color: Colors.white70,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          hintText: toProvinceName.isEmpty
+                              ? "Chọn tỉnh/TP"
+                              : null,
                           hintStyle: const TextStyle(color: Colors.white54),
-                          border: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
-                          enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
+                          border: const OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white54),
+                          ),
+                          enabledBorder: const OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white54),
+                          ),
                           isDense: true,
-                          prefixIcon: Icon(Icons.location_city, size: 20, color: theme.colorScheme.secondary),
-                          suffixIcon: const Icon(Icons.unfold_more_rounded, color: Colors.white70),
+                          prefixIcon: Icon(
+                            Icons.location_city,
+                            size: 20,
+                            color: theme.colorScheme.secondary,
+                          ),
+                          suffixIcon: const Icon(
+                            Icons.unfold_more_rounded,
+                            color: Colors.white70,
+                          ),
                           focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: theme.colorScheme.secondary, width: 2),
+                            borderSide: BorderSide(
+                              color: theme.colorScheme.secondary,
+                              width: 2,
+                            ),
                           ),
                         ),
                       ),
@@ -801,16 +997,16 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                     onTap: (_loadingToDistricts || _toDistricts.isEmpty)
                         ? null
                         : () async {
-                      final chosen = await _showPicker(
-                        title: "Chọn quận/huyện đến",
-                        items: _toDistricts,
-                        selectedId: _toDistrictId,
-                        disabledId: null,
-                        icon: Icons.map,
-                      );
-                      if (!mounted || chosen == null) return;
-                      setState(() => _toDistrictId = chosen);
-                    },
+                            final chosen = await _showPicker(
+                              title: "Chọn quận/huyện đến",
+                              items: _toDistricts,
+                              selectedId: _toDistrictId,
+                              disabledId: null,
+                              icon: Icons.map,
+                            );
+                            if (!mounted || chosen == null) return;
+                            setState(() => _toDistrictId = chosen);
+                          },
                     child: AbsorbPointer(
                       child: TextFormField(
                         controller: TextEditingController(text: toDistrictName),
@@ -818,16 +1014,35 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           labelText: "Quận/Huyện đến",
-                          labelStyle: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w500),
-                          hintText: toDistrictName.isEmpty ? "Chọn quận/huyện" : null,
+                          labelStyle: const TextStyle(
+                            color: Colors.white70,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          hintText: toDistrictName.isEmpty
+                              ? "Chọn quận/huyện"
+                              : null,
                           hintStyle: const TextStyle(color: Colors.white54),
-                          border: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
-                          enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
+                          border: const OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white54),
+                          ),
+                          enabledBorder: const OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white54),
+                          ),
                           isDense: true,
-                          prefixIcon: Icon(Icons.map, size: 20, color: theme.colorScheme.secondary),
-                          suffixIcon: const Icon(Icons.unfold_more_rounded, color: Colors.white70),
+                          prefixIcon: Icon(
+                            Icons.map,
+                            size: 20,
+                            color: theme.colorScheme.secondary,
+                          ),
+                          suffixIcon: const Icon(
+                            Icons.unfold_more_rounded,
+                            color: Colors.white70,
+                          ),
                           focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: theme.colorScheme.secondary, width: 2),
+                            borderSide: BorderSide(
+                              color: theme.colorScheme.secondary,
+                              width: 2,
+                            ),
                           ),
                         ),
                       ),
@@ -839,12 +1054,22 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: "Địa chỉ đến (toAddress)",
-                      labelStyle: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w500),
-                      border: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
-                      enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
+                      labelStyle: const TextStyle(
+                        color: Colors.white70,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      border: const OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white54),
+                      ),
+                      enabledBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white54),
+                      ),
                       isDense: true,
                       focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: theme.colorScheme.secondary, width: 2),
+                        borderSide: BorderSide(
+                          color: theme.colorScheme.secondary,
+                          width: 2,
+                        ),
                       ),
                     ),
                   ),
@@ -861,11 +1086,20 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: "Giá chào (offerPrice)",
-                      labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                      labelStyle: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
                       border: const OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.price_change, color: theme.colorScheme.secondary),
+                      prefixIcon: Icon(
+                        Icons.price_change,
+                        color: theme.colorScheme.secondary,
+                      ),
                       focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: theme.colorScheme.secondary, width: 2),
+                        borderSide: BorderSide(
+                          color: theme.colorScheme.secondary,
+                          width: 2,
+                        ),
                       ),
                       helperText: "VD: 400000",
                       helperStyle: const TextStyle(color: Colors.white70),
@@ -878,33 +1112,26 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: "Tiền nhận (creatorEarn)",
-                      labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                      labelStyle: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
                       border: const OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.attach_money, color: theme.colorScheme.secondary),
+                      prefixIcon: Icon(
+                        Icons.attach_money,
+                        color: theme.colorScheme.secondary,
+                      ),
                       focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: theme.colorScheme.secondary, width: 2),
+                        borderSide: BorderSide(
+                          color: theme.colorScheme.secondary,
+                          width: 2,
+                        ),
                       ),
                       helperText: "VD: 350000",
                       helperStyle: const TextStyle(color: Colors.white70),
                     ),
                   ),
                 ],
-              ),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _goNext,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                    backgroundColor: theme.colorScheme.secondary,
-                    foregroundColor: Colors.black87,
-                  ),
-                  child: const Text(
-                    "TIẾP THEO",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
               ),
               const SizedBox(height: 110),
             ],
@@ -916,7 +1143,7 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
             color: theme.colorScheme.primary,
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.3),
+                color: Colors.grey.withValues(alpha: 0.3),
                 spreadRadius: 1,
                 blurRadius: 10,
                 offset: const Offset(0, -2),
@@ -929,7 +1156,9 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
               onPressed: _goNext,
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
                 backgroundColor: theme.colorScheme.secondary,
                 foregroundColor: Colors.black87,
               ),

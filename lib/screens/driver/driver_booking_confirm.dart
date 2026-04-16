@@ -23,10 +23,12 @@ class DriverBookingConfirmScreen extends StatefulWidget {
   });
 
   @override
-  State<DriverBookingConfirmScreen> createState() => _DriverBookingConfirmScreenState();
+  State<DriverBookingConfirmScreen> createState() =>
+      _DriverBookingConfirmScreenState();
 }
 
-class _DriverBookingConfirmScreenState extends State<DriverBookingConfirmScreen> {
+class _DriverBookingConfirmScreenState
+    extends State<DriverBookingConfirmScreen> {
   bool _isCreatingRide = false;
 
   String formatCurrency(num value) {
@@ -73,11 +75,11 @@ class _DriverBookingConfirmScreenState extends State<DriverBookingConfirmScreen>
   }
 
   Widget _buildTextPriceRow(
-      String label,
-      String value, {
-        bool isBold = false,
-        Color? color,
-      }) {
+    String label,
+    String value, {
+    bool isBold = false,
+    Color? color,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -105,11 +107,11 @@ class _DriverBookingConfirmScreenState extends State<DriverBookingConfirmScreen>
   }
 
   Widget _buildPriceRow(
-      String label,
-      num amount, {
-        bool isBold = false,
-        Color? color,
-      }) {
+    String label,
+    num amount, {
+    bool isBold = false,
+    Color? color,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -166,7 +168,9 @@ class _DriverBookingConfirmScreenState extends State<DriverBookingConfirmScreen>
             ),
             Divider(
               height: 20,
-              color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+              color: Theme.of(
+                context,
+              ).colorScheme.secondary.withValues(alpha: 0.3),
             ),
             ...children,
           ],
@@ -178,8 +182,8 @@ class _DriverBookingConfirmScreenState extends State<DriverBookingConfirmScreen>
   Future<String> _getProvinceName(int provinceId) async {
     try {
       final provinces = await ApiService.getProvinces();
-      final p = provinces.cast<dynamic?>().firstWhere(
-            (x) => x != null && x['id'].toString() == provinceId.toString(),
+      final p = provinces.cast<dynamic>().firstWhere(
+        (x) => x != null && x['id'].toString() == provinceId.toString(),
         orElse: () => null,
       );
       return p?['name']?.toString() ?? '';
@@ -191,8 +195,8 @@ class _DriverBookingConfirmScreenState extends State<DriverBookingConfirmScreen>
   Future<String> _getDistrictName(int provinceId, int districtId) async {
     try {
       final districts = await ApiService.getDistricts(provinceId: provinceId);
-      final d = districts.cast<dynamic?>().firstWhere(
-            (x) => x != null && x['id'].toString() == districtId.toString(),
+      final d = districts.cast<dynamic>().firstWhere(
+        (x) => x != null && x['id'].toString() == districtId.toString(),
         orElse: () => null,
       );
       return d?['name']?.toString() ?? '';
@@ -210,7 +214,10 @@ class _DriverBookingConfirmScreenState extends State<DriverBookingConfirmScreen>
     if (token == null || token.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Bạn chưa đăng nhập'), backgroundColor: Colors.red),
+          const SnackBar(
+            content: Text('Bạn chưa đăng nhập'),
+            backgroundColor: Colors.red,
+          ),
         );
         setState(() => _isCreatingRide = false);
       }
@@ -233,6 +240,7 @@ class _DriverBookingConfirmScreenState extends State<DriverBookingConfirmScreen>
         offerPrice: req.offerPrice,
         creatorEarn: req.creatorEarn,
         note: req.note,
+        groupId: req.groupId,
       );
 
       if (!mounted) return;
@@ -244,14 +252,20 @@ class _DriverBookingConfirmScreenState extends State<DriverBookingConfirmScreen>
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(ok ? 'Tạo/đẩy đơn thành công' : 'Tạo/đẩy đơn thất bại'),
+            content: Text(
+              ok
+                  ? (req.groupId != null
+                        ? 'Tạo và đẩy đơn vào nhóm chat thành công'
+                        : 'Tạo/đẩy đơn thành công')
+                  : 'Tạo/đẩy đơn thất bại',
+            ),
             backgroundColor: ok ? Colors.green : Colors.red,
           ),
         );
 
         if (ok) {
           widget.onGoToPushedOrdersTab?.call();
-          Navigator.pop(context);
+          Navigator.pop(context, true);
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -264,10 +278,7 @@ class _DriverBookingConfirmScreenState extends State<DriverBookingConfirmScreen>
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Lỗi: $e'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) setState(() => _isCreatingRide = false);
@@ -301,11 +312,19 @@ class _DriverBookingConfirmScreenState extends State<DriverBookingConfirmScreen>
       ),
       body: FutureBuilder<_ConfirmLocationNames>(
         future: () async {
-          final fromProvinceName = await _getProvinceName(widget.fromProvinceId);
+          final fromProvinceName = await _getProvinceName(
+            widget.fromProvinceId,
+          );
           final toProvinceName = await _getProvinceName(widget.toProvinceId);
 
-          final fromDistrictName = await _getDistrictName(widget.fromProvinceId, req.fromDistrictId);
-          final toDistrictName = await _getDistrictName(widget.toProvinceId, req.toDistrictId);
+          final fromDistrictName = await _getDistrictName(
+            widget.fromProvinceId,
+            req.fromDistrictId,
+          );
+          final toDistrictName = await _getDistrictName(
+            widget.toProvinceId,
+            req.toDistrictId,
+          );
 
           return _ConfirmLocationNames(
             fromProvinceName: fromProvinceName,
@@ -338,7 +357,8 @@ class _DriverBookingConfirmScreenState extends State<DriverBookingConfirmScreen>
                   children: [
                     _buildInfoRow("Số lượng:", req.quantity.toString()),
                     _buildInfoRow("SĐT khách:", req.customerPhone),
-                    if (req.note.trim().isNotEmpty) _buildInfoRow("Ghi chú:", req.note),
+                    if (req.note.trim().isNotEmpty)
+                      _buildInfoRow("Ghi chú:", req.note),
                     _buildInfoRow(
                       "Giờ đón:",
                       pickupDt == null
@@ -352,7 +372,8 @@ class _DriverBookingConfirmScreenState extends State<DriverBookingConfirmScreen>
                   title: "Điểm đón",
                   icon: Icons.my_location,
                   children: [
-                    if (fromProvince.isNotEmpty) _buildInfoRow("Tỉnh/Thành:", fromProvince),
+                    if (fromProvince.isNotEmpty)
+                      _buildInfoRow("Tỉnh/Thành:", fromProvince),
                     _buildInfoRow("Quận/Huyện:", fromDistrict),
                     _buildInfoRow("Địa chỉ:", req.fromAddress),
                   ],
@@ -362,7 +383,8 @@ class _DriverBookingConfirmScreenState extends State<DriverBookingConfirmScreen>
                   title: "Điểm đến",
                   icon: Icons.location_on,
                   children: [
-                    if (toProvince.isNotEmpty) _buildInfoRow("Tỉnh/Thành:", toProvince),
+                    if (toProvince.isNotEmpty)
+                      _buildInfoRow("Tỉnh/Thành:", toProvince),
                     _buildInfoRow("Quận/Huyện:", toDistrict),
                     _buildInfoRow("Địa chỉ:", req.toAddress),
                   ],
@@ -376,7 +398,7 @@ class _DriverBookingConfirmScreenState extends State<DriverBookingConfirmScreen>
                     _buildPriceRow("Tiền nhận:", req.creatorEarn),
                     Divider(
                       height: 20,
-                      color: theme.colorScheme.secondary.withOpacity(0.5),
+                      color: theme.colorScheme.secondary.withValues(alpha: 0.5),
                       thickness: 1.5,
                     ),
                     _buildTextPriceRow(
@@ -399,7 +421,7 @@ class _DriverBookingConfirmScreenState extends State<DriverBookingConfirmScreen>
           color: theme.colorScheme.primary,
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.3),
+              color: Colors.grey.withValues(alpha: 0.3),
               spreadRadius: 1,
               blurRadius: 10,
               offset: const Offset(0, -2),
@@ -410,10 +432,15 @@ class _DriverBookingConfirmScreenState extends State<DriverBookingConfirmScreen>
           children: [
             Expanded(
               child: OutlinedButton(
-                onPressed: _isCreatingRide ? null : () => Navigator.pop(context),
+                onPressed: _isCreatingRide
+                    ? null
+                    : () => Navigator.pop(context),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 50),
-                  side: BorderSide(color: theme.colorScheme.secondary, width: 2),
+                  side: BorderSide(
+                    color: theme.colorScheme.secondary,
+                    width: 2,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
                   ),
@@ -443,17 +470,20 @@ class _DriverBookingConfirmScreenState extends State<DriverBookingConfirmScreen>
                 ),
                 child: _isCreatingRide
                     ? const SizedBox(
-                  height: 22,
-                  width: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.black87,
-                  ),
-                )
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.black87,
+                        ),
+                      )
                     : const Text(
-                  "TẠO CHUYẾN",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
+                        "TẠO CHUYẾN",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
           ],

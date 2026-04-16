@@ -19,6 +19,7 @@ class CreateBrokerRideRequest {
   final num offerPrice;
   final num creatorEarn;
   final String note;
+  final int? groupId;
 
   const CreateBrokerRideRequest({
     required this.fromDistrictId,
@@ -32,6 +33,7 @@ class CreateBrokerRideRequest {
     required this.offerPrice,
     required this.creatorEarn,
     this.note = "",
+    this.groupId,
   });
 
   Map<String, dynamic> toJson() => {
@@ -46,6 +48,7 @@ class CreateBrokerRideRequest {
     "offerPrice": offerPrice,
     "creatorEarn": creatorEarn,
     "note": note,
+    if (groupId != null) "groupId": groupId,
   };
 
   String toRawJson() => jsonEncode(toJson());
@@ -68,10 +71,7 @@ class CreateBrokerRideResponse {
   final bool success;
   final CreateBrokerRideData? data;
 
-  const CreateBrokerRideResponse({
-    required this.success,
-    required this.data,
-  });
+  const CreateBrokerRideResponse({required this.success, required this.data});
 
   factory CreateBrokerRideResponse.fromJson(Map<String, dynamic> json) {
     return CreateBrokerRideResponse(
@@ -83,7 +83,9 @@ class CreateBrokerRideResponse {
   }
 
   factory CreateBrokerRideResponse.fromRawJson(String raw) =>
-      CreateBrokerRideResponse.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+      CreateBrokerRideResponse.fromJson(
+        jsonDecode(raw) as Map<String, dynamic>,
+      );
 }
 
 class CreateBrokerRideData {
