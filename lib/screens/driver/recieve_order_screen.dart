@@ -7,33 +7,55 @@ import '../../models/waiting_ride_model.dart';
 import '../../providers/recieve_order_provider.dart';
 import 'ride_detail_screen.dart';
 
-class RecieveOrderScreen extends StatefulWidget {
+class RecieveOrderScreen extends StatelessWidget {
   const RecieveOrderScreen({super.key});
 
   @override
-  State<RecieveOrderScreen> createState() => _RecieveOrderScreenState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => RecieveOrderProvider(),
+      child: const _RecieveOrderView(),
+    );
+  }
 }
 
-class _RecieveOrderScreenState extends State<RecieveOrderScreen>
+class _RecieveOrderView extends StatefulWidget {
+  const _RecieveOrderView();
+
+  @override
+  State<_RecieveOrderView> createState() => _RecieveOrderViewState();
+}
+
+class _RecieveOrderViewState extends State<_RecieveOrderView>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  bool _didInitProvider = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final provider =
-      Provider.of<RecieveOrderProvider>(context, listen: false);
-      await provider.init();
-    });
-
     _tabController.addListener(_handleTabSelection);
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (_didInitProvider) return;
+    _didInitProvider = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final provider = context.read<RecieveOrderProvider>();
+      await provider.init();
+    });
+  }
+
   void _handleTabSelection() {
-    final provider = Provider.of<RecieveOrderProvider>(context, listen: false);
+    if (!_tabController.indexIsChanging) return;
+
+    final provider = context.read<RecieveOrderProvider>();
     if (_tabController.index == 1 && !provider.isAcceptedLoaded) {
       provider.loadAcceptedRides();
     }
@@ -209,107 +231,103 @@ class _RecieveOrderScreenState extends State<RecieveOrderScreen>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return ChangeNotifierProvider(
-      create: (_) => RecieveOrderProvider(),
-      child: Consumer<RecieveOrderProvider>(
-        builder: (context, provider, _) {
-          final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
-          final bottomPadding = 12.0 + 24.0 + bottomSafe;
+    return Consumer<RecieveOrderProvider>(
+      builder: (context, provider, _) {
+        final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
+        final bottomPadding = 12.0 + 24.0 + bottomSafe;
 
-          return Scaffold(
-            backgroundColor: theme.scaffoldBackgroundColor,
-            appBar: AppBar(
-              title: Text(
-                "Nhận đơn",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.secondary,
-                ),
-              ),
-              elevation: 0,
-              backgroundColor: theme.colorScheme.primary,
-              foregroundColor: Colors.white,
-              bottom: TabBar(
-                controller: _tabController,
-                labelColor: theme.colorScheme.secondary,
-                labelStyle:
-                const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                unselectedLabelColor: Colors.white70,
-                unselectedLabelStyle:
-                const TextStyle(fontWeight: FontWeight.w600),
-                indicatorColor: theme.colorScheme.secondary,
-                indicatorWeight: 5.5,
-                tabs: const [
-                  Tab(text: "ĐƠN MỚI", icon: Icon(Icons.fiber_new_rounded)),
-                  Tab(
-                    text: "ĐƠN ĐÃ NHẬN",
-                    icon: Icon(Icons.assignment_turned_in_rounded),
-                  ),
-                ],
+        return Scaffold(
+          backgroundColor: theme.scaffoldBackgroundColor,
+          appBar: AppBar(
+            title: Text(
+              "Nhận đơn",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.secondary,
               ),
             ),
-            body: TabBarView(
+            elevation: 0,
+            backgroundColor: theme.colorScheme.primary,
+            foregroundColor: Colors.white,
+            bottom: TabBar(
               controller: _tabController,
-              children: [
-                Column(
-                  children: [
-                    _buildLocationFilter(),
-                    Expanded(
-                      child: RefreshIndicator(
-                        onRefresh: () async {
-                          await provider.loadMyBrokerRideIds();
-                          provider.pagingController.refresh();
-                        },
-                        child: SafeArea(
-                          bottom: true,
-                          child: PagedListView<int, WaitingRide>(
-                            pagingController: provider.pagingController,
-                            padding:
-                            EdgeInsets.fromLTRB(12, 12, 12, bottomPadding),
-                            physics: const BouncingScrollPhysics(
-                              parent: AlwaysScrollableScrollPhysics(),
-                            ),
-                            builderDelegate:
-                            PagedChildBuilderDelegate<WaitingRide>(
-                              itemBuilder: (context, item, index) =>
-                                  _buildRideCard(
-                                    context,
-                                    provider,
-                                    item,
-                                    true,
-                                  ),
-                              noItemsFoundIndicatorBuilder: (_) =>
-                                  _buildEmptyPlaceholder(context),
-                            ),
+              labelColor: theme.colorScheme.secondary,
+              labelStyle:
+              const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              unselectedLabelColor: Colors.white70,
+              unselectedLabelStyle:
+              const TextStyle(fontWeight: FontWeight.w600),
+              indicatorColor: theme.colorScheme.secondary,
+              indicatorWeight: 5.5,
+              tabs: const [
+                Tab(text: "ĐƠN MỚI", icon: Icon(Icons.fiber_new_rounded)),
+                Tab(
+                  text: "ĐƠN ĐÃ NHẬN",
+                  icon: Icon(Icons.assignment_turned_in_rounded),
+                ),
+              ],
+            ),
+          ),
+          body: TabBarView(
+            controller: _tabController,
+            children: [
+              Column(
+                children: [
+                  _buildLocationFilter(),
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: () async {
+                        await provider.loadMyBrokerRideIds();
+                        provider.pagingController.refresh();
+                      },
+                      child: SafeArea(
+                        bottom: true,
+                        child: PagedListView<int, WaitingRide>(
+                          pagingController: provider.pagingController,
+                          padding:
+                          EdgeInsets.fromLTRB(12, 12, 12, bottomPadding),
+                          physics: const BouncingScrollPhysics(
+                            parent: AlwaysScrollableScrollPhysics(),
+                          ),
+                          builderDelegate: PagedChildBuilderDelegate<WaitingRide>(
+                            itemBuilder: (context, item, index) =>
+                                _buildRideCard(
+                                  context,
+                                  provider,
+                                  item,
+                                  true,
+                                ),
+                            noItemsFoundIndicatorBuilder: (_) =>
+                                _buildEmptyPlaceholder(context),
                           ),
                         ),
                       ),
                     ),
-                  ],
-                ),
-                provider.isLoadingAcceptedRides
-                    ? Center(
-                  child: CircularProgressIndicator(
-                    color: theme.colorScheme.secondary,
                   ),
-                )
-                    : RefreshIndicator(
-                  onRefresh: provider.loadAcceptedRides,
-                  child: SafeArea(
-                    bottom: true,
-                    child: _buildOldOrderList(
-                      context,
-                      provider,
-                      provider.acceptedRidesStatus2,
-                    ),
+                ],
+              ),
+              provider.isLoadingAcceptedRides
+                  ? Center(
+                child: CircularProgressIndicator(
+                  color: theme.colorScheme.secondary,
+                ),
+              )
+                  : RefreshIndicator(
+                onRefresh: provider.loadAcceptedRides,
+                child: SafeArea(
+                  bottom: true,
+                  child: _buildOldOrderList(
+                    context,
+                    provider,
+                    provider.acceptedRidesStatus2,
                   ),
                 ),
-              ],
-            ),
-          );
-        },
-      ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

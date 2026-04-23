@@ -1,8 +1,10 @@
 ///Tài liệu cho file api này:
 ///https://docs.google.com/document/d/1MD5Tx42I-CpFgTNwrrwUhB8FsdQFhiiqAN_Xy0kUfAc/edit?tab=t.d9q2g56xpd8j
 import 'dart:convert';
+import 'package:beludriver_app/models/driver_onboarding_status_dto.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import '../models/driver_onboarding_status_dto.dart';
 
 class ApiService {
   static dynamic safeDecode(String? body) {
@@ -20,7 +22,7 @@ class ApiService {
   // -----------------------------------------------------------
   // BASE URL CHUẨN
   // -----------------------------------------------------------
-  static const String _baseUrl = "https://belucar.com/api/accountdriverapi";
+  static const String _baseUrl = "https://xeghepdongduong.com/api/accountdriverapi";
 
   // Default headers
   static Map<String, String> _defaultHeaders() => {
@@ -58,22 +60,24 @@ class ApiService {
     final url = Uri.parse("$_baseUrl/driver/login");
 
     try {
-      // Build body đúng theo tài liệu API
       final body = jsonEncode({
         "phone": phone,
         "password": password,
         "deviceToken": deviceToken,
       });
 
-      // Thực hiện gọi POST
       return await http
-          .post(url, headers: _defaultHeaders(), body: body)
+          .post(
+        url,
+        headers: _defaultHeaders(),
+        body: body,
+      )
           .timeout(const Duration(seconds: 20));
     } catch (e) {
-      // Trả về một Response lỗi giả lập nếu có sự cố kết nối để tránh Crash App
       return http.Response(
         jsonEncode({"message": "Lỗi kết nối mạng: $e"}),
         500,
+        headers: {"Content-Type": "application/json"},
       );
     }
   }
@@ -82,7 +86,7 @@ class ApiService {
   // 2️⃣ LOGOUT
   // -----------------------------------------------------------
   static Future<http.Response> Driverlogout(String accessToken) async {
-    final url = Uri.parse("https://belucar.com/api/accountdriverapi/logout");
+    final url = Uri.parse("https://xeghepdongduong.com/api/accountdriverapi/logout");
 
     try {
       return await http
@@ -101,8 +105,7 @@ class ApiService {
     required String phone,
     required String email,
     required String password,
-    required licenseNumber,
-    required String avatarFilePath, // Giữ nguyên type, logic xử lý bên dưới
+    required String licenseNumber,
   }) async {
     final url = Uri.parse("$_baseUrl/driver-register");
 
@@ -114,14 +117,6 @@ class ApiService {
       request.fields["email"] = email;
       request.fields["password"] = password;
       request.fields["licenseNumber"] = licenseNumber;
-
-      // Chỉ đính kèm file nếu đường dẫn không rỗng
-      if (avatarFilePath.isNotEmpty) {
-        request.files.add(
-          await http.MultipartFile.fromPath("avatar", avatarFilePath),
-        );
-      }
-      // ------------------------------------------------------------------
 
       final resStream = await request.send();
       return await http.Response.fromStream(resStream);
@@ -160,7 +155,7 @@ class ApiService {
     String? avatarFilePath, // optional
   }) async {
     final url = Uri.parse(
-      "https://belucar.com/api/accountdriverapi/driver-update-profile",
+      "https://xeghepdongduong.com/api/accountdriverapi/driver-update-profile",
     );
 
     try {
@@ -191,7 +186,7 @@ class ApiService {
     required String email,
   }) async {
     final url = Uri.parse(
-      "https://belucar.com/api/accountdriverapi/forgot-password",
+      "https://xeghepdongduong.com/api/accountdriverapi/forgot-password",
     );
 
     try {
@@ -212,7 +207,7 @@ class ApiService {
     required String newPassword,
   }) async {
     final url = Uri.parse(
-      "https://belucar.com/api/accountdriverapi/reset-password",
+      "https://xeghepdongduong.com/api/accountdriverapi/reset-password",
     );
 
     try {
@@ -238,7 +233,10 @@ class ApiService {
 
     try {
       return await http
-          .get(url, headers: _authHeaders(accessToken))
+          .get(
+        url,
+        headers: _authHeaders(accessToken),
+      )
           .timeout(const Duration(seconds: 20));
     } catch (e) {
       return _errorResponse(e);
@@ -252,7 +250,7 @@ class ApiService {
     required String newPassword,
   }) async {
     final url = Uri.parse(
-      "https://belucar.com/api/accountdriverapi/change-password",
+      "https://xeghepdongduong.com/api/accountdriverapi/change-password",
     );
 
     print("🔵 [API] CALL CHANGE PASSWORD → $url");
@@ -291,7 +289,7 @@ class ApiService {
   static Future<http.Response> deleteAccount({
     required String accessToken,
   }) async {
-    final url = Uri.parse("https://belucar.com/api/accountdriverapi/delete");
+    final url = Uri.parse("https://xeghepdongduong.com/api/accountdriverapi/delete");
 
     print("🔵 [API] CALL DELETE ACCOUNT → $url");
 
@@ -322,7 +320,7 @@ class ApiService {
     required double amount,
     required String content,
   }) async {
-    final url = Uri.parse("https://belucar.com/api/paymentapi/deposite");
+    final url = Uri.parse("https://xeghepdongduong.com/api/paymentapi/deposite");
 
     print("🔵 [API] DEPOSIT WALLET → $url");
     print("➡️ amount: $amount | content: $content");
@@ -359,7 +357,7 @@ class ApiService {
     int pageSize = 20,
   }) async {
     final url = Uri.parse(
-      "https://belucar.com/api/rideapi/waiting"
+      "https://xeghepdongduong.com/api/rideapi/waiting"
       "?page=$page&pageSize=$pageSize",
     );
 
@@ -390,7 +388,7 @@ class ApiService {
   static Future<http.Response> getAcceptedRides({
     required String accessToken,
   }) async {
-    final url = Uri.parse("https://belucar.com/api/driverapi/ride-confirmed");
+    final url = Uri.parse("https://xeghepdongduong.com/api/driverapi/ride-confirmed");
 
     print("🔵 [API] GET WAITING RIDES → $url");
 
@@ -423,7 +421,7 @@ class ApiService {
     required int rideSource, // 1 = hệ thống, 2 = đơn đẩy tài xế
   }) async {
     final url = Uri.parse(
-      "https://belucar.com/api/rideapi/accept/$id/$rideSource",
+      "https://xeghepdongduong.com/api/rideapi/accept/$id/$rideSource",
     );
 
     print("🔵 [API] ACCEPT RIDE → $url");
@@ -453,7 +451,7 @@ class ApiService {
   static Future<http.Response> getWalletHistory({
     required String accessToken,
   }) async {
-    final url = Uri.parse("https://belucar.com/api/paymentapi/history");
+    final url = Uri.parse("https://xeghepdongduong.com/api/paymentapi/history");
 
     print("🔵 [API] WALLET HISTORY → $url");
 
@@ -480,7 +478,7 @@ class ApiService {
 
   //lấy tỉnh để lọc đơn
   static Future<List<dynamic>> getProvinces() async {
-    final url = Uri.parse("https://belucar.com/api/provinceapi/active");
+    final url = Uri.parse("https://xeghepdongduong.com/api/provinceapi/active");
 
     try {
       final response = await http.get(url).timeout(const Duration(seconds: 15));
@@ -503,7 +501,7 @@ class ApiService {
   //Lấy huyện theo tỉnh
   static Future<List<dynamic>> getDistricts({required int provinceId}) async {
     final url = Uri.parse(
-      "https://belucar.com/api/provinceapi/district/$provinceId",
+      "https://xeghepdongduong.com/api/provinceapi/district/$provinceId",
     );
 
     try {
@@ -531,7 +529,7 @@ class ApiService {
     required int rideSource, // 👈 thêm
   }) async {
     final url = Uri.parse(
-      "https://belucar.com/api/driverapi/ride-detail/$rideId/$rideSource",
+      "https://xeghepdongduong.com/api/driverapi/ride-detail/$rideId/$rideSource",
     );
 
     try {
@@ -558,7 +556,7 @@ class ApiService {
     required int rideSource, // 👈 thêm
   }) async {
     final url = Uri.parse(
-      "https://belucar.com/api/driverapi/start/$rideId/$rideSource",
+      "https://xeghepdongduong.com/api/driverapi/start/$rideId/$rideSource",
     );
 
     try {
@@ -585,7 +583,7 @@ class ApiService {
     required int rideSource, // 👈 thêm
   }) async {
     final url = Uri.parse(
-      "https://belucar.com/api/driverapi/complete/$rideId/$rideSource",
+      "https://xeghepdongduong.com/api/driverapi/complete/$rideId/$rideSource",
     );
 
     try {
@@ -609,7 +607,7 @@ class ApiService {
   static Future<http.Response> getProcessingRides({
     required String accessToken,
   }) async {
-    final url = Uri.parse("https://belucar.com/api/driverapi/ride-process");
+    final url = Uri.parse("https://xeghepdongduong.com/api/driverapi/ride-process");
 
     print("🔵 [API] GET PROCESSING RIDES → $url");
 
@@ -638,7 +636,7 @@ class ApiService {
   static Future<http.Response> getRideHistory({
     required String accessToken,
   }) async {
-    final url = Uri.parse("https://belucar.com/api/driverapi/ride-history");
+    final url = Uri.parse("https://xeghepdongduong.com/api/driverapi/ride-history");
 
     print("🔵 [API] GET RIDE HISTORY → $url");
 
@@ -672,7 +670,7 @@ class ApiService {
     required String accountNumber,
     required String accountName,
   }) async {
-    final url = Uri.parse("https://belucar.com/api/withdrawalapi/create");
+    final url = Uri.parse("https://xeghepdongduong.com/api/withdrawalapi/create");
 
     return http.post(
       url,
@@ -695,7 +693,7 @@ class ApiService {
     required String accessToken,
   }) async {
     final url = Uri.parse(
-      "https://belucar.com/api/withdrawalapi/history-withdrawal",
+      "https://xeghepdongduong.com/api/withdrawalapi/history-withdrawal",
     );
 
     try {
@@ -737,7 +735,7 @@ class ApiService {
     required int fromDistrictId,
   }) async {
     final url = Uri.parse(
-      "https://belucar.com/api/rideapi/search",
+      "https://xeghepdongduong.com/api/rideapi/search",
     ).replace(queryParameters: {"fromDistrictId": fromDistrictId.toString()});
 
     print("🔵 [API] SEARCH RIDE BY DISTRICT → $url");
@@ -768,7 +766,7 @@ class ApiService {
     required String accessToken,
   }) async {
     final url = Uri.parse(
-      "https://belucar.com/api/rideapi/ride-count-by-province",
+      "https://xeghepdongduong.com/api/rideapi/ride-count-by-province",
     );
 
     return await http.get(
@@ -785,7 +783,7 @@ class ApiService {
     required int provinceId,
   }) async {
     final url = Uri.parse(
-      "https://belucar.com/api/rideapi/ride-count-by-district/$provinceId",
+      "https://xeghepdongduong.com/api/rideapi/ride-count-by-district/$provinceId",
     );
 
     print("🔵 [API] GET RIDE COUNT BY DISTRICT → $url");
@@ -812,7 +810,7 @@ class ApiService {
   }
 
   // API #23: Tạo đơn / Đẩy đơn (create-broker)
-  // POST https://belucar.com/api/rideapi/create-broker
+  // POST https://xeghepdongduong.com/api/rideapi/create-broker
   // Bearer Token: Access Token
   static Future<http.Response> createBrokerRide({
     required String accessToken,
@@ -829,7 +827,7 @@ class ApiService {
     String note = "",
     int? groupId,
   }) async {
-    final url = Uri.parse("https://belucar.com/api/rideapi/create-broker");
+    final url = Uri.parse("https://xeghepdongduong.com/api/rideapi/create-broker");
 
     try {
       final payload = {
@@ -880,12 +878,12 @@ class ApiService {
   }
 
   // API #24: Lấy danh sách các chuyến đã đẩy lên (status = 1,2,3)
-  // GET https://belucar.com/api/rideapi/ride-broker
+  // GET https://xeghepdongduong.com/api/rideapi/ride-broker
   // Bearer Token: Access Token
   static Future<http.Response> getBrokerRides({
     required String accessToken,
   }) async {
-    final url = Uri.parse("https://belucar.com/api/rideapi/ride-broker");
+    final url = Uri.parse("https://xeghepdongduong.com/api/rideapi/ride-broker");
 
     try {
       return await http
@@ -908,7 +906,7 @@ class ApiService {
     required int rideId,
   }) async {
     final url = Uri.parse(
-      "https://belucar.com/api/rideapi/cancel-broker/$rideId",
+      "https://xeghepdongduong.com/api/rideapi/cancel-broker/$rideId",
     );
 
     print("=== CANCEL BROKER RIDE ===");
@@ -934,6 +932,102 @@ class ApiService {
       return response;
     } catch (e) {
       print("ERROR CANCEL BROKER: $e");
+      return _errorResponse(e);
+    }
+  }
+
+  // -----------------------------------------------------------
+// GET ONBOARDING STATUS
+// -----------------------------------------------------------
+  static Future<DriverOnboardingStatusDto?> getOnboardingStatus(
+      String accessToken,
+      ) async {
+    try {
+      final url = Uri.parse("$_baseUrl/onboarding-status");
+
+      final response = await http.get(
+        url,
+        headers: _authHeaders(accessToken),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return DriverOnboardingStatusDto.fromJson(data);
+      } else {
+        print("get Onboarding Status failed: ${response.body}");
+        return null;
+      }
+    } catch (e) {
+      final error = _errorResponse(e);
+      print("get Onboarding Status error: ${error.body}");
+      return null;
+    }
+  }
+
+  // 4.1. API tạo yêu cầu nạp tiền theo worker
+  static Future<http.Response> createDepositRequest({
+    required String accessToken,
+    required int amount,
+  }) async {
+    final url = Uri.parse("https://xeghepdongduong.com/api/depositapi/create");
+
+    print("🔵 [API] CREATE DEPOSIT REQUEST → $url");
+    print("➡️ amount: $amount");
+
+    try {
+      final res = await http
+          .post(
+        url,
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $accessToken",
+        },
+        body: jsonEncode({
+          "amount": amount,
+        }),
+      )
+          .timeout(const Duration(seconds: 20));
+
+      print("📥 [API] STATUS: ${res.statusCode}");
+      print("📥 [API] BODY: ${res.body}");
+
+      return res;
+    } catch (e) {
+      print("❌ [API] CREATE DEPOSIT REQUEST ERROR: $e");
+      return _errorResponse(e);
+    }
+  }
+
+  // 4.2. API hủy yêu cầu nạp tiền
+  static Future<http.Response> cancelDepositRequest({
+    required String accessToken,
+    required int depositId,
+  }) async {
+    final url = Uri.parse(
+      "https://xeghepdongduong.com/api/depositapi/cancel/$depositId",
+    );
+
+    print("🔵 [API] CANCEL DEPOSIT REQUEST → $url");
+    print("➡️ depositId: $depositId");
+
+    try {
+      final res = await http
+          .put(
+        url,
+        headers: {
+          "Accept": "application/json",
+          "Authorization": "Bearer $accessToken",
+        },
+      )
+          .timeout(const Duration(seconds: 20));
+
+      print("📥 [API] STATUS: ${res.statusCode}");
+      print("📥 [API] BODY: ${res.body}");
+
+      return res;
+    } catch (e) {
+      print("❌ [API] CANCEL DEPOSIT REQUEST ERROR: $e");
       return _errorResponse(e);
     }
   }

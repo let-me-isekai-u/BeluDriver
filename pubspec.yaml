@@ -43,11 +43,7 @@ dependencies:
   firebase_core: ^4.3.0
   firebase_messaging: ^16.1.0
   signalr_netcore: ^1.4.4
-
-
-
-
-
+  lottie: ^2.7.0
 
 
 
@@ -70,6 +66,10 @@ flutter:
     - lib/assets/icons/ActivityLogo.png
     - lib/assets/tet_splash.png
     - lib/assets/icons/BeluDriver_launcher.png
+    - lib/assets/icons/dong_duong_driver_logo.png
+    - lib/assets/sample_car.png
+    - lib/assets/animations/Thanks.json
+    - lib/assets/summer_splash.png
 
 
 flutter_icons:

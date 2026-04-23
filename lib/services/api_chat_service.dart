@@ -9,7 +9,7 @@ class ApiChatService {
   final Future<String?> Function() tokenProvider;
   final http.Client _client;
 
-  static const String baseUrl = 'https://belucar.com/api';
+  static const String baseUrl = 'https://xeghepdongduong.com/api';
 
   Map<String, String> _headers({bool isJson = false}) {
     return {

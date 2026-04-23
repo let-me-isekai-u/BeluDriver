@@ -60,7 +60,6 @@ android {
 }
 
 dependencies {
-    // 🔥 Bổ sung dòng này
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }
 flutter {

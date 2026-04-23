@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../providers/driver/login_provider.dart';
+import '../forgot_password_screen.dart';
 import 'driver_home.dart';
 import 'driver_register_screen.dart';
-import '../forgot_password_screen.dart';
-import 'dart:convert';
-import '../../services/api_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-import '../../services/firebase_notification_service.dart';
 
 class DriverLoginScreen extends StatefulWidget {
   const DriverLoginScreen({super.key});
@@ -17,11 +15,6 @@ class DriverLoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<DriverLoginScreen>
     with TickerProviderStateMixin {
-  final TextEditingController phoneController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
-  bool _obscurePassword = true;
-  bool _isLoading = false;
-
   late final AnimationController _logoController;
 
   @override
@@ -36,8 +29,6 @@ class _LoginScreenState extends State<DriverLoginScreen>
   @override
   void dispose() {
     _logoController.dispose();
-    phoneController.dispose();
-    passwordController.dispose();
     super.dispose();
   }
 
@@ -59,58 +50,23 @@ class _LoginScreenState extends State<DriverLoginScreen>
     );
   }
 
-  // GIỮ NGUYÊN LOGIC LOGIN API
-  Future<void> _login() async {
-    String phone = phoneController.text.trim();
-    String password = passwordController.text.trim();
+  Future<void> _login(LoginProvider provider) async {
+    final result = await provider.login();
 
-    if (phone.isEmpty || password.isEmpty) {
-      _showSnack("Vui lòng nhập đầy đủ thông tin");
-      return;
-    }
+    if (!mounted) return;
 
-    setState(() => _isLoading = true);
-    String? deviceToken = await FirebaseNotificationService.getDeviceToken();
-    final String tokenToSend = deviceToken ?? "";
-
-    try {
-      final res = await ApiService.driverLogin(
-        phone: phone,
-        password: password,
-        deviceToken: tokenToSend,
+    if (result == null) {
+      _showSnack(
+        "Đăng nhập thành công!",
+        color: Theme.of(context).colorScheme.secondary,
       );
 
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        final accessToken = data["accessToken"] ?? "";
-        final refreshToken = data["refreshToken"] ?? "";
-        final fullName = data["fullName"] ?? "";
-
-        if (accessToken.isEmpty) {
-          _showSnack("Server không trả về accessToken");
-          return;
-        }
-
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString("accessToken", accessToken);
-        await prefs.setString("refreshToken", refreshToken);
-        await prefs.setString("fullName", fullName);
-
-        // dùng secondary (gold) cho success cho đúng palette
-        _showSnack("Đăng nhập thành công!", color: Theme.of(context).colorScheme.secondary);
-
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const DriverHomeScreen()),
-              (Route<dynamic> route) => false,
-        );
-      } else {
-        final err = jsonDecode(res.body);
-        _showSnack(err["message"] ?? "Sai tài khoản hoặc mật khẩu");
-      }
-    } catch (e) {
-      _showSnack("Lỗi kết nối: $e");
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const DriverHomeScreen()),
+            (Route<dynamic> route) => false,
+      );
+    } else {
+      _showSnack(result);
     }
   }
 
@@ -133,45 +89,49 @@ class _LoginScreenState extends State<DriverLoginScreen>
     final theme = Theme.of(context);
     final size = MediaQuery.of(context).size;
 
-    return Scaffold(
-      body: Stack(
-        children: [
-          // 1) Background top banner theo theme (dark green)
-          Container(
-            height: size.height * 0.38,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  theme.colorScheme.primary,
-                  theme.colorScheme.surface,
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(60),
-                bottomRight: Radius.circular(60),
-              ),
+    return ChangeNotifierProvider(
+      create: (_) => LoginProvider(),
+      child: Consumer<LoginProvider>(
+        builder: (context, provider, _) {
+          return Scaffold(
+            body: Stack(
+              children: [
+                Container(
+                  height: size.height * 0.38,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        theme.colorScheme.primary,
+                        theme.colorScheme.surface,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(60),
+                      bottomRight: Radius.circular(60),
+                    ),
+                  ),
+                ),
+                SafeArea(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 40),
+                        _buildLogoSection(theme),
+                        const SizedBox(height: 28),
+                        _buildLoginFormCard(theme, provider),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-
-          // 2) Content
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                children: [
-                  const SizedBox(height: 40),
-                  _buildLogoSection(theme),
-                  const SizedBox(height: 28),
-                  _buildLoginFormCard(theme),
-                  const SizedBox(height: 24),
-                ],
-              ),
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -188,7 +148,6 @@ class _LoginScreenState extends State<DriverLoginScreen>
             height: 120,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
-              // logo nền sáng để nổi bật, nhưng dùng scheme cho hợp theme
               color: theme.colorScheme.onPrimary,
               boxShadow: [
                 BoxShadow(
@@ -202,7 +161,7 @@ class _LoginScreenState extends State<DriverLoginScreen>
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: Image.asset(
-                'lib/assets/icons/BeluDriver_launcher.png',
+                'lib/assets/icons/dong_duong_driver_logo.png',
                 fit: BoxFit.contain,
               ),
             ),
@@ -210,7 +169,7 @@ class _LoginScreenState extends State<DriverLoginScreen>
         ),
         const SizedBox(height: 16),
         Text(
-          "BeluDriver",
+          "Tài Xế Đông Dương",
           style: theme.textTheme.headlineLarge?.copyWith(
             fontSize: 28,
             letterSpacing: 2,
@@ -221,9 +180,8 @@ class _LoginScreenState extends State<DriverLoginScreen>
     );
   }
 
-  Widget _buildLoginFormCard(ThemeData theme) {
+  Widget _buildLoginFormCard(ThemeData theme, LoginProvider provider) {
     return Card(
-      // dùng cardTheme (mà bạn đã set màu + border)
       elevation: theme.cardTheme.elevation ?? 0,
       shape: theme.cardTheme.shape,
       child: Padding(
@@ -243,22 +201,24 @@ class _LoginScreenState extends State<DriverLoginScreen>
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 28),
-
             _buildTextField(
-              controller: phoneController,
+              controller: provider.phoneController,
               hint: "Số điện thoại",
               icon: Icons.phone_android,
               isPassword: false,
+              obscurePassword: provider.obscurePassword,
+              onTogglePassword: provider.togglePasswordVisibility,
             ),
             const SizedBox(height: 16),
             _buildTextField(
-              controller: passwordController,
+              controller: provider.passwordController,
               hint: "Mật khẩu",
               icon: Icons.lock_outline,
               isPassword: true,
+              obscurePassword: provider.obscurePassword,
+              onTogglePassword: provider.togglePasswordVisibility,
             ),
             const SizedBox(height: 10),
-
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
@@ -272,16 +232,13 @@ class _LoginScreenState extends State<DriverLoginScreen>
                 ),
               ),
             ),
-
             const SizedBox(height: 16),
-
-            // Button dùng ElevatedButtonTheme (brightYellow)
             SizedBox(
               width: double.infinity,
               height: 52,
               child: ElevatedButton(
-                onPressed: _isLoading ? null : _login,
-                child: _isLoading
+                onPressed: provider.isLoading ? null : () => _login(provider),
+                child: provider.isLoading
                     ? SizedBox(
                   width: 22,
                   height: 22,
@@ -296,9 +253,7 @@ class _LoginScreenState extends State<DriverLoginScreen>
                 ),
               ),
             ),
-
             const SizedBox(height: 18),
-
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -331,13 +286,15 @@ class _LoginScreenState extends State<DriverLoginScreen>
     required String hint,
     required IconData icon,
     required bool isPassword,
+    required bool obscurePassword,
+    required VoidCallback onTogglePassword,
   }) {
     final theme = Theme.of(context);
 
     return TextField(
       controller: controller,
       cursorColor: theme.colorScheme.secondary,
-      obscureText: isPassword ? _obscurePassword : false,
+      obscureText: isPassword ? obscurePassword : false,
       keyboardType: isPassword ? TextInputType.text : TextInputType.phone,
       style: theme.textTheme.bodyLarge?.copyWith(
         color: theme.colorScheme.onSurface,
@@ -357,10 +314,10 @@ class _LoginScreenState extends State<DriverLoginScreen>
         suffixIcon: isPassword
             ? IconButton(
           icon: Icon(
-            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+            obscurePassword ? Icons.visibility_off : Icons.visibility,
             color: theme.colorScheme.onSurface.withOpacity(0.7),
           ),
-          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+          onPressed: onTogglePassword,
         )
             : null,
         border: OutlineInputBorder(

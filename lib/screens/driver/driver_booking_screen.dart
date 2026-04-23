@@ -168,7 +168,7 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
   String _getNameById(List<dynamic> items, int? id) {
     if (id == null) return '';
     final found = items.cast<dynamic>().firstWhere(
-      (e) => e != null && e['id'].toString() == id.toString(),
+          (e) => e != null && e['id'].toString() == id.toString(),
       orElse: () => null,
     );
     return found?['name']?.toString() ?? '';
@@ -233,52 +233,52 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                 child: items.isEmpty
                     ? const Center(child: CircularProgressIndicator())
                     : ListView.separated(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        itemCount: items.length,
-                        separatorBuilder: (context, index) =>
-                            const Divider(height: 1, indent: 20, endIndent: 20),
-                        itemBuilder: (context, index) {
-                          final it = items[index];
-                          final id = it['id'] is int
-                              ? it['id'] as int
-                              : int.tryParse(it['id'].toString());
-                          final name = it['name']?.toString() ?? '';
-                          final bool isDisabled =
-                              (id != null &&
-                              disabledId != null &&
-                              id.toString() == disabledId.toString());
-                          final bool isSelected =
-                              (id != null &&
-                              selectedId != null &&
-                              id.toString() == selectedId.toString());
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  itemCount: items.length,
+                  separatorBuilder: (context, index) =>
+                  const Divider(height: 1, indent: 20, endIndent: 20),
+                  itemBuilder: (context, index) {
+                    final it = items[index];
+                    final id = it['id'] is int
+                        ? it['id'] as int
+                        : int.tryParse(it['id'].toString());
+                    final name = it['name']?.toString() ?? '';
+                    final bool isDisabled =
+                    (id != null &&
+                        disabledId != null &&
+                        id.toString() == disabledId.toString());
+                    final bool isSelected =
+                    (id != null &&
+                        selectedId != null &&
+                        id.toString() == selectedId.toString());
 
-                          return ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 4,
-                            ),
-                            leading: Icon(
-                              icon,
-                              color: isDisabled
-                                  ? Colors.grey[300]
-                                  : Theme.of(context).colorScheme.secondary,
-                            ),
-                            title: Text(
-                              name,
-                              style: TextStyle(
-                                color: isDisabled ? Colors.grey : Colors.black,
-                                fontWeight: isSelected
-                                    ? FontWeight.w700
-                                    : FontWeight.w600,
-                                fontSize: 16,
-                              ),
-                            ),
-                            onTap: (id == null || isDisabled)
-                                ? null
-                                : () => Navigator.pop(ctx, id),
-                          );
-                        },
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 4,
                       ),
+                      leading: Icon(
+                        icon,
+                        color: isDisabled
+                            ? Colors.grey[300]
+                            : Theme.of(context).colorScheme.secondary,
+                      ),
+                      title: Text(
+                        name,
+                        style: TextStyle(
+                          color: isDisabled ? Colors.grey : Colors.black,
+                          fontWeight: isSelected
+                              ? FontWeight.w700
+                              : FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
+                      onTap: (id == null || isDisabled)
+                          ? null
+                          : () => Navigator.pop(ctx, id),
+                    );
+                  },
+                ),
               ),
             ],
           ),
@@ -386,7 +386,7 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                                   setDialogState(() => selectedHour = index),
                               children: List.generate(
                                 24,
-                                (index) => Center(
+                                    (index) => Center(
                                   child: Text(
                                     index.toString().padLeft(2, '0'),
                                     style: const TextStyle(
@@ -431,7 +431,7 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                                   setDialogState(() => selectedMinute = index),
                               children: List.generate(
                                 60,
-                                (index) => Center(
+                                    (index) => Center(
                                   child: Text(
                                     index.toString().padLeft(2, '0'),
                                     style: const TextStyle(
@@ -459,9 +459,9 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
 
   bool _validateAndShowErrors() {
     void showErr(String msg) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), backgroundColor: Colors.red),
+      );
     }
 
     if (_phoneController.text.trim().isEmpty) {
@@ -478,7 +478,7 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
     if (_fromProvinceId == null ||
         _fromDistrictId == null ||
         _fromAddressController.text.trim().isEmpty) {
-      showErr("Vui lòng nhập đầy đủ điểm đón");
+      showErr("Vui lòng nhập đầy đủ ��iểm đón");
       return false;
     }
 
@@ -563,11 +563,9 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
     return Theme(
       data: theme.copyWith(
         textSelectionTheme: TextSelectionThemeData(
-          cursorColor: gold, // màu con trỏ
-          selectionColor: gold.withValues(
-            alpha: 0.25,
-          ), // (tuỳ chọn) màu highlight
-          selectionHandleColor: gold, // (tuỳ chọn) màu handle kéo
+          cursorColor: gold,
+          selectionColor: gold.withValues(alpha: 0.25),
+          selectionHandleColor: gold,
         ),
       ),
       child: Scaffold(
@@ -674,17 +672,17 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                     onTap: _loadingProvinces || _provinces.isEmpty
                         ? null
                         : () async {
-                            final chosen = await _showPicker(
-                              title: "Chọn tỉnh/TP đón",
-                              items: _provinces,
-                              selectedId: _fromProvinceId,
-                              disabledId: _toProvinceId,
-                              icon: Icons.location_city,
-                            );
-                            if (!mounted || chosen == null) return;
-                            setState(() => _fromProvinceId = chosen);
-                            await _loadDistrictsForFromProvince(chosen);
-                          },
+                      final chosen = await _showPicker(
+                        title: "Chọn tỉnh/TP đón",
+                        items: _provinces,
+                        selectedId: _fromProvinceId,
+                        disabledId: _toProvinceId,
+                        icon: Icons.location_city,
+                      );
+                      if (!mounted || chosen == null) return;
+                      setState(() => _fromProvinceId = chosen);
+                      await _loadDistrictsForFromProvince(chosen);
+                    },
                     child: AbsorbPointer(
                       child: TextFormField(
                         controller: TextEditingController(
@@ -733,16 +731,16 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                     onTap: (_loadingFromDistricts || _fromDistricts.isEmpty)
                         ? null
                         : () async {
-                            final chosen = await _showPicker(
-                              title: "Chọn quận/huyện đón",
-                              items: _fromDistricts,
-                              selectedId: _fromDistrictId,
-                              disabledId: null,
-                              icon: Icons.map,
-                            );
-                            if (!mounted || chosen == null) return;
-                            setState(() => _fromDistrictId = chosen);
-                          },
+                      final chosen = await _showPicker(
+                        title: "Chọn quận/huyện đón",
+                        items: _fromDistricts,
+                        selectedId: _fromDistrictId,
+                        disabledId: null,
+                        icon: Icons.map,
+                      );
+                      if (!mounted || chosen == null) return;
+                      setState(() => _fromDistrictId = chosen);
+                    },
                     child: AbsorbPointer(
                       child: TextFormField(
                         controller: TextEditingController(
@@ -940,17 +938,17 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                     onTap: _loadingProvinces || _provinces.isEmpty
                         ? null
                         : () async {
-                            final chosen = await _showPicker(
-                              title: "Chọn tỉnh/TP đến",
-                              items: _provinces,
-                              selectedId: _toProvinceId,
-                              disabledId: _fromProvinceId,
-                              icon: Icons.location_city,
-                            );
-                            if (!mounted || chosen == null) return;
-                            setState(() => _toProvinceId = chosen);
-                            await _loadDistrictsForToProvince(chosen);
-                          },
+                      final chosen = await _showPicker(
+                        title: "Chọn tỉnh/TP đến",
+                        items: _provinces,
+                        selectedId: _toProvinceId,
+                        disabledId: _fromProvinceId,
+                        icon: Icons.location_city,
+                      );
+                      if (!mounted || chosen == null) return;
+                      setState(() => _toProvinceId = chosen);
+                      await _loadDistrictsForToProvince(chosen);
+                    },
                     child: AbsorbPointer(
                       child: TextFormField(
                         controller: TextEditingController(text: toProvinceName),
@@ -997,16 +995,16 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                     onTap: (_loadingToDistricts || _toDistricts.isEmpty)
                         ? null
                         : () async {
-                            final chosen = await _showPicker(
-                              title: "Chọn quận/huyện đến",
-                              items: _toDistricts,
-                              selectedId: _toDistrictId,
-                              disabledId: null,
-                              icon: Icons.map,
-                            );
-                            if (!mounted || chosen == null) return;
-                            setState(() => _toDistrictId = chosen);
-                          },
+                      final chosen = await _showPicker(
+                        title: "Chọn quận/huyện đến",
+                        items: _toDistricts,
+                        selectedId: _toDistrictId,
+                        disabledId: null,
+                        icon: Icons.map,
+                      );
+                      if (!mounted || chosen == null) return;
+                      setState(() => _toDistrictId = chosen);
+                    },
                     child: AbsorbPointer(
                       child: TextFormField(
                         controller: TextEditingController(text: toDistrictName),
@@ -1150,21 +1148,27 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
               ),
             ],
           ),
-          child: SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _goNext,
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
+          child: SafeArea(
+            top: false,
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _goNext,
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  backgroundColor: theme.colorScheme.secondary,
+                  foregroundColor: Colors.black87,
                 ),
-                backgroundColor: theme.colorScheme.secondary,
-                foregroundColor: Colors.black87,
-              ),
-              child: const Text(
-                "TIẾP THEO",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                child: const Text(
+                  "TIẾP THEO",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
           ),
