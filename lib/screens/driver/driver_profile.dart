@@ -480,7 +480,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
               (item) => Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Text(
-              '• ${item.provinceName} (ID: ${item.provinceId})',
+              '• ${item.provinceName}',
               style: const TextStyle(color: Colors.white),
             ),
           ),
