@@ -10,6 +10,7 @@ class ApiChatService {
   final http.Client _client;
 
   static const String baseUrl = 'https://xeghepdongduong.com/api';
+  static const String chatHubUrl = 'https://xeghepdongduong.com/hubs/chat';
 
   Map<String, String> _headers({bool isJson = false}) {
     return {

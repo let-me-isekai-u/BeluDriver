@@ -7,7 +7,7 @@ import '../services/api_chat_service.dart';
 import '../services/signalr_service.dart';
 
 class ChatProvider extends ChangeNotifier {
-  static const String _chatHubUrl = 'https://belucar.com/hubs/chat';
+  static const String _chatHubUrl = ApiChatService.chatHubUrl;
   static const String _joinGroupMethod = 'JoinDriverGroup';
   static const String _leaveGroupMethod = 'LeaveDriverGroup';
   static const String _newMessageEventName = 'driver-group.message.created';
