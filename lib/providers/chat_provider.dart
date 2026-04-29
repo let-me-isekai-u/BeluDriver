@@ -29,6 +29,7 @@ class ChatProvider extends ChangeNotifier {
   bool _isRealtimeConnected = false;
   bool _isDisposed = false;
   bool _isGroupUnavailable = false;
+  bool _hasExplicitGroupSelection = false;
 
   bool _hasMoreMessages = false;
   int? _nextBeforeMessageId;
@@ -108,7 +109,34 @@ class ChatProvider extends ChangeNotifier {
     return groups.first;
   }
 
+  void _applySelectedGroup(
+    DriverChatGroupDto group, {
+    required bool explicitSelection,
+  }) {
+    _groupId = group.id;
+    _groupInfo = group;
+    _isGroupUnavailable = !group.isActive;
+    _hasExplicitGroupSelection = explicitSelection;
+  }
+
+  Future<void> _loadSelectedGroupDetailIfNeeded({
+    bool forceRefresh = false,
+  }) async {
+    if (_groupId == null) return;
+    if (!forceRefresh && _groupInfo?.id == _groupId) {
+      return;
+    }
+
+    final detail = await _chatService.getDriverGroupDetail(_groupId!);
+    _applySelectedGroup(detail, explicitSelection: _hasExplicitGroupSelection);
+  }
+
   Future<int?> ensurePrimaryGroup({bool forceRefresh = false}) async {
+    if (_hasExplicitGroupSelection && _groupId != null) {
+      await _loadSelectedGroupDetailIfNeeded(forceRefresh: forceRefresh);
+      return _groupId;
+    }
+
     if (!forceRefresh && _groupId != null) {
       return _groupId;
     }
@@ -123,16 +151,25 @@ class ChatProvider extends ChangeNotifier {
       _hasMoreMessages = false;
       _nextBeforeMessageId = null;
       _isGroupUnavailable = true;
+      _hasExplicitGroupSelection = false;
       return null;
     }
 
-    _groupId = selected.id;
-    _groupInfo = selected;
-    _isGroupUnavailable = !selected.isActive;
+    _applySelectedGroup(selected, explicitSelection: false);
     return _groupId;
   }
 
   Future<void> _refreshGroupState() async {
+    if (_hasExplicitGroupSelection && _groupId != null) {
+      try {
+        await _loadSelectedGroupDetailIfNeeded(forceRefresh: true);
+      } catch (e) {
+        _log('refresh explicit group error: $e');
+      }
+      safeNotify();
+      return;
+    }
+
     final previousGroupId = _groupId;
     final resolvedGroupId = await ensurePrimaryGroup(forceRefresh: true);
 
@@ -167,6 +204,7 @@ class ChatProvider extends ChangeNotifier {
   Future<void> initChat({
     required String accessToken,
     int? groupId,
+    DriverChatGroupDto? initialGroup,
     bool autoMarkRead = true,
     int take = 30,
   }) async {
@@ -176,8 +214,18 @@ class ChatProvider extends ChangeNotifier {
     safeNotify();
 
     try {
-      _groupId = groupId;
-      final resolvedGroupId = groupId ?? await ensurePrimaryGroup();
+      _groupId = groupId ?? initialGroup?.id;
+      _groupInfo =
+          initialGroup ?? (_groupInfo?.id == _groupId ? _groupInfo : null);
+      _hasExplicitGroupSelection = _groupId != null;
+
+      final int? resolvedGroupId;
+      if (_groupId != null) {
+        await _loadSelectedGroupDetailIfNeeded();
+        resolvedGroupId = _groupId;
+      } else {
+        resolvedGroupId = await ensurePrimaryGroup();
+      }
 
       if (resolvedGroupId == null) {
         _isInitializing = false;
@@ -213,6 +261,15 @@ class ChatProvider extends ChangeNotifier {
     bool autoMarkRead = false,
     int take = 30,
   }) async {
+    if (groupId != null) {
+      _groupId = groupId;
+      _hasExplicitGroupSelection = true;
+      if (_groupInfo?.id != groupId) {
+        _groupInfo = null;
+      }
+      await _loadSelectedGroupDetailIfNeeded();
+    }
+
     final resolvedGroupId = groupId ?? _groupId ?? await ensurePrimaryGroup();
     if (resolvedGroupId == null) {
       _error = 'Hiện chưa có nhóm chat hoạt động.';
@@ -288,7 +345,12 @@ class ChatProvider extends ChangeNotifier {
     required String accessToken,
     int? groupId,
   }) async {
-    _groupId = groupId ?? _groupId;
+    if (groupId != null) {
+      _groupId = groupId;
+      _hasExplicitGroupSelection = true;
+    } else {
+      _groupId = _groupId;
+    }
     final resolvedGroupId = _groupId ?? await ensurePrimaryGroup();
 
     if (resolvedGroupId == null) {
@@ -596,6 +658,7 @@ class ChatProvider extends ChangeNotifier {
     _isRealtimeConnecting = false;
     _isRealtimeConnected = false;
     _isGroupUnavailable = false;
+    _hasExplicitGroupSelection = false;
     _hasMoreMessages = false;
     _nextBeforeMessageId = null;
     _error = null;

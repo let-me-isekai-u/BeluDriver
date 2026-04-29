@@ -203,7 +203,7 @@ class _KycStepCitizenCardState extends State<KycStepCitizenCard> {
           Row(
             children: [
               Text(
-                'Bước 2/6',
+                'Bước 5/6',
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.white,
@@ -215,7 +215,7 @@ class _KycStepCitizenCardState extends State<KycStepCitizenCard> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
-                    value: 2 / 9,
+                    value: 5 / 6,
                     minHeight: 6,
                     backgroundColor: Colors.grey.shade200,
                     color: colorScheme.primary,

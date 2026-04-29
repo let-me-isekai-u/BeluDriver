@@ -204,6 +204,9 @@ class ApiException implements Exception {
 class DriverChatGroupDto {
   DriverChatGroupDto({
     required this.id,
+    required this.groupCode,
+    required this.provinceId,
+    required this.provinceName,
     required this.name,
     required this.description,
     required this.audienceType,
@@ -218,6 +221,9 @@ class DriverChatGroupDto {
   });
 
   final int id;
+  final String? groupCode;
+  final int? provinceId;
+  final String? provinceName;
   final String? name;
   final String? description;
   final int? audienceType;
@@ -247,6 +253,9 @@ class DriverChatGroupDto {
 
     return DriverChatGroupDto(
       id: parseInt(json['id']),
+      groupCode: json['groupCode']?.toString(),
+      provinceId: parseNullableInt(json['provinceId']),
+      provinceName: json['provinceName']?.toString(),
       name: json['name']?.toString(),
       description: json['description']?.toString(),
       audienceType: parseNullableInt(json['audienceType']),
@@ -266,6 +275,9 @@ class DriverChatGroupDto {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'groupCode': groupCode,
+      'provinceId': provinceId,
+      'provinceName': provinceName,
       'name': name,
       'description': description,
       'audienceType': audienceType,

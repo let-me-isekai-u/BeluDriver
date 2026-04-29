@@ -23,6 +23,10 @@ class DriverBookingScreen extends StatefulWidget {
 }
 
 class _DriverBookingScreenState extends State<DriverBookingScreen> {
+  static const int _hanoiProvinceId = 1;
+  static const int _noiBaiDistrictId = 974;
+  static const String _noiBaiAirportAddress = "Cảng hàng không quốc tế Nội Bài";
+
   final _phoneController = TextEditingController();
   final _noteController = TextEditingController();
   final _quantityController = TextEditingController(text: "1");
@@ -48,6 +52,20 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
   List<dynamic> _provinces = [];
   List<dynamic> _fromDistricts = [];
   List<dynamic> _toDistricts = [];
+
+  List<dynamic> get _availableFromDistricts => _filterDistrictsForSelection(
+    districts: _fromDistricts,
+    currentProvinceId: _fromProvinceId,
+    otherProvinceId: _toProvinceId,
+    otherDistrictId: _toDistrictId,
+  );
+
+  List<dynamic> get _availableToDistricts => _filterDistrictsForSelection(
+    districts: _toDistricts,
+    currentProvinceId: _toProvinceId,
+    otherProvinceId: _fromProvinceId,
+    otherDistrictId: _fromDistrictId,
+  );
 
   @override
   void initState() {
@@ -79,6 +97,7 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
   }
 
   Future<void> _loadDistrictsForFromProvince(int provinceId) async {
+    _syncAddressWithDistrict(isFrom: true, districtId: null);
     setState(() {
       _loadingFromDistricts = true;
       _fromDistricts = [];
@@ -94,6 +113,7 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
   }
 
   Future<void> _loadDistrictsForToProvince(int provinceId) async {
+    _syncAddressWithDistrict(isFrom: false, districtId: null);
     setState(() {
       _loadingToDistricts = true;
       _toDistricts = [];
@@ -168,10 +188,59 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
   String _getNameById(List<dynamic> items, int? id) {
     if (id == null) return '';
     final found = items.cast<dynamic>().firstWhere(
-          (e) => e != null && e['id'].toString() == id.toString(),
+      (e) => e != null && e['id'].toString() == id.toString(),
       orElse: () => null,
     );
     return found?['name']?.toString() ?? '';
+  }
+
+  bool _canSelectSameProvince(int? provinceId) {
+    return provinceId == _hanoiProvinceId;
+  }
+
+  List<dynamic> _filterDistrictsForSelection({
+    required List<dynamic> districts,
+    required int? currentProvinceId,
+    required int? otherProvinceId,
+    required int? otherDistrictId,
+  }) {
+    if (currentProvinceId != _hanoiProvinceId ||
+        otherProvinceId != _hanoiProvinceId) {
+      return districts;
+    }
+
+    if (otherDistrictId == null || otherDistrictId == _noiBaiDistrictId) {
+      return districts;
+    }
+
+    return districts.where((district) {
+      final id = _parseLocationId(district['id']);
+      return id == _noiBaiDistrictId;
+    }).toList();
+  }
+
+  int? _parseLocationId(dynamic rawId) {
+    if (rawId is int) return rawId;
+    return int.tryParse(rawId.toString());
+  }
+
+  void _syncAddressWithDistrict({
+    required bool isFrom,
+    required int? districtId,
+  }) {
+    final controller = isFrom ? _fromAddressController : _toAddressController;
+
+    if (districtId == _noiBaiDistrictId) {
+      controller.text = _noiBaiAirportAddress;
+      controller.selection = TextSelection.collapsed(
+        offset: controller.text.length,
+      );
+      return;
+    }
+
+    if (controller.text.trim() == _noiBaiAirportAddress) {
+      controller.clear();
+    }
   }
 
   Future<int?> _showPicker({
@@ -180,6 +249,7 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
     required int? selectedId,
     required int? disabledId,
     required IconData icon,
+    bool Function(int?)? canSelectDisabledId,
   }) {
     return showModalBottomSheet<int?>(
       context: context,
@@ -233,52 +303,53 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                 child: items.isEmpty
                     ? const Center(child: CircularProgressIndicator())
                     : ListView.separated(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  itemCount: items.length,
-                  separatorBuilder: (context, index) =>
-                  const Divider(height: 1, indent: 20, endIndent: 20),
-                  itemBuilder: (context, index) {
-                    final it = items[index];
-                    final id = it['id'] is int
-                        ? it['id'] as int
-                        : int.tryParse(it['id'].toString());
-                    final name = it['name']?.toString() ?? '';
-                    final bool isDisabled =
-                    (id != null &&
-                        disabledId != null &&
-                        id.toString() == disabledId.toString());
-                    final bool isSelected =
-                    (id != null &&
-                        selectedId != null &&
-                        id.toString() == selectedId.toString());
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        itemCount: items.length,
+                        separatorBuilder: (context, index) =>
+                            const Divider(height: 1, indent: 20, endIndent: 20),
+                        itemBuilder: (context, index) {
+                          final it = items[index];
+                          final id = it['id'] is int
+                              ? it['id'] as int
+                              : int.tryParse(it['id'].toString());
+                          final name = it['name']?.toString() ?? '';
+                          final bool isDisabled =
+                              (id != null &&
+                              disabledId != null &&
+                              id.toString() == disabledId.toString() &&
+                              !(canSelectDisabledId?.call(id) ?? false));
+                          final bool isSelected =
+                              (id != null &&
+                              selectedId != null &&
+                              id.toString() == selectedId.toString());
 
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 4,
+                          return ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 4,
+                            ),
+                            leading: Icon(
+                              icon,
+                              color: isDisabled
+                                  ? Colors.grey[300]
+                                  : Theme.of(context).colorScheme.secondary,
+                            ),
+                            title: Text(
+                              name,
+                              style: TextStyle(
+                                color: isDisabled ? Colors.grey : Colors.black,
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
+                                    : FontWeight.w600,
+                                fontSize: 16,
+                              ),
+                            ),
+                            onTap: (id == null || isDisabled)
+                                ? null
+                                : () => Navigator.pop(ctx, id),
+                          );
+                        },
                       ),
-                      leading: Icon(
-                        icon,
-                        color: isDisabled
-                            ? Colors.grey[300]
-                            : Theme.of(context).colorScheme.secondary,
-                      ),
-                      title: Text(
-                        name,
-                        style: TextStyle(
-                          color: isDisabled ? Colors.grey : Colors.black,
-                          fontWeight: isSelected
-                              ? FontWeight.w700
-                              : FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                      ),
-                      onTap: (id == null || isDisabled)
-                          ? null
-                          : () => Navigator.pop(ctx, id),
-                    );
-                  },
-                ),
               ),
             ],
           ),
@@ -386,7 +457,7 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                                   setDialogState(() => selectedHour = index),
                               children: List.generate(
                                 24,
-                                    (index) => Center(
+                                (index) => Center(
                                   child: Text(
                                     index.toString().padLeft(2, '0'),
                                     style: const TextStyle(
@@ -431,7 +502,7 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                                   setDialogState(() => selectedMinute = index),
                               children: List.generate(
                                 60,
-                                    (index) => Center(
+                                (index) => Center(
                                   child: Text(
                                     index.toString().padLeft(2, '0'),
                                     style: const TextStyle(
@@ -459,9 +530,9 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
 
   bool _validateAndShowErrors() {
     void showErr(String msg) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg), backgroundColor: Colors.red),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
     }
 
     if (_phoneController.text.trim().isEmpty) {
@@ -672,17 +743,18 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                     onTap: _loadingProvinces || _provinces.isEmpty
                         ? null
                         : () async {
-                      final chosen = await _showPicker(
-                        title: "Chọn tỉnh/TP đón",
-                        items: _provinces,
-                        selectedId: _fromProvinceId,
-                        disabledId: _toProvinceId,
-                        icon: Icons.location_city,
-                      );
-                      if (!mounted || chosen == null) return;
-                      setState(() => _fromProvinceId = chosen);
-                      await _loadDistrictsForFromProvince(chosen);
-                    },
+                            final chosen = await _showPicker(
+                              title: "Chọn tỉnh/TP đón",
+                              items: _provinces,
+                              selectedId: _fromProvinceId,
+                              disabledId: _toProvinceId,
+                              icon: Icons.location_city,
+                              canSelectDisabledId: _canSelectSameProvince,
+                            );
+                            if (!mounted || chosen == null) return;
+                            setState(() => _fromProvinceId = chosen);
+                            await _loadDistrictsForFromProvince(chosen);
+                          },
                     child: AbsorbPointer(
                       child: TextFormField(
                         controller: TextEditingController(
@@ -731,16 +803,20 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                     onTap: (_loadingFromDistricts || _fromDistricts.isEmpty)
                         ? null
                         : () async {
-                      final chosen = await _showPicker(
-                        title: "Chọn quận/huyện đón",
-                        items: _fromDistricts,
-                        selectedId: _fromDistrictId,
-                        disabledId: null,
-                        icon: Icons.map,
-                      );
-                      if (!mounted || chosen == null) return;
-                      setState(() => _fromDistrictId = chosen);
-                    },
+                            final chosen = await _showPicker(
+                              title: "Chọn quận/huyện đón",
+                              items: _availableFromDistricts,
+                              selectedId: _fromDistrictId,
+                              disabledId: null,
+                              icon: Icons.map,
+                            );
+                            if (!mounted || chosen == null) return;
+                            setState(() => _fromDistrictId = chosen);
+                            _syncAddressWithDistrict(
+                              isFrom: true,
+                              districtId: chosen,
+                            );
+                          },
                     child: AbsorbPointer(
                       child: TextFormField(
                         controller: TextEditingController(
@@ -938,17 +1014,18 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                     onTap: _loadingProvinces || _provinces.isEmpty
                         ? null
                         : () async {
-                      final chosen = await _showPicker(
-                        title: "Chọn tỉnh/TP đến",
-                        items: _provinces,
-                        selectedId: _toProvinceId,
-                        disabledId: _fromProvinceId,
-                        icon: Icons.location_city,
-                      );
-                      if (!mounted || chosen == null) return;
-                      setState(() => _toProvinceId = chosen);
-                      await _loadDistrictsForToProvince(chosen);
-                    },
+                            final chosen = await _showPicker(
+                              title: "Chọn tỉnh/TP đến",
+                              items: _provinces,
+                              selectedId: _toProvinceId,
+                              disabledId: _fromProvinceId,
+                              icon: Icons.location_city,
+                              canSelectDisabledId: _canSelectSameProvince,
+                            );
+                            if (!mounted || chosen == null) return;
+                            setState(() => _toProvinceId = chosen);
+                            await _loadDistrictsForToProvince(chosen);
+                          },
                     child: AbsorbPointer(
                       child: TextFormField(
                         controller: TextEditingController(text: toProvinceName),
@@ -995,16 +1072,20 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                     onTap: (_loadingToDistricts || _toDistricts.isEmpty)
                         ? null
                         : () async {
-                      final chosen = await _showPicker(
-                        title: "Chọn quận/huyện đến",
-                        items: _toDistricts,
-                        selectedId: _toDistrictId,
-                        disabledId: null,
-                        icon: Icons.map,
-                      );
-                      if (!mounted || chosen == null) return;
-                      setState(() => _toDistrictId = chosen);
-                    },
+                            final chosen = await _showPicker(
+                              title: "Chọn quận/huyện đến",
+                              items: _availableToDistricts,
+                              selectedId: _toDistrictId,
+                              disabledId: null,
+                              icon: Icons.map,
+                            );
+                            if (!mounted || chosen == null) return;
+                            setState(() => _toDistrictId = chosen);
+                            _syncAddressWithDistrict(
+                              isFrom: false,
+                              districtId: chosen,
+                            );
+                          },
                     child: AbsorbPointer(
                       child: TextFormField(
                         controller: TextEditingController(text: toDistrictName),
@@ -1164,10 +1245,7 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                 ),
                 child: const Text(
                   "TIẾP THEO",
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             ),

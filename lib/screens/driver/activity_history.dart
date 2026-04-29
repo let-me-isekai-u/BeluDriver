@@ -3,16 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/api_service.dart';
+import '../../services/api_chat_service.dart';
 import '../../models/driver/ride_model.dart';
 import '../../models/driver/broker_rides_model.dart';
 import 'ride_detail_screen.dart';
 
 class ActivityScreen extends StatefulWidget {
   final int initialTabIndex;
-  const ActivityScreen({
-    super.key,
-    this.initialTabIndex = 0,
-  });
+  const ActivityScreen({super.key, this.initialTabIndex = 0});
 
   @override
   State<ActivityScreen> createState() => _ActivityScreenState();
@@ -38,7 +36,11 @@ class _ActivityScreenState extends State<ActivityScreen>
   void initState() {
     super.initState();
     final safeInitial = widget.initialTabIndex.clamp(0, 2);
-    _tabController = TabController(length: 3, vsync: this, initialIndex: safeInitial);
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: safeInitial,
+    );
 
     _fetchOngoingRides();
 
@@ -88,8 +90,9 @@ class _ActivityScreenState extends State<ActivityScreen>
         if (body['success'] == true) {
           if (!mounted) return;
           setState(() {
-            ongoingRides =
-                (body['data'] as List).map((e) => RideModel.fromJson(e)).toList();
+            ongoingRides = (body['data'] as List)
+                .map((e) => RideModel.fromJson(e))
+                .toList();
           });
         }
       }
@@ -115,8 +118,9 @@ class _ActivityScreenState extends State<ActivityScreen>
         if (body['success'] == true) {
           if (!mounted) return;
           setState(() {
-            historyRides =
-                (body['data'] as List).map((e) => RideModel.fromJson(e)).toList();
+            historyRides = (body['data'] as List)
+                .map((e) => RideModel.fromJson(e))
+                .toList();
             _isHistoryLoaded = true;
           });
         }
@@ -147,7 +151,9 @@ class _ActivityScreenState extends State<ActivityScreen>
         if (!mounted) return;
         if (parsed.success) {
           setState(() {
-            brokerRides = parsed.data;
+            brokerRides = parsed.data
+                .where((ride) => ride.status == BrokerRideStatus.findingDriver)
+                .toList();
             _isBrokerLoaded = true;
           });
         }
@@ -188,9 +194,7 @@ class _ActivityScreenState extends State<ActivityScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.white70,
-            ),
+            style: TextButton.styleFrom(foregroundColor: Colors.white70),
             child: const Text("Không"),
           ),
           ElevatedButton(
@@ -296,10 +300,8 @@ class _ActivityScreenState extends State<ActivityScreen>
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => RideDetailScreen(
-          rideId: ride.id,
-          rideSource: ride.rideSource,
-        ),
+        builder: (_) =>
+            RideDetailScreen(rideId: ride.id, rideSource: ride.rideSource),
       ),
     ).then((_) {
       _fetchOngoingRides();
@@ -331,7 +333,10 @@ class _ActivityScreenState extends State<ActivityScreen>
         bottom: TabBar(
           controller: _tabController,
           labelColor: theme.colorScheme.secondary,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 15,
+          ),
           unselectedLabelColor: Colors.white70,
           unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
           indicatorColor: theme.colorScheme.secondary,
@@ -448,10 +453,10 @@ class _ActivityScreenState extends State<ActivityScreen>
   // LIST (RideModel) - giữ nguyên
   // ======================
   Widget _buildList(
-      List<RideModel> rides,
-      ThemeData theme, {
-        required String emptyMessage,
-      }) {
+    List<RideModel> rides,
+    ThemeData theme, {
+    required String emptyMessage,
+  }) {
     final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
     final bottomPadding = 12.0 + 24.0 + bottomSafe;
 
@@ -489,7 +494,8 @@ class _ActivityScreenState extends State<ActivityScreen>
             ),
             padding: EdgeInsets.fromLTRB(12, 12, 12, bottomPadding),
             itemCount: rides.length,
-            itemBuilder: (context, index) => _buildRideCard(rides[index], theme),
+            itemBuilder: (context, index) =>
+                _buildRideCard(rides[index], theme),
           ),
         ],
       ),
@@ -551,13 +557,16 @@ class _ActivityScreenState extends State<ActivityScreen>
                     style: const TextStyle(color: Colors.grey, fontSize: 13),
                   ),
                   Container(
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: ride.statusColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                          color: ride.statusColor.withOpacity(0.45)),
+                        color: ride.statusColor.withOpacity(0.45),
+                      ),
                     ),
                     child: Text(
                       ride.statusText,
@@ -592,8 +601,10 @@ class _ActivityScreenState extends State<ActivityScreen>
                       const SizedBox(height: 2),
                       Text(
                         ride.formattedPrice,
-                        style:
-                        const TextStyle(fontSize: 11, color: Colors.grey),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey,
+                        ),
                       ),
                     ],
                   ),
@@ -647,7 +658,7 @@ class _ActivityScreenState extends State<ActivityScreen>
     // Bạn muốn "đúng đơn của tài xế đấy thì có nút huỷ" -> API này theo token đã là đúng tài xế.
     // Mình hiển thị nút huỷ cho status 1/2/3 luôn.
     // Nếu nghiệp vụ chỉ cho huỷ khi status == 1 (mới đẩy), bạn đổi điều kiện tại đây.
-    final canCancel = ride.status == 1 || ride.status == 2 || ride.status == 3;
+    final canCancel = ride.status == BrokerRideStatus.findingDriver;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -666,8 +677,10 @@ class _ActivityScreenState extends State<ActivityScreen>
                   style: const TextStyle(color: Colors.grey, fontSize: 13),
                 ),
                 Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -725,7 +738,9 @@ class _ActivityScreenState extends State<ActivityScreen>
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: _isLoadingBroker ? null : () => _handleCancelBrokerRide(ride),
+                  onPressed: _isLoadingBroker
+                      ? null
+                      : () => _handleCancelBrokerRide(ride),
                   icon: const Icon(Icons.cancel_outlined),
                   label: const Text(
                     "HUỶ ĐƠN ĐÃ ĐẨY",
@@ -775,7 +790,7 @@ class _ActivityScreenState extends State<ActivityScreen>
   String _brokerStatusText(int status) {
     switch (status) {
       case 1:
-        return "ĐÃ ĐẨY";
+        return "CHƯA NHẬN";
       case 2:
         return "ĐANG XỬ LÝ";
       case 3:
@@ -790,8 +805,11 @@ class _ActivityScreenState extends State<ActivityScreen>
       children: [
         Row(
           children: [
-            const Icon(Icons.radio_button_checked,
-                size: 16, color: Colors.green),
+            const Icon(
+              Icons.radio_button_checked,
+              size: 16,
+              color: Colors.green,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -810,7 +828,10 @@ class _ActivityScreenState extends State<ActivityScreen>
             child: SizedBox(
               height: 12,
               child: VerticalDivider(
-                  width: 1, thickness: 1, color: Colors.grey),
+                width: 1,
+                thickness: 1,
+                color: Colors.grey,
+              ),
             ),
           ),
         ),

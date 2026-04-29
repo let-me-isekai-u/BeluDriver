@@ -182,7 +182,7 @@ class _KycStepPortraitState extends State<KycStepPortrait> {
           Row(
             children: [
               const Text(
-                'Bước 5/6',
+                'Bước 2/6',
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.white,
@@ -194,7 +194,7 @@ class _KycStepPortraitState extends State<KycStepPortrait> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
-                    value: 5 / 6,
+                    value: 2 / 6,
                     minHeight: 6,
                     backgroundColor: Colors.grey.shade200,
                     color: colorScheme.primary,

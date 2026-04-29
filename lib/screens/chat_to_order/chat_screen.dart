@@ -13,7 +13,9 @@ import '../../services/api_service.dart';
 import '../driver/driver_booking_screen.dart';
 
 class DriverGroupChatScreen extends StatelessWidget {
-  const DriverGroupChatScreen({super.key});
+  const DriverGroupChatScreen({super.key, this.initialGroup});
+
+  final DriverChatGroupDto? initialGroup;
 
   Future<String?> _readAccessToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -24,13 +26,15 @@ class DriverGroupChatScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => ChatProvider(tokenProvider: _readAccessToken),
-      child: const _DriverGroupChatView(),
+      child: _DriverGroupChatView(initialGroup: initialGroup),
     );
   }
 }
 
 class _DriverGroupChatView extends StatefulWidget {
-  const _DriverGroupChatView();
+  const _DriverGroupChatView({this.initialGroup});
+
+  final DriverChatGroupDto? initialGroup;
 
   @override
   State<_DriverGroupChatView> createState() => _DriverGroupChatViewState();
@@ -53,6 +57,7 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
   int? _currentDriverId;
   bool _isReady = false;
   bool _inputFocused = false;
+  bool _isOpeningCreateRide = false;
   int? _lastRenderedMessageId;
   final Set<int> _processingBrokerRideIds = <int>{};
 
@@ -119,7 +124,12 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
 
     if (_accessToken.isEmpty) return;
 
-    await provider.initChat(accessToken: _accessToken, autoMarkRead: true);
+    await provider.initChat(
+      accessToken: _accessToken,
+      groupId: widget.initialGroup?.id,
+      initialGroup: widget.initialGroup,
+      autoMarkRead: true,
+    );
     if (!mounted || !provider.hasGroup) return;
 
     await provider.connectRealtime(
@@ -192,27 +202,55 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
   }
 
   Future<void> _openCreateRide(ChatProvider provider) async {
-    if (_accessToken.isEmpty || provider.groupId == null) return;
+    if (_accessToken.isEmpty || _isOpeningCreateRide) return;
 
-    final created = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => DriverBookingScreen(
-          groupId: provider.groupId,
-          closeOnSuccess: true,
+    setState(() => _isOpeningCreateRide = true);
+
+    try {
+      final resolvedGroupId =
+          provider.groupId ??
+          await provider.ensurePrimaryGroup(forceRefresh: true);
+
+      if (!mounted) return;
+
+      if (resolvedGroupId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nhóm chat chưa sẵn sàng để đẩy đơn.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      final created = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DriverBookingScreen(
+            groupId: resolvedGroupId,
+            closeOnSuccess: true,
+          ),
         ),
-      ),
-    );
+      );
 
-    if (!mounted || created != true) return;
+      if (!mounted || created != true) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Đơn đã được đẩy vào nhóm chat.'),
-        backgroundColor: Colors.green,
-      ),
-    );
-    _scrollToBottom();
+      await provider.loadMessages(groupId: resolvedGroupId, autoMarkRead: true);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đơn đã được đẩy vào nhóm chat.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      _scrollToBottom();
+    } finally {
+      if (mounted) {
+        setState(() => _isOpeningCreateRide = false);
+      }
+    }
   }
 
   bool _isBrokerRideBusy(int rideId) {
@@ -380,14 +418,31 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
     if (provider.isInitializing && !provider.hasGroup) {
       return 'Đang tải nhóm chat...';
     }
+    final initialName = widget.initialGroup?.name?.trim();
+    if (provider.groupName == 'Nhóm chat tài xế' &&
+        initialName != null &&
+        initialName.isNotEmpty) {
+      return initialName;
+    }
     return provider.groupName;
+  }
+
+  bool _shouldDisplayBrokerRideCard(DriverChatMessageModel message) {
+    if (!message.isBrokerRideCard) return true;
+
+    final ride = message.brokerRideMeta;
+    if (ride == null) return false;
+
+    return ride.status == BrokerRideStatus.findingDriver;
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<ChatProvider>(
       builder: (context, provider, child) {
-        final messages = provider.messages;
+        final messages = provider.messages
+            .where(_shouldDisplayBrokerRideCard)
+            .toList(growable: false);
         final latestId = messages.isEmpty ? null : messages.last.id;
 
         if (latestId != null && latestId != _lastRenderedMessageId) {
@@ -416,7 +471,10 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
 
   PreferredSizeWidget _buildAppBar(ChatProvider provider) {
     final connected = provider.isRealtimeConnected;
-    final subtitle = provider.groupDescription ?? 'Chat realtime cho tài xế';
+    final subtitle =
+        provider.groupDescription ??
+        widget.initialGroup?.description ??
+        'Chat realtime cho tài xế';
 
     return AppBar(
       elevation: 0,
@@ -507,10 +565,12 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
         ],
       ),
       actions: [
-        if (_accessToken.isNotEmpty && provider.groupId != null)
+        if (_accessToken.isNotEmpty)
           IconButton(
             tooltip: 'Đẩy đơn vào nhóm',
-            onPressed: provider.isBusy ? null : () => _openCreateRide(provider),
+            onPressed: _isOpeningCreateRide
+                ? null
+                : () => _openCreateRide(provider),
             icon: const Icon(Icons.add_box_rounded, color: Colors.white),
           ),
       ],
@@ -1152,12 +1212,14 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          if (provider.groupId != null)
+          if (_accessToken.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(right: 8, bottom: 2),
               child: InkWell(
                 borderRadius: BorderRadius.circular(18),
-                onTap: provider.isBusy ? null : () => _openCreateRide(provider),
+                onTap: _isOpeningCreateRide
+                    ? null
+                    : () => _openCreateRide(provider),
                 child: Container(
                   width: 38,
                   height: 38,
@@ -1314,7 +1376,7 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
   String _statusText(int status) {
     switch (status) {
       case BrokerRideStatus.findingDriver:
-        return 'ĐÃ ĐẨY';
+        return 'CHƯA NHẬN';
       case BrokerRideStatus.accepted:
         return 'ĐANG XỬ LÝ';
       case BrokerRideStatus.inProgress:
