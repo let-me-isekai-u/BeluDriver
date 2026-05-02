@@ -235,7 +235,7 @@ class _DriverBookingConfirmScreenState
         toAddress: req.toAddress,
         type: req.type,
         customerPhone: req.customerPhone,
-        quantity: req.quantity,
+        quantity: req.normalizedQuantity,
         pickupTime: req.pickupTime,
         offerPrice: req.offerPrice,
         creatorEarn: req.creatorEarn,
@@ -289,6 +289,7 @@ class _DriverBookingConfirmScreenState
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final req = widget.request;
+    final rideTypeLabel = BrokerRideType.labelOf(req.type);
 
     final DateTime? pickupDt = (() {
       try {
@@ -355,7 +356,12 @@ class _DriverBookingConfirmScreenState
                   title: "Thông tin đơn",
                   icon: Icons.info_outline,
                   children: [
-                    _buildInfoRow("Số lượng:", req.quantity.toString()),
+                    _buildInfoRow("Loại chuyến:", rideTypeLabel),
+                    if (BrokerRideType.requiresPassengerQuantity(req.type))
+                      _buildInfoRow(
+                        "Số lượng:",
+                        req.normalizedQuantity.toString(),
+                      ),
                     _buildInfoRow("SĐT khách:", req.customerPhone),
                     if (req.note.trim().isNotEmpty)
                       _buildInfoRow("Ghi chú:", req.note),

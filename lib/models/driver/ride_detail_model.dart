@@ -1,3 +1,5 @@
+import '../broker_ride_models.dart';
+
 class RideDetailModel {
   final int id;
   final String code;
@@ -20,7 +22,7 @@ class RideDetailModel {
   final String toDistrict;
 
   final String createdAt; // 👈 thêm
-  final int quantity;     // 👈 thêm
+  final int quantity; // 👈 thêm
 
   RideDetailModel({
     required this.id,
@@ -67,17 +69,6 @@ class RideDetailModel {
   }
 
   String get typeText {
-    switch (type) {
-      case 1:
-        return "Chở người";
-      case 2:
-        return "Chở người - bao xe";
-      case 3:
-        return "Chở hàng";
-      case 4:
-        return "Chở hàng hoả tốc";
-      default:
-        return "Không xác định";
-    }
+    return BrokerRideType.labelOf(type);
   }
 }

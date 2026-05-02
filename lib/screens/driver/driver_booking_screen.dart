@@ -35,7 +35,8 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
   final _offerPriceController = TextEditingController();
   final _creatorEarnController = TextEditingController();
 
-  static const int _type = 2;
+  int _selectedType = BrokerRideType.passenger;
+  String _lastPassengerQuantity = "1";
 
   int? _fromProvinceId;
   int? _fromDistrictId;
@@ -192,6 +193,39 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
       orElse: () => null,
     );
     return found?['name']?.toString() ?? '';
+  }
+
+  bool get _requiresPassengerQuantity =>
+      BrokerRideType.requiresPassengerQuantity(_selectedType);
+
+  bool get _isCharterRide => BrokerRideType.isCharter(_selectedType);
+
+  int get _normalizedQuantity {
+    final rawQuantity = _tryParseInt(_quantityController.text) ?? 1;
+    return BrokerRideType.normalizeQuantity(
+      type: _selectedType,
+      quantity: rawQuantity,
+    );
+  }
+
+  void _updateRideType(int? nextType) {
+    if (nextType == null || nextType == _selectedType) return;
+
+    setState(() {
+      if (_requiresPassengerQuantity) {
+        _lastPassengerQuantity = _quantityController.text.trim().isEmpty
+            ? "1"
+            : _quantityController.text.trim();
+      }
+
+      _selectedType = nextType;
+
+      if (_isCharterRide) {
+        _quantityController.text = "1";
+      } else {
+        _quantityController.text = _lastPassengerQuantity;
+      }
+    });
   }
 
   bool _canSelectSameProvince(int? provinceId) {
@@ -540,10 +574,12 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
       return false;
     }
 
-    final q = _tryParseInt(_quantityController.text);
-    if (q == null || q < 1) {
-      showErr("Số lượng phải là số nguyên ≥ 1");
-      return false;
+    if (_requiresPassengerQuantity) {
+      final q = _tryParseInt(_quantityController.text);
+      if (q == null || q < 1) {
+        showErr("Số lượng phải là số nguyên ≥ 1");
+        return false;
+      }
     }
 
     if (_fromProvinceId == null ||
@@ -594,9 +630,9 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
       toDistrictId: _toDistrictId!,
       fromAddress: _fromAddressController.text.trim(),
       toAddress: _toAddressController.text.trim(),
-      type: _type,
+      type: _selectedType,
       customerPhone: _phoneController.text.trim(),
-      quantity: int.parse(_quantityController.text.trim()),
+      quantity: _normalizedQuantity,
       pickupTime: _buildPickupIso()!,
       offerPrice: num.parse(_offerPriceController.text.trim()),
       creatorEarn: num.parse(_creatorEarnController.text.trim()),
@@ -704,22 +740,22 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
               ),
               const SizedBox(height: 18),
               _buildSectionCard(
-                title: "Số lượng",
-                icon: Icons.confirmation_number,
+                title: "Loại chuyến",
+                icon: Icons.directions_car,
                 children: [
-                  TextField(
-                    controller: _quantityController,
-                    keyboardType: TextInputType.number,
+                  DropdownButtonFormField<int>(
+                    initialValue: _selectedType,
+                    dropdownColor: theme.colorScheme.primary,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
-                      labelText: "Số lượng (quantity)",
+                      labelText: "Loại chuyến (type)",
                       labelStyle: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w500,
                       ),
                       border: const OutlineInputBorder(),
                       prefixIcon: Icon(
-                        Icons.people,
+                        Icons.category_outlined,
                         color: theme.colorScheme.secondary,
                       ),
                       focusedBorder: OutlineInputBorder(
@@ -728,10 +764,44 @@ class _DriverBookingScreenState extends State<DriverBookingScreen> {
                           width: 2,
                         ),
                       ),
-                      helperText: "Nhập số nguyên ≥ 1",
-                      helperStyle: const TextStyle(color: Colors.white70),
                     ),
+                    items: BrokerRideType.options
+                        .map(
+                          (option) => DropdownMenuItem<int>(
+                            value: option.value,
+                            child: Text(option.label),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: _updateRideType,
                   ),
+                  const SizedBox(height: 12),
+                  if (_requiresPassengerQuantity)
+                    TextField(
+                      controller: _quantityController,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        labelText: "Số lượng người (quantity)",
+                        labelStyle: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        border: const OutlineInputBorder(),
+                        prefixIcon: Icon(
+                          Icons.people,
+                          color: theme.colorScheme.secondary,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: theme.colorScheme.secondary,
+                            width: 2,
+                          ),
+                        ),
+                        helperText: "Nhập số nguyên ≥ 1",
+                        helperStyle: const TextStyle(color: Colors.white70),
+                      ),
+                    ),
                 ],
               ),
               const SizedBox(height: 18),
