@@ -1,7 +1,10 @@
 import 'dart:io';
 
+import 'package:beludriver_app/screens/face_detection/front_face_capture_screen.dart';
+import 'package:beludriver_app/screens/face_detection/left_face_capture_screen.dart';
+import 'package:beludriver_app/screens/face_detection/right_face_capture_screen.dart';
+import 'package:beludriver_app/services/permission_service.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
 class KycStepFaceVerification extends StatefulWidget {
   final File? initialFaceLeft;
@@ -31,11 +34,6 @@ class KycStepFaceVerification extends StatefulWidget {
 }
 
 class _KycStepFaceVerificationState extends State<KycStepFaceVerification> {
-  final ImagePicker _picker = ImagePicker();
-
-  // face_left  = nghiêng sang trái (người dùng nhìn sang trái)
-  // face_front = chính diện
-  // face_right = nghiêng sang phải (người dùng nhìn sang phải)
   File? _faceLeft;
   File? _faceFront;
   File? _faceRight;
@@ -48,34 +46,84 @@ class _KycStepFaceVerificationState extends State<KycStepFaceVerification> {
     _faceRight = widget.initialFaceRight;
   }
 
-  Future<void> _pickFaceLeft() async {
-    if (widget.isSubmitting) return;
-    final XFile? picked = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 85,
-    );
-    if (picked == null) return;
-    setState(() => _faceLeft = File(picked.path));
+  Future<bool> _ensureCameraPermission() async {
+    final granted = await PermissionService.ensureCamera();
+
+    if (!mounted) return false;
+
+    if (!granted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cần cấp quyền camera để chụp ảnh khuôn mặt'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+
+    return granted;
   }
 
-  Future<void> _pickFaceFront() async {
+  Future<void> _captureFaceFront() async {
     if (widget.isSubmitting) return;
-    final XFile? picked = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 85,
+
+    final granted = await _ensureCameraPermission();
+    if (!granted) return;
+
+    final String? imagePath = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (_) => const FrontFaceCaptureScreen(
+          showDebugInfo: false,
+        ),
+      ),
     );
-    if (picked == null) return;
-    setState(() => _faceFront = File(picked.path));
+
+    if (!mounted || imagePath == null || imagePath.isEmpty) return;
+
+    setState(() {
+      _faceFront = File(imagePath);
+    });
   }
 
-  Future<void> _pickFaceRight() async {
+  Future<void> _captureFaceLeft() async {
     if (widget.isSubmitting) return;
-    final XFile? picked = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 85,
+
+    final granted = await _ensureCameraPermission();
+    if (!granted) return;
+
+    final String? imagePath = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (_) => const LeftFaceCaptureScreen(
+          showDebugInfo: false,
+        ),
+      ),
     );
-    if (picked == null) return;
-    setState(() => _faceRight = File(picked.path));
+
+    if (!mounted || imagePath == null || imagePath.isEmpty) return;
+
+    setState(() {
+      _faceLeft = File(imagePath);
+    });
+  }
+
+  Future<void> _captureFaceRight() async {
+    if (widget.isSubmitting) return;
+
+    final granted = await _ensureCameraPermission();
+    if (!granted) return;
+
+    final String? imagePath = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (_) => const RightFaceCaptureScreen(
+          showDebugInfo: false,
+        ),
+      ),
+    );
+
+    if (!mounted || imagePath == null || imagePath.isEmpty) return;
+
+    setState(() {
+      _faceRight = File(imagePath);
+    });
   }
 
   void _confirm() {
@@ -85,7 +133,7 @@ class _KycStepFaceVerificationState extends State<KycStepFaceVerification> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Vui lòng chọn đủ 3 ảnh khuôn mặt: trái, chính diện, phải.',
+            'Vui lòng chụp đủ 3 ảnh khuôn mặt: trái, chính diện, phải.',
           ),
           behavior: SnackBarBehavior.floating,
         ),
@@ -93,8 +141,6 @@ class _KycStepFaceVerificationState extends State<KycStepFaceVerification> {
       return;
     }
 
-    // Thứ tự callback: faceLeft, faceFront, faceRight
-    // khớp với kyc_popup.dart: onConfirmed: (faceLeft, faceFront, faceRight)
     widget.onConfirmed(_faceLeft!, _faceFront!, _faceRight!);
   }
 
@@ -114,7 +160,7 @@ class _KycStepFaceVerificationState extends State<KycStepFaceVerification> {
           children: [
             Text(
               title,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
@@ -132,11 +178,14 @@ class _KycStepFaceVerificationState extends State<KycStepFaceVerification> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.check_circle_outline,
-                        size: 13, color: Colors.green.shade600),
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 13,
+                      color: Colors.green.shade600,
+                    ),
                     const SizedBox(width: 3),
                     Text(
-                      'Đã chọn ảnh',
+                      'Đã chụp ảnh',
                       style: TextStyle(
                         fontSize: 11,
                         color: Colors.green.shade700,
@@ -150,10 +199,9 @@ class _KycStepFaceVerificationState extends State<KycStepFaceVerification> {
           ],
         ),
         const SizedBox(height: 4),
-        // Hint mô tả cách chụp
         Text(
           hint,
-          style: TextStyle(fontSize: 12, color: Colors.white),
+          style: const TextStyle(fontSize: 12, color: Colors.white),
         ),
         const SizedBox(height: 6),
         GestureDetector(
@@ -163,13 +211,11 @@ class _KycStepFaceVerificationState extends State<KycStepFaceVerification> {
             height: 140,
             decoration: BoxDecoration(
               border: Border.all(
-                color:
-                file != null ? colorScheme.primary : Colors.grey.shade300,
+                color: file != null ? colorScheme.primary : Colors.grey.shade300,
                 width: file != null ? 2 : 1.5,
               ),
               borderRadius: BorderRadius.circular(14),
-              color:
-              file != null ? Colors.transparent : Colors.grey.shade50,
+              color: file != null ? Colors.transparent : Colors.grey.shade50,
             ),
             child: file == null
                 ? Column(
@@ -181,11 +227,15 @@ class _KycStepFaceVerificationState extends State<KycStepFaceVerification> {
                     color: colorScheme.primary.withOpacity(0.08),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(icon, size: 28, color: colorScheme.primary),
+                  child: Icon(
+                    icon,
+                    size: 28,
+                    color: colorScheme.primary,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Nhấn để chọn ảnh',
+                  'Nhấn để mở camera',
                   style: TextStyle(
                     fontSize: 14,
                     color: colorScheme.primary,
@@ -194,7 +244,7 @@ class _KycStepFaceVerificationState extends State<KycStepFaceVerification> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'JPG, PNG · Tối đa 10MB',
+                  'Chụp đúng góc khuôn mặt yêu cầu',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey.shade400,
@@ -229,7 +279,6 @@ class _KycStepFaceVerificationState extends State<KycStepFaceVerification> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Progress ─────────────────────────────────────────────────
           Row(
             children: [
               const Text(
@@ -254,10 +303,7 @@ class _KycStepFaceVerificationState extends State<KycStepFaceVerification> {
               ),
             ],
           ),
-
           const SizedBox(height: 20),
-
-          // ── Title ────────────────────────────────────────────────────
           const Text(
             'Xác nhận khuôn mặt',
             textAlign: TextAlign.center,
@@ -269,41 +315,35 @@ class _KycStepFaceVerificationState extends State<KycStepFaceVerification> {
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: Colors.white),
           ),
-
           const SizedBox(height: 24),
 
-          // ── face_front: chính diện ───────────────────────────────────
           _buildPicker(
             title: 'Khuôn mặt chính diện',
             hint: 'Nhìn thẳng vào camera, không nghiêng đầu',
             icon: Icons.face,
             file: _faceFront,
-            onTap: _pickFaceFront,
+            onTap: _captureFaceFront,
           ),
           const SizedBox(height: 16),
 
-          // ── face_left: người dùng quay sang trái ────────────────────
           _buildPicker(
             title: 'Khuôn mặt bên trái',
             hint: 'Quay đầu sang trái khoảng 45°',
             icon: Icons.arrow_back,
             file: _faceLeft,
-            onTap: _pickFaceLeft,
+            onTap: _captureFaceLeft,
           ),
           const SizedBox(height: 16),
 
-          // ── face_right: người dùng quay sang phải ───────────────────
           _buildPicker(
             title: 'Khuôn mặt bên phải',
             hint: 'Quay đầu sang phải khoảng 45°',
             icon: Icons.arrow_forward,
             file: _faceRight,
-            onTap: _pickFaceRight,
+            onTap: _captureFaceRight,
           ),
-
           const SizedBox(height: 24),
 
-          // ── Bottom action row ────────────────────────────────────────
           Row(
             children: [
               SizedBox(
@@ -324,21 +364,21 @@ class _KycStepFaceVerificationState extends State<KycStepFaceVerification> {
                   onPressed: widget.isSubmitting
                       ? null
                       : _faceFront == null
-                      ? _pickFaceFront
+                      ? _captureFaceFront
                       : _faceLeft == null
-                      ? _pickFaceLeft
+                      ? _captureFaceLeft
                       : _faceRight == null
-                      ? _pickFaceRight
-                      : _pickFaceFront,
-                  icon: const Icon(Icons.photo_library_outlined, size: 18),
+                      ? _captureFaceRight
+                      : _captureFaceFront,
+                  icon: const Icon(Icons.camera_alt_outlined, size: 18),
                   label: Text(
                     _faceFront == null
-                        ? 'Chọn ảnh chính diện'
+                        ? 'Chụp ảnh chính diện'
                         : _faceLeft == null
-                        ? 'Chọn ảnh bên trái'
+                        ? 'Chụp ảnh bên trái'
                         : _faceRight == null
-                        ? 'Chọn ảnh bên phải'
-                        : 'Chọn lại ảnh',
+                        ? 'Chụp ảnh bên phải'
+                        : 'Chụp lại ảnh',
                   ),
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size.fromHeight(48),
@@ -370,7 +410,6 @@ class _KycStepFaceVerificationState extends State<KycStepFaceVerification> {
               ),
             ],
           ),
-
           const SizedBox(height: 8),
         ],
       ),

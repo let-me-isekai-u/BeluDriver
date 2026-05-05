@@ -23,6 +23,10 @@ import '../../providers/kyc/kyc_provider.dart';
 import '../../providers/routes/register_route_provider.dart';
 import '../register_route/register_route_popup.dart';
 
+
+///test màn hình facedetection
+import '../face_detection/face_capture_screen.dart';
+
 class DriverHomeScreen extends StatelessWidget {
   const DriverHomeScreen({super.key});
 
@@ -510,6 +514,18 @@ class _HomeDashboard extends StatelessWidget {
                     ),
                   ),
                 ),
+                // _buildMenuCard(
+                //   context,
+                //   "XÁC THỰC KHUÔN MẶT",
+                //   Icons.face_retouching_natural,
+                //   Colors.teal,
+                //       () => Navigator.push(
+                //     context,
+                //     MaterialPageRoute(
+                //       builder: (_) => const FaceCaptureScreen(),
+                //     ),
+                //   ),
+                // ),
               ],
             ),
           ),

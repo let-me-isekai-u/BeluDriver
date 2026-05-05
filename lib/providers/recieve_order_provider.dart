@@ -1,19 +1,41 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/paged_response_model.dart';
 import '../models/waiting_ride_model.dart';
 import '../models/driver/broker_rides_model.dart';
 import '../services/api_service.dart';
 
+enum WaitingRideSortOption { createdAtDesc, pickupTimeAsc }
+
+abstract class WaitingRideListItem {
+  const WaitingRideListItem();
+}
+
+class WaitingRideDateHeaderItem extends WaitingRideListItem {
+  const WaitingRideDateHeaderItem(this.date);
+
+  final DateTime? date;
+}
+
+class WaitingRideCardItem extends WaitingRideListItem {
+  const WaitingRideCardItem(this.ride);
+
+  final WaitingRide ride;
+}
+
 class RecieveOrderProvider extends ChangeNotifier {
   static const int pageSize = 20;
 
-  final PagingController<int, WaitingRide> pagingController =
-  PagingController(firstPageKey: 1);
+  final PagingController<int, WaitingRideListItem> pagingController =
+      PagingController(firstPageKey: 1);
+
+  final List<WaitingRide> _waitingRides = <WaitingRide>[];
+  WaitingRideSortOption _sortOption = WaitingRideSortOption.createdAtDesc;
 
   List<dynamic> provinces = [];
   int? selectedProvinceId;
@@ -28,6 +50,8 @@ class RecieveOrderProvider extends ChangeNotifier {
   final Set<int> myBrokerRideIds = <int>{};
   bool loadingMyBrokerRides = false;
 
+  WaitingRideSortOption get sortOption => _sortOption;
+
   RecieveOrderProvider() {
     pagingController.addPageRequestListener((pageKey) {
       fetchNewRidesPage(pageKey);
@@ -41,14 +65,19 @@ class RecieveOrderProvider extends ChangeNotifier {
   }
 
   Future<void> init() async {
-    await Future.wait([
-      loadProvinces(),
-      loadMyBrokerRideIds(),
-    ]);
+    await Future.wait([loadProvinces(), loadMyBrokerRideIds()]);
   }
 
   void applyFilter() {
+    _waitingRides.clear();
     pagingController.refresh();
+  }
+
+  void setSortOption(WaitingRideSortOption value) {
+    if (_sortOption == value) return;
+    _sortOption = value;
+    _rebuildWaitingRideItems();
+    notifyListeners();
   }
 
   Future<String> _getToken() async {
@@ -73,10 +102,10 @@ class RecieveOrderProvider extends ChangeNotifier {
     if (ride is WaitingRide) return ride.rideSource;
     if (ride is Map) {
       return int.tryParse(
-        ride['rideSource']?.toString() ??
-            ride['ride_source']?.toString() ??
-            '1',
-      ) ??
+            ride['rideSource']?.toString() ??
+                ride['ride_source']?.toString() ??
+                '1',
+          ) ??
           1;
     }
     return 1;
@@ -85,8 +114,8 @@ class RecieveOrderProvider extends ChangeNotifier {
   int extractRideId(dynamic ride) {
     if (ride is WaitingRide) return ride.id;
     return int.tryParse(
-      ride['rideId']?.toString() ?? ride['id']?.toString() ?? '0',
-    ) ??
+          ride['rideId']?.toString() ?? ride['id']?.toString() ?? '0',
+        ) ??
         0;
   }
 
@@ -100,6 +129,10 @@ class RecieveOrderProvider extends ChangeNotifier {
 
   Future<void> fetchNewRidesPage(int pageKey) async {
     try {
+      if (pageKey == pagingController.firstPageKey) {
+        _waitingRides.clear();
+      }
+
       final token = await _getToken();
 
       if (selectedDistrictId != null) {
@@ -115,18 +148,23 @@ class RecieveOrderProvider extends ChangeNotifier {
             final items = list
                 .map<WaitingRide>(
                   (json) => WaitingRide.fromJson(json as Map<String, dynamic>),
-            )
+                )
                 .toList();
 
-            pagingController.appendLastPage(items);
+            _setWaitingRidePage(
+              items,
+              nextPageKey: null,
+              replaceExisting: true,
+            );
             return;
           } else {
-            pagingController.error = "Không thể tải dữ liệu (filter theo huyện)";
+            pagingController.error =
+                "Không thể tải dữ liệu (filter theo huyện)";
             return;
           }
         } else {
           pagingController.error =
-          "Không thể tải dữ liệu từ máy chủ (filter theo huyện)";
+              "Không thể tải dữ liệu từ máy chủ (filter theo huyện)";
           return;
         }
       }
@@ -143,17 +181,16 @@ class RecieveOrderProvider extends ChangeNotifier {
 
         final pagedResponse = PagedResponse<WaitingRide>.fromJson(
           pagedData,
-              (json) => WaitingRide.fromJson(json as Map<String, dynamic>),
+          (json) => WaitingRide.fromJson(json as Map<String, dynamic>),
         );
 
         final newItems = pagedResponse.data;
 
-        if (!pagedResponse.hasNext) {
-          pagingController.appendLastPage(newItems);
-        } else {
-          final nextPageKey = pageKey + 1;
-          pagingController.appendPage(newItems, nextPageKey);
-        }
+        _setWaitingRidePage(
+          newItems,
+          nextPageKey: pagedResponse.hasNext ? pageKey + 1 : null,
+          replaceExisting: pageKey == pagingController.firstPageKey,
+        );
       } else {
         pagingController.error = "Không thể tải dữ liệu từ máy chủ";
       }
@@ -182,7 +219,9 @@ class RecieveOrderProvider extends ChangeNotifier {
           notifyListeners();
         }
       } else {
-        debugPrint("getBrokerRides() status=${res.statusCode} body=${res.body}");
+        debugPrint(
+          "getBrokerRides() status=${res.statusCode} body=${res.body}",
+        );
       }
     } catch (e) {
       debugPrint("Lỗi load broker rides: $e");
@@ -241,10 +280,7 @@ class RecieveOrderProvider extends ChangeNotifier {
   Future<Map<String, dynamic>> acceptRide(WaitingRide ride) async {
     final token = await _getToken();
     if (token.isEmpty) {
-      return {
-        'success': false,
-        'message': 'Token không hợp lệ',
-      };
+      return {'success': false, 'message': 'Token không hợp lệ'};
     }
 
     final res = await ApiService.acceptRide(
@@ -256,9 +292,10 @@ class RecieveOrderProvider extends ChangeNotifier {
     if (res.statusCode == 200) {
       final body = jsonDecode(res.body);
 
-      final currentItems = pagingController.itemList ?? [];
-      currentItems.removeWhere((item) => item.id == ride.id);
-      pagingController.itemList = List.from(currentItems);
+      _waitingRides.removeWhere(
+        (item) => item.id == ride.id && item.rideSource == ride.rideSource,
+      );
+      _rebuildWaitingRideItems();
 
       isAcceptedLoaded = false;
       notifyListeners();
@@ -269,32 +306,25 @@ class RecieveOrderProvider extends ChangeNotifier {
       };
     } else {
       pagingController.refresh();
-      return {
-        'success': false,
-        'message': "Đơn đã được nhận bởi tài xế khác!",
-      };
+      return {'success': false, 'message': "Đơn đã được nhận bởi tài xế khác!"};
     }
   }
 
   Future<Map<String, dynamic>> cancelMyBrokerRide(dynamic ride) async {
     final int rideId = extractRideId(ride);
     if (rideId == 0) {
-      return {
-        'success': false,
-        'message': 'Ride không hợp lệ',
-      };
+      return {'success': false, 'message': 'Ride không hợp lệ'};
     }
 
     final token = await _getToken();
     if (token.isEmpty) {
-      return {
-        'success': false,
-        'message': 'Token không hợp lệ',
-      };
+      return {'success': false, 'message': 'Token không hợp lệ'};
     }
 
-    final res =
-    await ApiService.cancelBrokerRide(accessToken: token, rideId: rideId);
+    final res = await ApiService.cancelBrokerRide(
+      accessToken: token,
+      rideId: rideId,
+    );
 
     if (res.statusCode == 200) {
       myBrokerRideIds.remove(rideId);
@@ -303,10 +333,7 @@ class RecieveOrderProvider extends ChangeNotifier {
       pagingController.refresh();
       await loadMyBrokerRideIds();
 
-      return {
-        'success': true,
-        'message': 'Huỷ đơn thành công',
-      };
+      return {'success': true, 'message': 'Huỷ đơn thành công'};
     } else {
       return {
         'success': false,
@@ -318,18 +345,12 @@ class RecieveOrderProvider extends ChangeNotifier {
   Future<Map<String, dynamic>> startRide(dynamic ride) async {
     final token = await _getToken();
     if (token.isEmpty) {
-      return {
-        'success': false,
-        'message': 'Token không hợp lệ',
-      };
+      return {'success': false, 'message': 'Token không hợp lệ'};
     }
 
     final int rideId = extractRideId(ride);
     if (rideId == 0) {
-      return {
-        'success': false,
-        'message': 'Ride không hợp lệ',
-      };
+      return {'success': false, 'message': 'Ride không hợp lệ'};
     }
 
     final int rideSource = extractRideSource(ride);
@@ -349,10 +370,7 @@ class RecieveOrderProvider extends ChangeNotifier {
       };
     }
 
-    return {
-      'success': false,
-      'message': 'Không thể bắt đầu chuyến đi',
-    };
+    return {'success': false, 'message': 'Không thể bắt đầu chuyến đi'};
   }
 
   List<Map<String, dynamic>> get acceptedRidesStatus2 {
@@ -361,7 +379,115 @@ class RecieveOrderProvider extends ChangeNotifier {
         .toList();
   }
 
+  String sortOptionLabel(WaitingRideSortOption option) {
+    switch (option) {
+      case WaitingRideSortOption.createdAtDesc:
+        return 'Ngày đặt mới nhất';
+      case WaitingRideSortOption.pickupTimeAsc:
+        return 'Giờ đón sớm nhất';
+    }
+  }
+
   // ====================== Helpers ======================
+
+  void _setWaitingRidePage(
+    List<WaitingRide> newItems, {
+    required int? nextPageKey,
+    required bool replaceExisting,
+  }) {
+    if (replaceExisting) {
+      _waitingRides
+        ..clear()
+        ..addAll(newItems);
+    } else {
+      final existingKeys = _waitingRides
+          .map((ride) => '${ride.id}_${ride.rideSource}')
+          .toSet();
+
+      for (final ride in newItems) {
+        final key = '${ride.id}_${ride.rideSource}';
+        if (existingKeys.add(key)) {
+          _waitingRides.add(ride);
+        }
+      }
+    }
+
+    _rebuildWaitingRideItems(nextPageKey: nextPageKey);
+  }
+
+  void _rebuildWaitingRideItems({int? nextPageKey}) {
+    final sortedRides = List<WaitingRide>.from(_waitingRides)
+      ..sort(_compareWaitingRides);
+
+    final displayItems = <WaitingRideListItem>[];
+    DateTime? currentHeaderDate;
+
+    for (final ride in sortedRides) {
+      if (_sortOption == WaitingRideSortOption.createdAtDesc) {
+        final headerDate = _dateOnly(extractCreatedAt(ride));
+        if (!_isSameDay(currentHeaderDate, headerDate)) {
+          displayItems.add(WaitingRideDateHeaderItem(headerDate));
+          currentHeaderDate = headerDate;
+        }
+      }
+
+      displayItems.add(WaitingRideCardItem(ride));
+    }
+
+    pagingController.value = PagingState<int, WaitingRideListItem>(
+      itemList: displayItems,
+      error: null,
+      nextPageKey: nextPageKey ?? pagingController.nextPageKey,
+    );
+  }
+
+  int _compareWaitingRides(WaitingRide a, WaitingRide b) {
+    switch (_sortOption) {
+      case WaitingRideSortOption.createdAtDesc:
+        final createdCompare = _compareDateDesc(
+          extractCreatedAt(a),
+          extractCreatedAt(b),
+        );
+        if (createdCompare != 0) return createdCompare;
+        return _compareDateAsc(
+          extractPickupDateTime(a),
+          extractPickupDateTime(b),
+        );
+      case WaitingRideSortOption.pickupTimeAsc:
+        final pickupCompare = _compareDateAsc(
+          extractPickupDateTime(a),
+          extractPickupDateTime(b),
+        );
+        if (pickupCompare != 0) return pickupCompare;
+        return _compareDateDesc(extractCreatedAt(a), extractCreatedAt(b));
+    }
+  }
+
+  int _compareDateDesc(DateTime? a, DateTime? b) {
+    if (a == null && b == null) return 0;
+    if (a == null) return 1;
+    if (b == null) return -1;
+    return b.compareTo(a);
+  }
+
+  int _compareDateAsc(DateTime? a, DateTime? b) {
+    if (a == null && b == null) return 0;
+    if (a == null) return 1;
+    if (b == null) return -1;
+    return a.compareTo(b);
+  }
+
+  bool _isSameDay(DateTime? a, DateTime? b) {
+    if (a == null && b == null) return true;
+    if (a == null || b == null) return false;
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  DateTime? _dateOnly(DateTime? value) {
+    if (value == null) return null;
+    final local = value.toLocal();
+    return DateTime(local.year, local.month, local.day);
+  }
 
   String extractProvinceFromMap(Map m, List<String> keys) {
     for (final k in keys) {
@@ -385,33 +511,82 @@ class RecieveOrderProvider extends ChangeNotifier {
     return null;
   }
 
-  String formatPickupTime(dynamic value) {
-    if (value == null) return '';
+  DateTime? extractCreatedAt(dynamic ride) {
+    if (ride is WaitingRide) {
+      return parseDateTime(ride.createdAt);
+    }
+
+    if (ride is Map) {
+      return parseDateTime(
+        extractDynamicFromMap(ride, [
+          'createdAt',
+          'created_at',
+          'createAt',
+          'create_at',
+        ]),
+      );
+    }
+
+    return null;
+  }
+
+  DateTime? extractPickupDateTime(dynamic ride) {
+    if (ride is WaitingRide) {
+      return parseDateTime(ride.pickupTime);
+    }
+
+    if (ride is Map) {
+      return parseDateTime(
+        extractDynamicFromMap(ride, [
+          'pickupTime',
+          'pickup_time',
+          'pickupAt',
+          'pickup_at',
+          'pickuptime',
+          'pickupDate',
+          'pickup_date',
+        ]),
+      );
+    }
+
+    return null;
+  }
+
+  DateTime? parseDateTime(dynamic value) {
+    if (value == null) return null;
+
+    if (value is DateTime) return value.toLocal();
+
     try {
       if (value is int) {
-        final int v = value;
-        final int ms = v.abs() > 1000000000000 ? v : v * 1000;
-        return DateTime.fromMillisecondsSinceEpoch(ms)
-            .toLocal()
-            .toString();
+        final ms = value.abs() > 1000000000000 ? value : value * 1000;
+        return DateTime.fromMillisecondsSinceEpoch(ms).toLocal();
       }
 
-      final s = value.toString().trim();
-      if (s.isEmpty) return '';
+      final raw = value.toString().trim();
+      if (raw.isEmpty || raw.startsWith('0001-01-01')) return null;
 
-      if (RegExp(r'^\d+$').hasMatch(s)) {
-        final int v = int.parse(s);
-        final int ms = v.abs() > 1000000000000 ? v : v * 1000;
-        return DateTime.fromMillisecondsSinceEpoch(ms)
-            .toLocal()
-            .toString();
+      if (RegExp(r'^\d+$').hasMatch(raw)) {
+        final parsed = int.parse(raw);
+        final ms = parsed.abs() > 1000000000000 ? parsed : parsed * 1000;
+        return DateTime.fromMillisecondsSinceEpoch(ms).toLocal();
       }
 
-      final DateTime dt = DateTime.parse(s);
-      return dt.toLocal().toString();
+      return DateTime.parse(raw).toLocal();
     } catch (_) {
-      return value.toString();
+      return null;
     }
+  }
+
+  String formatCreatedDateHeader(DateTime? value) {
+    if (value == null) return 'Không rõ ngày đặt';
+    return DateFormat('dd/MM/yyyy').format(value.toLocal());
+  }
+
+  String formatPickupTime(dynamic value) {
+    final parsed = parseDateTime(value);
+    if (parsed == null) return value?.toString() ?? '';
+    return parsed.toString();
   }
 
   String buildFullAddress(String? address, String? district, String? province) {

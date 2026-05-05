@@ -1,7 +1,8 @@
 class WaitingRide {
   final int id;
-  final int rideSource; // 👈 thêm dòng này
+  final int rideSource;
   final String? code;
+  final String? createdAt;
   final String? fromAddress;
   final String? fromDistrict;
   final String? fromProvince;
@@ -14,8 +15,9 @@ class WaitingRide {
 
   WaitingRide({
     required this.id,
-    required this.rideSource, // 👈 thêm
+    required this.rideSource,
     this.code,
+    this.createdAt,
     this.fromAddress,
     this.fromProvince,
     this.toAddress,
@@ -32,6 +34,7 @@ class WaitingRide {
       id: json['id'] ?? 0,
       rideSource: json['rideSource'] ?? 1,
       code: json['code'],
+      createdAt: json['createdAt']?.toString() ?? json['createAt']?.toString(),
       fromAddress: json['fromAddress'],
       fromProvince: json['fromProvince'],
       toAddress: json['toAddress'],
