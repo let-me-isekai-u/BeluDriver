@@ -1,9 +1,9 @@
 import 'dart:async';
-import 'dart:ui';
+import 'dart:io';
 
 import 'package:camera/camera.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 
@@ -25,15 +25,25 @@ class SingleFaceCaptureScreen extends StatefulWidget {
 }
 
 class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
+  static const Map<DeviceOrientation, int> _orientations = {
+    DeviceOrientation.portraitUp: 0,
+    DeviceOrientation.landscapeLeft: 90,
+    DeviceOrientation.portraitDown: 180,
+    DeviceOrientation.landscapeRight: 270,
+  };
+
   CameraController? _controller;
   late final FaceDetector _faceDetector;
   late final FlutterTts _tts;
+  bool _isTtsReady = false;
+  Future<void>? _ttsInitFuture;
 
   bool _isInitializing = true;
   bool _isStreaming = false;
   bool _isProcessing = false;
   bool _isCountingDown = false;
   bool _isTakingShot = false;
+  bool _hasLoggedFirstFrameMetadata = false;
 
   Timer? _captureTimer;
 
@@ -59,16 +69,21 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
     super.initState();
 
     _tts = FlutterTts();
-    _tts.setLanguage('vi-VN');
-    _tts.setSpeechRate(0.45);
-    _tts.setVolume(1.0);
-    _tts.awaitSpeakCompletion(true);
+    _tts.setStartHandler(() => _log('TTS START'));
+    _tts.setCompletionHandler(() => _log('TTS COMPLETE'));
+    _tts.setErrorHandler((message) {
+      _log('TTS ERROR: $message');
+      _isTtsReady = false;
+      _ttsInitFuture = null;
+    });
+    _tts.awaitSpeakCompletion(false);
+    unawaited(_ensureTtsReady());
 
     _faceDetector = FaceDetector(
       options: FaceDetectorOptions(
         enableClassification: true,
         enableTracking: true,
-        performanceMode: FaceDetectorMode.fast,
+        performanceMode: FaceDetectorMode.accurate,
       ),
     );
 
@@ -90,39 +105,39 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
   }) {
     debugPrint(
       '[FACE][$tag] '
-          'step=$_stepLabel '
-          'yaw=${yaw?.toStringAsFixed(1) ?? "--"} '
-          'ratio=${ratio?.toStringAsFixed(3) ?? "--"} '
-          'centerX=${centerOffsetX?.toStringAsFixed(3) ?? "--"} '
-          'centerY=${centerOffsetY?.toStringAsFixed(3) ?? "--"} '
-          'count=$_detectedFaceCount '
-          'pose=$_debugPoseMatched '
-          'large=$_debugLargeEnough '
-          'center=$_debugCenterOk '
-          'stable=$_stableFrames/$_requiredStableFrames '
-          'counting=$_isCountingDown '
-          'taking=$_isTakingShot '
-          'token=$_countdownToken',
+      'step=$_stepLabel '
+      'yaw=${yaw?.toStringAsFixed(1) ?? "--"} '
+      'ratio=${ratio?.toStringAsFixed(3) ?? "--"} '
+      'centerX=${centerOffsetX?.toStringAsFixed(3) ?? "--"} '
+      'centerY=${centerOffsetY?.toStringAsFixed(3) ?? "--"} '
+      'count=$_detectedFaceCount '
+      'pose=$_debugPoseMatched '
+      'large=$_debugLargeEnough '
+      'center=$_debugCenterOk '
+      'stable=$_stableFrames/$_requiredStableFrames '
+      'counting=$_isCountingDown '
+      'taking=$_isTakingShot '
+      'token=$_countdownToken',
     );
   }
 
   void _logFail(
-      String reason, {
-        double? yaw,
-        double? ratio,
-        double? centerOffsetX,
-        double? centerOffsetY,
-      }) {
+    String reason, {
+    double? yaw,
+    double? ratio,
+    double? centerOffsetX,
+    double? centerOffsetY,
+  }) {
     debugPrint(
       '[FACE][FAIL] '
-          'step=$_stepLabel '
-          'reason=$reason '
-          'yaw=${yaw?.toStringAsFixed(1) ?? "--"} '
-          'ratio=${ratio?.toStringAsFixed(3) ?? "--"} '
-          'centerX=${centerOffsetX?.toStringAsFixed(3) ?? "--"} '
-          'centerY=${centerOffsetY?.toStringAsFixed(3) ?? "--"} '
-          'stable=$_stableFrames/$_requiredStableFrames '
-          'token=$_countdownToken',
+      'step=$_stepLabel '
+      'reason=$reason '
+      'yaw=${yaw?.toStringAsFixed(1) ?? "--"} '
+      'ratio=${ratio?.toStringAsFixed(3) ?? "--"} '
+      'centerX=${centerOffsetX?.toStringAsFixed(3) ?? "--"} '
+      'centerY=${centerOffsetY?.toStringAsFixed(3) ?? "--"} '
+      'stable=$_stableFrames/$_requiredStableFrames '
+      'token=$_countdownToken',
     );
   }
 
@@ -136,7 +151,7 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
       }
 
       final selectedCamera = cameras.firstWhere(
-            (camera) => camera.lensDirection == CameraLensDirection.front,
+        (camera) => camera.lensDirection == CameraLensDirection.front,
         orElse: () => cameras.first,
       );
 
@@ -144,7 +159,9 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
         selectedCamera,
         ResolutionPreset.medium,
         enableAudio: false,
-        imageFormatGroup: ImageFormatGroup.yuv420,
+        imageFormatGroup: Platform.isAndroid
+            ? ImageFormatGroup.nv21
+            : ImageFormatGroup.bgra8888,
       );
 
       await _controller!.initialize();
@@ -161,8 +178,8 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
       });
 
       _log('CAMERA READY');
-      await _speak(_initialInstruction());
       await _startImageStream();
+      unawaited(_speak(_initialInstruction()));
     } catch (e, st) {
       _log('_initCamera error: $e');
       _log('$st');
@@ -252,7 +269,21 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
       }
 
       final face = faces.first;
-      final yaw = face.headEulerAngleY ?? 999.0;
+      final yaw = face.headEulerAngleY;
+      if (yaw == null) {
+        _stableFrames = 0;
+        _resetCaptureState();
+        setState(() {
+          _lastYaw = null;
+          _debugPoseMatched = false;
+          _debugLargeEnough = false;
+          _debugCenterOk = false;
+          _statusText = 'Đang phân tích góc khuôn mặt...';
+        });
+        _logFail('missing yaw');
+        return;
+      }
+
       final ratio = _getFaceRatio(face, image);
       final centerOffsets = _getFaceCenterOffsets(face, image);
       final centerOffsetX = centerOffsets.$1;
@@ -284,7 +315,7 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
         if (!isStillValid) {
           _log(
             'COUNTDOWN CANCEL (lost pose) '
-                'pose=$isPoseMatched large=$isFaceLargeEnough center=$isCenterOk',
+            'pose=$isPoseMatched large=$isFaceLargeEnough center=$isCenterOk',
           );
           _stableFrames = 0;
           _resetCaptureState();
@@ -501,11 +532,175 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
     }
   }
 
+  Future<void> _ensureTtsReady() {
+    final initFuture = _ttsInitFuture;
+    if (initFuture != null) return initFuture;
+
+    final future = _initTts();
+    _ttsInitFuture = future;
+    return future;
+  }
+
+  String? _nonEmptyString(dynamic value) {
+    if (value == null) return null;
+
+    final text = value.toString().trim();
+    if (text.isEmpty || text.toLowerCase() == 'null') {
+      return null;
+    }
+
+    return text;
+  }
+
+  bool _ttsCallSucceeded(dynamic result) => result == 1 || result == true;
+
+  Map<String, String>? _voiceFromDynamic(dynamic value) {
+    if (value is! Map) return null;
+
+    final name = _nonEmptyString(value['name']);
+    final locale = _nonEmptyString(value['locale']);
+    if (name == null || locale == null) {
+      return null;
+    }
+
+    return <String, String>{'name': name, 'locale': locale};
+  }
+
+  List<Map<String, String>> _voicesFromDynamic(dynamic value) {
+    if (value is! List) return const <Map<String, String>>[];
+
+    final voices = <Map<String, String>>[];
+    for (final item in value) {
+      final voice = _voiceFromDynamic(item);
+      if (voice != null) {
+        voices.add(voice);
+      }
+    }
+    return voices;
+  }
+
+  Map<String, String>? _pickPreferredVoice(List<Map<String, String>> voices) {
+    for (final voice in voices) {
+      final locale = (voice['locale'] ?? '').toLowerCase();
+      if (locale.startsWith('vi')) {
+        return voice;
+      }
+    }
+
+    if (voices.isEmpty) return null;
+    return voices.first;
+  }
+
+  String _describeVoice(Map<String, String> voice) =>
+      'name=${voice['name'] ?? "unknown"} locale=${voice['locale'] ?? "unknown"}';
+
+  Future<void> _initTts() async {
+    try {
+      Map<String, String>? defaultVoice;
+      Map<String, String>? selectedVoice;
+      var selectedVoiceApplied = false;
+
+      if (Platform.isAndroid) {
+        final enginesRaw = await _tts.getEngines;
+        final engines = enginesRaw is List
+            ? enginesRaw.map((engine) => engine.toString()).toList()
+            : <String>[];
+
+        _log('TTS ENGINES: ${engines.join(', ')}');
+
+        if (engines.isEmpty) {
+          _log('TTS unavailable: no installed engines found');
+          _isTtsReady = false;
+          return;
+        }
+
+        final defaultEngine = _nonEmptyString(await _tts.getDefaultEngine);
+        _log('TTS DEFAULT ENGINE: ${defaultEngine ?? "null"}');
+
+        final selectedEngine = defaultEngine ?? engines.first;
+        _log('TTS SELECTED ENGINE: $selectedEngine');
+        final engineResult = await _tts.setEngine(selectedEngine);
+        _log('TTS SET ENGINE RESULT: $engineResult');
+
+        await _tts.setAudioAttributesForNavigation();
+        defaultVoice = _voiceFromDynamic(await _tts.getDefaultVoice);
+
+        if (defaultVoice != null) {
+          _log('TTS DEFAULT VOICE: ${_describeVoice(defaultVoice)}');
+        } else {
+          _log('TTS DEFAULT VOICE: null');
+        }
+
+        final voices = _voicesFromDynamic(await _tts.getVoices);
+        if (voices.isNotEmpty) {
+          final preview = voices.take(3).map(_describeVoice).join(' | ');
+          _log('TTS VOICES: total=${voices.length} sample=$preview');
+        } else {
+          _log('TTS VOICES: none reported by engine');
+        }
+
+        selectedVoice = defaultVoice ?? _pickPreferredVoice(voices);
+        if (selectedVoice != null) {
+          final setVoiceResult = await _tts.setVoice(selectedVoice);
+          selectedVoiceApplied = _ttsCallSucceeded(setVoiceResult);
+          _log(
+            'TTS SET VOICE RESULT: $setVoiceResult ${_describeVoice(selectedVoice)}',
+          );
+        }
+      }
+
+      dynamic languageResult = await _tts.setLanguage('vi-VN');
+      _log('TTS LANGUAGE vi-VN: $languageResult');
+
+      if (!_ttsCallSucceeded(languageResult)) {
+        languageResult = await _tts.setLanguage('vi');
+        _log('TTS LANGUAGE vi: $languageResult');
+      }
+
+      final vietnameseReady = _ttsCallSucceeded(languageResult);
+      var usedVoiceFallback = false;
+      if (!vietnameseReady) {
+        if (Platform.isAndroid) {
+          usedVoiceFallback = true;
+          _log(
+            selectedVoiceApplied
+                ? 'TTS fallback to selected voice'
+                : 'TTS fallback to engine default configuration',
+          );
+        } else {
+          _log('TTS unavailable: failed to set Vietnamese language');
+          _isTtsReady = false;
+          return;
+        }
+      }
+
+      await _tts.setSpeechRate(0.45);
+      await _tts.setVolume(1.0);
+
+      _isTtsReady = true;
+      _log(usedVoiceFallback ? 'TTS READY (voice fallback)' : 'TTS READY');
+    } catch (e, st) {
+      _isTtsReady = false;
+      _log('TTS INIT ERROR: $e');
+      _log('$st');
+    } finally {
+      if (!_isTtsReady) {
+        _ttsInitFuture = null;
+      }
+    }
+  }
+
   Future<void> _speak(String text) async {
     try {
+      await _ensureTtsReady();
+      if (!_isTtsReady) {
+        _log('TTS SKIP: engine not ready');
+        return;
+      }
+
       _log('TTS: $text');
       await _tts.stop();
-      await _tts.speak(text);
+      await _tts.speak(text, focus: Platform.isAndroid);
     } catch (e, st) {
       _log('tts error: $e');
       _log('$st');
@@ -531,22 +726,93 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
     try {
       final controller = _controller;
       if (controller == null) return null;
+      final camera = controller.description;
+      final sensorOrientation = camera.sensorOrientation;
 
-      final WriteBuffer allBytes = WriteBuffer();
-      for (final plane in image.planes) {
-        allBytes.putUint8List(plane.bytes);
+      InputImageRotation? rotation;
+      if (Platform.isIOS) {
+        rotation = InputImageRotationValue.fromRawValue(sensorOrientation);
+      } else if (Platform.isAndroid) {
+        var rotationCompensation =
+            _orientations[controller.value.deviceOrientation];
+        if (rotationCompensation == null) {
+          _log('SKIP FRAME: missing device orientation');
+          return null;
+        }
+
+        if (camera.lensDirection == CameraLensDirection.front) {
+          rotationCompensation =
+              (sensorOrientation + rotationCompensation) % 360;
+        } else {
+          rotationCompensation =
+              (sensorOrientation - rotationCompensation + 360) % 360;
+        }
+
+        rotation = InputImageRotationValue.fromRawValue(rotationCompensation);
+      }
+
+      if (rotation == null) {
+        _log('SKIP FRAME: unsupported rotation=$sensorOrientation');
+        return null;
+      }
+
+      if (image.planes.isEmpty) {
+        _log('SKIP FRAME: no planes');
+        return null;
+      }
+
+      InputImageFormat? format = InputImageFormatValue.fromRawValue(
+        image.format.raw,
+      );
+
+      if (Platform.isAndroid) {
+        final isNv21LikeStream =
+            image.planes.length == 1 &&
+            (format == InputImageFormat.nv21 ||
+                image.format.group == ImageFormatGroup.nv21 ||
+                image.format.group == ImageFormatGroup.yuv420);
+
+        if (!isNv21LikeStream) {
+          _log(
+            'SKIP FRAME: unsupported Android stream '
+            'raw=${image.format.raw} group=${image.format.group} planes=${image.planes.length}',
+          );
+          return null;
+        }
+
+        format = InputImageFormat.nv21;
+      }
+
+      if (Platform.isIOS && format != InputImageFormat.bgra8888) {
+        _log('SKIP FRAME: iOS format must be bgra8888, got=$format');
+        return null;
+      }
+
+      if (format == null) {
+        _log('SKIP FRAME: unsupported format after normalization');
+        return null;
+      }
+
+      final plane = image.planes.first;
+
+      if (!_hasLoggedFirstFrameMetadata) {
+        _hasLoggedFirstFrameMetadata = true;
+        _log(
+          'FRAME META raw=${image.format.raw} '
+          'group=${image.format.group} '
+          'planes=${image.planes.length} '
+          'bytesPerRow=${plane.bytesPerRow} '
+          'rotation=${rotation.rawValue}',
+        );
       }
 
       return InputImage.fromBytes(
-        bytes: allBytes.done().buffer.asUint8List(),
+        bytes: plane.bytes,
         metadata: InputImageMetadata(
           size: Size(image.width.toDouble(), image.height.toDouble()),
-          rotation: InputImageRotationValue.fromRawValue(
-            controller.description.sensorOrientation,
-          ) ??
-              InputImageRotation.rotation0deg,
-          format: InputImageFormat.yuv420,
-          bytesPerRow: image.planes.first.bytesPerRow,
+          rotation: rotation,
+          format: format,
+          bytesPerRow: plane.bytesPerRow,
         ),
       );
     } catch (e, st) {
@@ -578,11 +844,11 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
         _statusText = 'Đã chụp thành công';
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã chụp ảnh thành công')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Đã chụp ảnh thành công')));
 
-      await _speak('Đã chụp thành công');
+      unawaited(_speak('Đã chụp thành công'));
 
       if (!mounted) return;
       Navigator.of(context).pop(imageFile.path);
@@ -676,15 +942,11 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
   @override
   Widget build(BuildContext context) {
     if (_errorText != null) {
-      return Scaffold(
-        body: Center(child: Text(_errorText!)),
-      );
+      return Scaffold(body: Center(child: Text(_errorText!)));
     }
 
     if (_isInitializing || _controller == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final size = MediaQuery.of(context).size;
