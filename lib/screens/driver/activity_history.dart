@@ -23,7 +23,6 @@ class _ActivityScreenState extends State<ActivityScreen>
   List<RideModel> ongoingRides = [];
   List<RideModel> historyRides = [];
 
-  //TAB 3: ĐƠN ĐÃ ĐẨY (API 24)
   List<BrokerRideItem> brokerRides = [];
   bool _isLoadingBroker = false;
   bool _isBrokerLoaded = false;
@@ -42,12 +41,11 @@ class _ActivityScreenState extends State<ActivityScreen>
       initialIndex: safeInitial,
     );
 
-    _fetchOngoingRides();
-
-    if (safeInitial == 1 && !_isHistoryLoaded) {
+    if (safeInitial == 0) {
+      _fetchOngoingRides();
+    } else if (safeInitial == 1) {
       _fetchHistoryRides();
-    }
-    if (safeInitial == 2 && !_isBrokerLoaded) {
+    } else if (safeInitial == 2) {
       _fetchBrokerRides();
     }
 
@@ -55,10 +53,17 @@ class _ActivityScreenState extends State<ActivityScreen>
   }
 
   void _handleTabChange() {
-    if (_tabController.index == 1 && !_isHistoryLoaded) {
+    if (_tabController.indexIsChanging) return;
+
+    if (_tabController.index == 0 && ongoingRides.isEmpty && !_isLoadingOngoing) {
+      _fetchOngoingRides();
+    }
+
+    if (_tabController.index == 1 && !_isHistoryLoaded && !_isLoadingHistory) {
       _fetchHistoryRides();
     }
-    if (_tabController.index == 2 && !_isBrokerLoaded) {
+
+    if (_tabController.index == 2 && !_isBrokerLoaded && !_isLoadingBroker) {
       _fetchBrokerRides();
     }
   }
@@ -75,15 +80,17 @@ class _ActivityScreenState extends State<ActivityScreen>
     return prefs.getString('accessToken') ?? '';
   }
 
-  // ======================
-  // TAB 1: ĐANG DIỄN RA
-  // ======================
   Future<void> _fetchOngoingRides() async {
     if (!mounted) return;
     setState(() => _isLoadingOngoing = true);
+
     try {
       final token = await _getToken();
+
+      debugPrint("🔵 [ACTIVITY][TAB 1] CALL getProcessingRides");
       final res = await ApiService.getProcessingRides(accessToken: token);
+      debugPrint("🔵 [ACTIVITY][TAB 1] STATUS: ${res.statusCode}");
+      debugPrint("🔵 [ACTIVITY][TAB 1] BODY: ${res.body}");
 
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
@@ -103,15 +110,17 @@ class _ActivityScreenState extends State<ActivityScreen>
     }
   }
 
-  // ======================
-  // TAB 2: LỊCH SỬ
-  // ======================
   Future<void> _fetchHistoryRides() async {
     if (!mounted) return;
     setState(() => _isLoadingHistory = true);
+
     try {
       final token = await _getToken();
+
+      debugPrint("🟠 [ACTIVITY][TAB 2] CALL getRideHistory");
       final res = await ApiService.getRideHistory(accessToken: token);
+      debugPrint("🟠 [ACTIVITY][TAB 2] STATUS: ${res.statusCode}");
+      debugPrint("🟠 [ACTIVITY][TAB 2] BODY: ${res.body}");
 
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
@@ -132,9 +141,6 @@ class _ActivityScreenState extends State<ActivityScreen>
     }
   }
 
-  // ======================
-  // TAB 3: ĐƠN ĐÃ ĐẨY (API 24)
-  // ======================
   Future<void> _fetchBrokerRides() async {
     if (!mounted) return;
     setState(() => _isLoadingBroker = true);
@@ -143,7 +149,10 @@ class _ActivityScreenState extends State<ActivityScreen>
       final token = await _getToken();
       if (token.isEmpty) return;
 
+      debugPrint("🟣 [ACTIVITY][TAB 3] CALL getBrokerRides");
       final res = await ApiService.getBrokerRides(accessToken: token);
+      debugPrint("🟣 [ACTIVITY][TAB 3] STATUS: ${res.statusCode}");
+      debugPrint("🟣 [ACTIVITY][TAB 3] BODY: ${res.body}");
 
       if (res.statusCode == 200) {
         final parsed = BrokerRidesResponse.fromRawJson(res.body);
@@ -151,14 +160,11 @@ class _ActivityScreenState extends State<ActivityScreen>
         if (!mounted) return;
         if (parsed.success) {
           setState(() {
-            brokerRides = parsed.data
-                .where((ride) => ride.status == BrokerRideStatus.findingDriver)
-                .toList();
+            brokerRides = parsed.data;
             _isBrokerLoaded = true;
           });
         }
       } else if (res.statusCode == 404) {
-        // backend có thể trả KeyNotFoundException
         if (!mounted) return;
         setState(() {
           brokerRides = [];
@@ -172,9 +178,6 @@ class _ActivityScreenState extends State<ActivityScreen>
     }
   }
 
-  // ======================
-  // HUỶ ĐƠN ĐÃ ĐẨY (API 25)
-  // ======================
   Future<void> _handleCancelBrokerRide(BrokerRideItem ride) async {
     final theme = Theme.of(context);
     final token = await _getToken();
@@ -224,7 +227,7 @@ class _ActivityScreenState extends State<ActivityScreen>
       );
 
       if (!mounted) return;
-      Navigator.pop(context); // close loading
+      Navigator.pop(context);
 
       if (res.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -244,7 +247,7 @@ class _ActivityScreenState extends State<ActivityScreen>
       }
     } catch (e) {
       if (!mounted) return;
-      Navigator.pop(context); // close loading
+      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Có lỗi xảy ra: $e"),
@@ -254,9 +257,6 @@ class _ActivityScreenState extends State<ActivityScreen>
     }
   }
 
-  // ======================
-  // COMPLETE RIDE
-  // ======================
   Future<void> _handleCompleteRide(RideModel ride) async {
     final theme = Theme.of(context);
     final token = await _getToken();
@@ -304,14 +304,15 @@ class _ActivityScreenState extends State<ActivityScreen>
             RideDetailScreen(rideId: ride.id, rideSource: ride.rideSource),
       ),
     ).then((_) {
-      _fetchOngoingRides();
-      if (_isHistoryLoaded) _fetchHistoryRides();
+      if (_tabController.index == 0) {
+        _fetchOngoingRides();
+      }
+      if (_isHistoryLoaded) {
+        _fetchHistoryRides();
+      }
     });
   }
 
-  // ======================
-  // UI
-  // ======================
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -386,7 +387,7 @@ class _ActivityScreenState extends State<ActivityScreen>
       child: _buildList(
         historyRides,
         theme,
-        emptyMessage: "Hiện tại bạn không có lịch sử chuyến xe nào.",
+        emptyMessage: "Hiện tại b���n không có lịch sử chuyến xe nào.",
       ),
     );
   }
@@ -449,14 +450,11 @@ class _ActivityScreenState extends State<ActivityScreen>
     );
   }
 
-  // ======================
-  // LIST (RideModel) - giữ nguyên
-  // ======================
   Widget _buildList(
-    List<RideModel> rides,
-    ThemeData theme, {
-    required String emptyMessage,
-  }) {
+      List<RideModel> rides,
+      ThemeData theme, {
+        required String emptyMessage,
+      }) {
     final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
     final bottomPadding = 12.0 + 24.0 + bottomSafe;
 
@@ -647,18 +645,11 @@ class _ActivityScreenState extends State<ActivityScreen>
     );
   }
 
-  // ======================
-  // CARD: BrokerRideItem + nút huỷ (API 25)
-  // ======================
   Widget _buildBrokerRideCard(BrokerRideItem ride, ThemeData theme) {
     final statusColor = _brokerStatusColor(ride.status);
     final statusText = _brokerStatusText(ride.status);
 
-    // Theo tài liệu: API 24 chỉ trả status 1,2,3
-    // Bạn muốn "đúng đơn của tài xế đấy thì có nút huỷ" -> API này theo token đã là đúng tài xế.
-    // Mình hiển thị nút huỷ cho status 1/2/3 luôn.
-    // Nếu nghiệp vụ chỉ cho huỷ khi status == 1 (mới đẩy), bạn đổi điều kiện tại đây.
-    final canCancel = ride.status == BrokerRideStatus.findingDriver;
+    final canCancel = ride.status == 0 || ride.status == 1 ;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -763,7 +754,6 @@ class _ActivityScreenState extends State<ActivityScreen>
     );
   }
 
-  // Helpers cho tab broker
   String _formatMoney(num value) {
     final v = value.toStringAsFixed(0);
     return "$v đ";
@@ -776,12 +766,18 @@ class _ActivityScreenState extends State<ActivityScreen>
 
   Color _brokerStatusColor(int status) {
     switch (status) {
-      case 1:
+      case 0:
         return Colors.orange;
+      case 1:
+        return Colors.amber;
       case 2:
         return Colors.blue;
       case 3:
+        return Colors.indigo;
+      case 4:
         return Colors.green;
+      case 5:
+        return Colors.red;
       default:
         return Colors.grey;
     }
@@ -789,15 +785,22 @@ class _ActivityScreenState extends State<ActivityScreen>
 
   String _brokerStatusText(int status) {
     switch (status) {
+      case 0:
+        return "Chờ duyệt";
       case 1:
-        return "CHƯA NHẬN";
+        return "Đang đợi tài xế";
       case 2:
-        return "ĐANG XỬ LÝ";
+        return "Đã có tài xế";
       case 3:
-        return "ĐÃ NHẬN";
+        return "Đang di chuyển";
+      case 4:
+        return "Đã hoàn thành";
+      case 5:
+        return "Đã huỷ";
       default:
-        return "KHÁC";
+        return "Khác";
     }
+
   }
 
   Widget _buildLocationLine(String from, String to) {

@@ -5,6 +5,9 @@ import 'package:provider/provider.dart';
 
 import '../../models/waiting_ride_model.dart';
 import '../../providers/recieve_order_provider.dart';
+import '../popup_list/insufficient_balance_popup.dart';
+import '../popup_list/has_accepted_popup.dart';
+import '../popup_list/received_success_popup.dart';
 import 'ride_detail_screen.dart';
 
 class RecieveOrderScreen extends StatelessWidget {
@@ -52,11 +55,13 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
     });
   }
 
+  /// Mỗi lần chuyển sang tab "Đơn đã nhận" đều gọi API load lại danh sách,
+  /// không cache — đảm bảo luôn có dữ liệu mới nhất.
   void _handleTabSelection() {
     if (!_tabController.indexIsChanging) return;
 
-    final provider = context.read<RecieveOrderProvider>();
-    if (_tabController.index == 1 && !provider.isAcceptedLoaded) {
+    if (_tabController.index == 1) {
+      final provider = context.read<RecieveOrderProvider>();
       provider.loadAcceptedRides();
     }
   }
@@ -69,31 +74,63 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
   }
 
   Future<void> _acceptRide(
-    BuildContext context,
-    RecieveOrderProvider provider,
-    WaitingRide ride,
-  ) async {
-    final theme = Theme.of(context);
-    final messenger = ScaffoldMessenger.of(context);
+      BuildContext context,
+      RecieveOrderProvider provider,
+      WaitingRide ride,
+      ) async {
     final result = await provider.acceptRide(ride);
 
     if (!mounted) return;
 
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(result['message'] ?? ''),
-        backgroundColor: result['success'] == true
-            ? theme.colorScheme.secondary
-            : theme.colorScheme.error,
-      ),
-    );
+    final reason = result['reason'] as String? ?? 'error';
+
+    switch (reason) {
+      case 'success':
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const ReceivedSuccessPopup(),
+        );
+        // Reload danh sách đơn đã nhận sau khi user đóng popup
+        if (mounted) {
+          provider.loadAcceptedRides();
+        }
+        break;
+
+      case 'insufficient_balance':
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const InsufficientBalancePopup(),
+        );
+        break;
+
+      case 'already_accepted':
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const HasAcceptedPopup(),
+        );
+        break;
+
+      default:
+      // Lỗi không xác định — giữ snackbar để dễ debug
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Có lỗi xảy ra'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+    }
   }
 
   Future<void> _cancelMyBrokerRide(
-    BuildContext context,
-    RecieveOrderProvider provider,
-    dynamic ride,
-  ) async {
+      BuildContext context,
+      RecieveOrderProvider provider,
+      dynamic ride,
+      ) async {
     final theme = Theme.of(context);
     final messenger = ScaffoldMessenger.of(context);
 
@@ -138,10 +175,10 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
   }
 
   Future<void> _startRide(
-    BuildContext context,
-    RecieveOrderProvider provider,
-    dynamic ride,
-  ) async {
+      BuildContext context,
+      RecieveOrderProvider provider,
+      dynamic ride,
+      ) async {
     final theme = Theme.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
@@ -176,10 +213,10 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
   }
 
   void _navigateToDetail(
-    BuildContext context,
-    RecieveOrderProvider provider,
-    dynamic ride,
-  ) {
+      BuildContext context,
+      RecieveOrderProvider provider,
+      dynamic ride,
+      ) {
     final int rideId = provider.extractRideId(ride);
     final int rideSource = provider.extractRideSource(ride);
 
@@ -206,10 +243,10 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
   }
 
   Widget _rideSourceChip(
-    RecieveOrderProvider provider,
-    int rideSource,
-    ThemeData theme,
-  ) {
+      RecieveOrderProvider provider,
+      int rideSource,
+      ThemeData theme,
+      ) {
     final color = _rideSourceColor(rideSource, theme);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -277,6 +314,7 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
           body: TabBarView(
             controller: _tabController,
             children: [
+              // ── Tab 1: Đơn mới ──────────────────────────────────────────
               Column(
                 children: [
                   _buildSortFilter(context, provider),
@@ -300,53 +338,55 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
                             parent: AlwaysScrollableScrollPhysics(),
                           ),
                           builderDelegate:
-                              PagedChildBuilderDelegate<WaitingRideListItem>(
-                                itemBuilder: (context, item, index) {
-                                  if (item is WaitingRideDateHeaderItem) {
-                                    return _buildCreatedAtHeader(
-                                      context,
-                                      provider,
-                                      item,
-                                    );
-                                  }
+                          PagedChildBuilderDelegate<WaitingRideListItem>(
+                            itemBuilder: (context, item, index) {
+                              if (item is WaitingRideDateHeaderItem) {
+                                return _buildCreatedAtHeader(
+                                  context,
+                                  provider,
+                                  item,
+                                );
+                              }
 
-                                  if (item is WaitingRideCardItem) {
-                                    return _buildRideCard(
-                                      context,
-                                      provider,
-                                      item.ride,
-                                      true,
-                                    );
-                                  }
+                              if (item is WaitingRideCardItem) {
+                                return _buildRideCard(
+                                  context,
+                                  provider,
+                                  item.ride,
+                                  true,
+                                );
+                              }
 
-                                  return const SizedBox.shrink();
-                                },
-                                noItemsFoundIndicatorBuilder: (_) =>
-                                    _buildEmptyPlaceholder(context),
-                              ),
+                              return const SizedBox.shrink();
+                            },
+                            noItemsFoundIndicatorBuilder: (_) =>
+                                _buildEmptyPlaceholder(context),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ],
               ),
+
+              // ── Tab 2: Đơn đã nhận ──────────────────────────────────────
               provider.isLoadingAcceptedRides
                   ? Center(
-                      child: CircularProgressIndicator(
-                        color: theme.colorScheme.secondary,
-                      ),
-                    )
+                child: CircularProgressIndicator(
+                  color: theme.colorScheme.secondary,
+                ),
+              )
                   : RefreshIndicator(
-                      onRefresh: provider.loadAcceptedRides,
-                      child: SafeArea(
-                        bottom: true,
-                        child: _buildOldOrderList(
-                          context,
-                          provider,
-                          provider.acceptedRidesStatus2,
-                        ),
-                      ),
-                    ),
+                onRefresh: provider.loadAcceptedRides,
+                child: SafeArea(
+                  bottom: true,
+                  child: _buildOldOrderList(
+                    context,
+                    provider,
+                    provider.acceptedRidesStatus2,
+                  ),
+                ),
+              ),
             ],
           ),
         );
@@ -388,10 +428,10 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
                   items: WaitingRideSortOption.values
                       .map(
                         (option) => DropdownMenuItem<WaitingRideSortOption>(
-                          value: option,
-                          child: Text(provider.sortOptionLabel(option)),
-                        ),
-                      )
+                      value: option,
+                      child: Text(provider.sortOptionLabel(option)),
+                    ),
+                  )
                       .toList(),
                   onChanged: (value) {
                     if (value != null) {
@@ -408,10 +448,10 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
   }
 
   Widget _buildCreatedAtHeader(
-    BuildContext context,
-    RecieveOrderProvider provider,
-    WaitingRideDateHeaderItem item,
-  ) {
+      BuildContext context,
+      RecieveOrderProvider provider,
+      WaitingRideDateHeaderItem item,
+      ) {
     final theme = Theme.of(context);
 
     return Padding(
@@ -452,11 +492,11 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
   }
 
   Widget _buildRideCard(
-    BuildContext context,
-    RecieveOrderProvider provider,
-    dynamic ride,
-    bool isNew,
-  ) {
+      BuildContext context,
+      RecieveOrderProvider provider,
+      dynamic ride,
+      bool isNew,
+      ) {
     final theme = Theme.of(context);
 
     final int rideSource = provider.extractRideSource(ride);
@@ -468,14 +508,14 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
     final dynamic pickupTime = (ride is WaitingRide)
         ? ride.pickupTime
         : provider.extractDynamicFromMap(ride, [
-            'pickupTime',
-            'pickup_time',
-            'pickupAt',
-            'pickup_at',
-            'pickuptime',
-            'pickupDate',
-            'pickup_date',
-          ]);
+      'pickupTime',
+      'pickup_time',
+      'pickupAt',
+      'pickup_at',
+      'pickuptime',
+      'pickupDate',
+      'pickup_date',
+    ]);
 
     String fromAddressRaw = '';
     String fromDistrictRaw = '';
@@ -533,9 +573,8 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
 
     final String pickupText = _displayPickupTime(provider, pickupTime);
 
-    final double price = (ride is WaitingRide)
-        ? ride.price
-        : (double.tryParse((ride['price'] ?? '0').toString()) ?? 0);
+    final double totalPrice = provider.extractRidePrice(ride);
+    final double netIncome = provider.extractRideNetIncome(ride);
 
     final VoidCallback? onTapCard = isNew
         ? null
@@ -614,7 +653,15 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
                 Divider(
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.12),
                 ),
-                _buildCardFooter(context, provider, ride, theme, isNew, price),
+                _buildCardFooter(
+                  context,
+                  provider,
+                  ride,
+                  theme,
+                  isNew,
+                  totalPrice,
+                  netIncome,
+                ),
               ],
             ),
           ),
@@ -624,26 +671,42 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
   }
 
   Widget _buildCardFooter(
-    BuildContext context,
-    RecieveOrderProvider provider,
-    dynamic ride,
-    ThemeData theme,
-    bool isNew,
-    double price,
-  ) {
+      BuildContext context,
+      RecieveOrderProvider provider,
+      dynamic ride,
+      ThemeData theme,
+      bool isNew,
+      double totalPrice,
+      double netIncome,
+      ) {
     final bool isMyBrokerRide = provider.isMyBrokerRide(ride);
     final int rideSource = provider.extractRideSource(ride);
 
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: Text(
-            "${NumberFormat('#,###').format(price)}đ",
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.secondary,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Giá tiền: ${NumberFormat('#,###').format(totalPrice)} đ",
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "Thu nhập ròng: ${NumberFormat('#,###').format(netIncome)} đ",
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(width: 8),
@@ -684,11 +747,11 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
   }
 
   Widget _buildLocationRow(
-    BuildContext context,
-    IconData icon,
-    Color color,
-    String address,
-  ) {
+      BuildContext context,
+      IconData icon,
+      Color color,
+      String address,
+      ) {
     final theme = Theme.of(context);
     return Row(
       children: [
@@ -707,10 +770,10 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
   }
 
   Widget _buildOldOrderList(
-    BuildContext context,
-    RecieveOrderProvider provider,
-    List<Map<String, dynamic>> rides,
-  ) {
+      BuildContext context,
+      RecieveOrderProvider provider,
+      List<Map<String, dynamic>> rides,
+      ) {
     if (rides.isEmpty) return _buildEmptyList(context);
 
     final bottomSafe = MediaQuery.of(context).viewPadding.bottom;

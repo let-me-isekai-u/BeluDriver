@@ -11,6 +11,7 @@ class WaitingRide {
   final String? toProvince;
   final String? pickupTime;
   final double price;
+  final double netIncome;
   final int status;
 
   WaitingRide({
@@ -24,6 +25,7 @@ class WaitingRide {
     this.toProvince,
     this.pickupTime,
     required this.price,
+    required this.netIncome,
     required this.status,
     this.fromDistrict,
     this.toDistrict,
@@ -31,19 +33,34 @@ class WaitingRide {
 
   factory WaitingRide.fromJson(Map<String, dynamic> json) {
     return WaitingRide(
-      id: json['id'] ?? 0,
-      rideSource: json['rideSource'] ?? 1,
-      code: json['code'],
+      id: _parseInt(json['id']),
+      rideSource: _parseInt(json['rideSource'], defaultValue: 1),
+      code: json['code']?.toString(),
       createdAt: json['createdAt']?.toString() ?? json['createAt']?.toString(),
-      fromAddress: json['fromAddress'],
-      fromProvince: json['fromProvince'],
-      toAddress: json['toAddress'],
-      toProvince: json['toProvince'],
-      pickupTime: json['pickupTime'],
-      price: (json['price'] ?? 0).toDouble(),
-      status: json['status'] ?? 0,
-      fromDistrict: json['fromDistrict'],
-      toDistrict: json['toDistrict'],
+      fromAddress: json['fromAddress']?.toString(),
+      fromProvince: json['fromProvince']?.toString(),
+      toAddress: json['toAddress']?.toString(),
+      toProvince: json['toProvince']?.toString(),
+      pickupTime: json['pickupTime']?.toString(),
+      price: _parseDouble(json['price']),
+      netIncome: _parseDouble(json['netIncome'] ?? json['net_income']),
+      status: _parseInt(json['status']),
+      fromDistrict: json['fromDistrict']?.toString(),
+      toDistrict: json['toDistrict']?.toString(),
     );
+  }
+
+  static int _parseInt(dynamic value, {int defaultValue = 0}) {
+    if (value == null) return defaultValue;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    return int.tryParse(value.toString()) ?? defaultValue;
+  }
+
+  static double _parseDouble(dynamic value, {double defaultValue = 0.0}) {
+    if (value == null) return defaultValue;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    return double.tryParse(value.toString()) ?? defaultValue;
   }
 }

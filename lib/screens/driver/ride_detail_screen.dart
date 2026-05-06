@@ -33,7 +33,6 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
   }
 
   String get _rideSourceText {
-    // 1 = hệ thống BeluCar, 2 = đơn chia sẻ/đơn đẩy
     switch (widget.rideSource) {
       case 1:
         return "Đơn BeluCar";
@@ -67,11 +66,25 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
         rideSource: widget.rideSource,
       );
 
+      debugPrint("=== GET RIDE DETAIL ===");
+      debugPrint("rideId: ${widget.rideId}");
+      debugPrint("rideSource: ${widget.rideSource}");
+      debugPrint("statusCode: ${res.statusCode}");
+      debugPrint("body: ${res.body}");
+
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
         if (body['success'] == true && body['data'] != null) {
+          final ride = RideDetailModel.fromJson(body['data']);
+
+          debugPrint("=== PARSED RIDE DETAIL ===");
+          debugPrint("customerName: ${ride.customerName}");
+          debugPrint("customerPhone: ${ride.customerPhone}");
+          debugPrint("price: ${ride.price}");
+          debugPrint("netIncome: ${ride.netIncome}");
+
           if (!mounted) return;
-          setState(() => _ride = RideDetailModel.fromJson(body['data']));
+          setState(() => _ride = ride);
         } else {
           if (!mounted) return;
           setState(() => _ride = null);
@@ -194,7 +207,8 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
           ],
         ),
       ),
-      bottomSheet: _ride!.status >= 4 ? null : _buildBottomActions(_ride!.status),
+      bottomSheet:
+      _ride!.status >= 4 ? null : _buildBottomActions(_ride!.status),
     );
   }
 
@@ -250,7 +264,6 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
               ),
             ),
             const SizedBox(height: 10),
-
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
@@ -267,7 +280,6 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
                 ),
               ),
             ),
-
             const SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -292,6 +304,7 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
 
   Widget _buildPriceDetailCard(ThemeData theme) {
     final formattedPrice = NumberFormat("#,###").format(_ride!.price);
+    final formattedNetIncome = NumberFormat("#,###").format(_ride!.netIncome);
 
     return _themedCard(
       child: Column(
@@ -305,12 +318,15 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
               color: theme.colorScheme.secondary,
             ),
           ),
-          Divider(height: 24, color: theme.colorScheme.onSurface.withOpacity(0.12)),
+          Divider(
+            height: 24,
+            color: theme.colorScheme.onSurface.withOpacity(0.12),
+          ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "Tổng thanh toán",
+                "Giá tiền",
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -327,12 +343,36 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Thu nhập ròng",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              Text(
+                "$formattedNetIncome đ",
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
   Widget _buildCustomerCard(ThemeData theme) {
+    final phone = _ride!.customerPhone.trim();
+
     return _themedCard(
       padding: const EdgeInsets.all(8),
       child: ListTile(
@@ -353,19 +393,40 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
             color: theme.colorScheme.onSurface,
           ),
         ),
-        subtitle: Text(
-          _ride!.customerPhone.isNotEmpty ? _ride!.customerPhone : "BeluCar Customer",
-          style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Text(
+              phone.isNotEmpty ? phone : "Không có số điện thoại",
+              style: TextStyle(
+                color: phone.isNotEmpty
+                    ? theme.colorScheme.onSurface.withOpacity(0.7)
+                    : Colors.red,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
         trailing: IconButton(
           icon: const Icon(Icons.phone, color: Colors.green, size: 28),
           onPressed: () async {
-            if (_ride!.customerPhone.isEmpty) {
+            debugPrint("=== CALL CUSTOMER ===");
+            debugPrint("customerName: ${_ride!.customerName}");
+            debugPrint("customerPhone: '${_ride!.customerPhone}'");
+            debugPrint("customerPhone(trim): '$phone'");
+
+            if (phone.isEmpty) {
               _showSnackBar("Không có số điện thoại", Colors.red);
               return;
             }
-            final uri = Uri.parse('tel:${_ride!.customerPhone}');
-            if (await canLaunchUrl(uri)) await launchUrl(uri);
+
+            final uri = Uri.parse('tel:$phone');
+            if (await canLaunchUrl(uri)) {
+              await launchUrl(uri);
+            } else {
+              _showSnackBar("Không thể mở ứng dụng gọi điện", Colors.red);
+            }
           },
         ),
       ),
@@ -447,20 +508,40 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
               color: theme.colorScheme.secondary,
             ),
           ),
-          Divider(height: 20, color: theme.colorScheme.onSurface.withOpacity(0.12)),
+          Divider(
+            height: 20,
+            color: theme.colorScheme.onSurface.withOpacity(0.12),
+          ),
           _detailRow("Loại dịch vụ", _ride!.typeText, theme),
           _detailRow("Nguồn đơn", _rideSourceText, theme),
           _detailRow("Số lượng", _ride!.quantity.toString(), theme),
           _detailRow("Thanh toán", _ride!.paymentMethod, theme),
           _detailRow("Thời gian tạo", _formatDate(_ride!.createdAt), theme),
           _detailRow("Thời gian đón", _formatDate(_ride!.pickupTime), theme),
-          _detailRow("Ghi chú", _ride!.note ?? "Không có ghi chú", theme, isLast: true),
+          _detailRow(
+            "Số điện thoại khách",
+            _ride!.customerPhone.trim().isNotEmpty
+                ? _ride!.customerPhone.trim()
+                : "Không có số điện thoại",
+            theme,
+          ),
+          _detailRow(
+            "Ghi chú",
+            _ride!.note ?? "Không có ghi chú",
+            theme,
+            isLast: true,
+          ),
         ],
       ),
     );
   }
 
-  Widget _detailRow(String label, String value, ThemeData theme, {bool isLast = false}) {
+  Widget _detailRow(
+      String label,
+      String value,
+      ThemeData theme, {
+        bool isLast = false,
+      }) {
     return Padding(
       padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
       child: Row(
@@ -512,16 +593,22 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
         children: [
           Expanded(
             child: ElevatedButton(
-              onPressed: () => status == 2 ? _handleStartRide() : _handleCompleteRide(),
+              onPressed: () =>
+              status == 2 ? _handleStartRide() : _handleCompleteRide(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: status == 2 ? Colors.blue : Colors.green,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 15),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               child: Text(
                 status == 2 ? "BẮT ĐẦU DI CHUYỂN" : "XÁC NHẬN HOÀN THÀNH",
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
             ),
           ),

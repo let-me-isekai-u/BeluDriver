@@ -1,5 +1,6 @@
+//Model dùng cho API 24
 import 'dart:convert';
-//model api 24
+
 class BrokerRidesResponse {
   final bool success;
   final List<BrokerRideItem> data;
@@ -29,10 +30,7 @@ class BrokerRidesResponse {
 class BrokerRideItem {
   final int rideId;
   final String code;
-
   final DateTime createdAt;
-
-  /// Có thể là "0001-01-01T00:00:00" => coi như null
   final DateTime? pickupTime;
 
   final String fromProvince;
@@ -65,7 +63,6 @@ class BrokerRideItem {
 
   static DateTime? _parseNullableDateTime(String? raw) {
     if (raw == null || raw.trim().isEmpty) return null;
-    // backend dùng "0001-01-01T00:00:00" như giá trị rỗng
     if (raw.startsWith('0001-01-01')) return null;
     try {
       return DateTime.parse(raw);
@@ -74,11 +71,22 @@ class BrokerRideItem {
     }
   }
 
+  static DateTime _parseDateTime(String? raw) {
+    if (raw == null || raw.trim().isEmpty) {
+      return DateTime.now();
+    }
+    try {
+      return DateTime.parse(raw);
+    } catch (_) {
+      return DateTime.now();
+    }
+  }
+
   factory BrokerRideItem.fromJson(Map<String, dynamic> json) {
     return BrokerRideItem(
-      rideId: (json['rideId'] as num).toInt(),
+      rideId: int.tryParse(json['rideId']?.toString() ?? '0') ?? 0,
       code: (json['code'] ?? '').toString(),
-      createdAt: DateTime.parse((json['createdAt'] ?? '').toString()),
+      createdAt: _parseDateTime(json['createdAt']?.toString()),
       pickupTime: _parseNullableDateTime(json['pickupTime']?.toString()),
       fromProvince: (json['fromProvince'] ?? '').toString(),
       fromDistrict: (json['fromDistrict'] ?? '').toString(),
@@ -87,7 +95,7 @@ class BrokerRideItem {
       toDistrict: (json['toDistrict'] ?? '').toString(),
       toAddress: (json['toAddress'] ?? '').toString(),
       price: (json['price'] as num?) ?? 0,
-      status: (json['status'] as num?)?.toInt() ?? 0,
+      status: int.tryParse(json['status']?.toString() ?? '0') ?? 0,
       paymentMethod: (json['paymentMethod'] ?? '').toString(),
     );
   }

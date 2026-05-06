@@ -32,7 +32,7 @@ class RecieveOrderProvider extends ChangeNotifier {
   static const int pageSize = 20;
 
   final PagingController<int, WaitingRideListItem> pagingController =
-      PagingController(firstPageKey: 1);
+  PagingController(firstPageKey: 1);
 
   final List<WaitingRide> _waitingRides = <WaitingRide>[];
   WaitingRideSortOption _sortOption = WaitingRideSortOption.createdAtDesc;
@@ -85,8 +85,6 @@ class RecieveOrderProvider extends ChangeNotifier {
     return prefs.getString('accessToken') ?? '';
   }
 
-  // ====================== Ride source helpers ======================
-
   String rideSourceText(int rideSource) {
     switch (rideSource) {
       case 1:
@@ -102,10 +100,10 @@ class RecieveOrderProvider extends ChangeNotifier {
     if (ride is WaitingRide) return ride.rideSource;
     if (ride is Map) {
       return int.tryParse(
-            ride['rideSource']?.toString() ??
-                ride['ride_source']?.toString() ??
-                '1',
-          ) ??
+        ride['rideSource']?.toString() ??
+            ride['ride_source']?.toString() ??
+            '1',
+      ) ??
           1;
     }
     return 1;
@@ -114,8 +112,8 @@ class RecieveOrderProvider extends ChangeNotifier {
   int extractRideId(dynamic ride) {
     if (ride is WaitingRide) return ride.id;
     return int.tryParse(
-          ride['rideId']?.toString() ?? ride['id']?.toString() ?? '0',
-        ) ??
+      ride['rideId']?.toString() ?? ride['id']?.toString() ?? '0',
+    ) ??
         0;
   }
 
@@ -125,7 +123,21 @@ class RecieveOrderProvider extends ChangeNotifier {
     return myBrokerRideIds.contains(rideId);
   }
 
-  // ====================== API & paging ======================
+  double extractRidePrice(dynamic ride) {
+    if (ride is WaitingRide) return ride.price;
+    if (ride is Map) {
+      return _parseDouble(ride['price']);
+    }
+    return 0;
+  }
+
+  double extractRideNetIncome(dynamic ride) {
+    if (ride is WaitingRide) return ride.netIncome;
+    if (ride is Map) {
+      return _parseDouble(ride['netIncome'] ?? ride['net_income']);
+    }
+    return 0;
+  }
 
   Future<void> fetchNewRidesPage(int pageKey) async {
     try {
@@ -141,6 +153,10 @@ class RecieveOrderProvider extends ChangeNotifier {
           fromDistrictId: selectedDistrictId!,
         );
 
+        debugPrint("=== SEARCH RIDE BY DISTRICT RESPONSE ===");
+        debugPrint("statusCode: ${res.statusCode}");
+        debugPrint("body: ${res.body}");
+
         if (res.statusCode == 200) {
           final body = jsonDecode(res.body);
           if (body['success'] == true) {
@@ -148,7 +164,7 @@ class RecieveOrderProvider extends ChangeNotifier {
             final items = list
                 .map<WaitingRide>(
                   (json) => WaitingRide.fromJson(json as Map<String, dynamic>),
-                )
+            )
                 .toList();
 
             _setWaitingRidePage(
@@ -159,12 +175,12 @@ class RecieveOrderProvider extends ChangeNotifier {
             return;
           } else {
             pagingController.error =
-                "Không thể tải dữ liệu (filter theo huyện)";
+            "Không thể tải dữ liệu (filter theo huyện)";
             return;
           }
         } else {
           pagingController.error =
-              "Không thể tải dữ liệu từ máy chủ (filter theo huyện)";
+          "Không thể tải dữ liệu từ máy chủ (filter theo huyện)";
           return;
         }
       }
@@ -175,13 +191,18 @@ class RecieveOrderProvider extends ChangeNotifier {
         pageSize: pageSize,
       );
 
+      debugPrint("=== GET WAITING RIDES PAGED RESPONSE ===");
+      debugPrint("pageKey: $pageKey");
+      debugPrint("statusCode: ${res.statusCode}");
+      debugPrint("body: ${res.body}");
+
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
         final dynamic pagedData = body['data'] ?? body;
 
         final pagedResponse = PagedResponse<WaitingRide>.fromJson(
           pagedData,
-          (json) => WaitingRide.fromJson(json as Map<String, dynamic>),
+              (json) => WaitingRide.fromJson(json as Map<String, dynamic>),
         );
 
         final newItems = pagedResponse.data;
@@ -258,6 +279,11 @@ class RecieveOrderProvider extends ChangeNotifier {
       final token = await _getToken();
 
       final res = await ApiService.getAcceptedRides(accessToken: token);
+
+      debugPrint("=== GET ACCEPTED RIDES RESPONSE ===");
+      debugPrint("statusCode: ${res.statusCode}");
+      debugPrint("body: ${res.body}");
+
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
         if (body['success'] == true) {
@@ -277,10 +303,19 @@ class RecieveOrderProvider extends ChangeNotifier {
     }
   }
 
+  /// Kết quả trả về có thêm key [reason]:
+  /// - 'success'            → nhận đơn thành công
+  /// - 'insufficient_balance' → số dư không đủ
+  /// - 'already_accepted'   → đơn đã được tài xế khác nhận
+  /// - 'error'              → lỗi khác
   Future<Map<String, dynamic>> acceptRide(WaitingRide ride) async {
     final token = await _getToken();
     if (token.isEmpty) {
-      return {'success': false, 'message': 'Token không hợp lệ'};
+      return {
+        'success': false,
+        'reason': 'error',
+        'message': 'Token không hợp lệ',
+      };
     }
 
     final res = await ApiService.acceptRide(
@@ -293,21 +328,51 @@ class RecieveOrderProvider extends ChangeNotifier {
       final body = jsonDecode(res.body);
 
       _waitingRides.removeWhere(
-        (item) => item.id == ride.id && item.rideSource == ride.rideSource,
+            (item) => item.id == ride.id && item.rideSource == ride.rideSource,
       );
       _rebuildWaitingRideItems();
 
+      // Đánh dấu cần reload — screen sẽ tự gọi loadAcceptedRides sau khi show popup
       isAcceptedLoaded = false;
       notifyListeners();
 
       return {
         'success': true,
+        'reason': 'success',
         'message': body['message'] ?? "Nhận đơn thành công",
       };
-    } else {
-      pagingController.refresh();
-      return {'success': false, 'message': "Đơn đã được nhận bởi tài xế khác!"};
     }
+
+    // Phân loại lỗi từ response body / status code
+    String reason = 'error';
+    String message = "Có lỗi xảy ra, vui lòng thử lại.";
+
+    try {
+      final body = jsonDecode(res.body);
+      final serverMessage =
+      (body['message'] ?? body['error'] ?? '').toString().toLowerCase();
+
+      if (res.statusCode == 400 &&
+          (serverMessage.contains('balance') ||
+              serverMessage.contains('số dư') ||
+              serverMessage.contains('insufficient') ||
+              serverMessage.contains('ký quỹ') ||
+              serverMessage.contains('wallet'))) {
+        reason = 'insufficient_balance';
+        message = body['message'] ?? "Số dư trong ví không đủ để nhận đơn.";
+      } else if (res.statusCode == 409 ||
+          serverMessage.contains('already') ||
+          serverMessage.contains('đã được nhận') ||
+          serverMessage.contains('accepted')) {
+        reason = 'already_accepted';
+        message = body['message'] ?? "Đơn đã được tài xế khác nhận.";
+      } else {
+        message = body['message'] ?? message;
+      }
+    } catch (_) {}
+
+    pagingController.refresh();
+    return {'success': false, 'reason': reason, 'message': message};
   }
 
   Future<Map<String, dynamic>> cancelMyBrokerRide(dynamic ride) async {
@@ -388,13 +453,11 @@ class RecieveOrderProvider extends ChangeNotifier {
     }
   }
 
-  // ====================== Helpers ======================
-
   void _setWaitingRidePage(
-    List<WaitingRide> newItems, {
-    required int? nextPageKey,
-    required bool replaceExisting,
-  }) {
+      List<WaitingRide> newItems, {
+        required int? nextPageKey,
+        required bool replaceExisting,
+      }) {
     if (replaceExisting) {
       _waitingRides
         ..clear()
@@ -600,5 +663,12 @@ class RecieveOrderProvider extends ChangeNotifier {
     if (p.isNotEmpty) parts.add(p);
 
     return parts.join(', ');
+  }
+
+  double _parseDouble(dynamic value, {double defaultValue = 0}) {
+    if (value == null) return defaultValue;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    return double.tryParse(value.toString()) ?? defaultValue;
   }
 }

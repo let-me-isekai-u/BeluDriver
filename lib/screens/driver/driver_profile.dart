@@ -35,6 +35,10 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
   bool _isSelectedProvincesExpanded = false;
   bool _isRoutesExpanded = false;
 
+  Color _kycStatusColor(int kycStatus) {
+    return kycStatus == 2 ? Colors.greenAccent : Colors.amber;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -408,48 +412,132 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
       ThemeData theme,
       DriverOnboardingStatusDto? onboarding,
       ) {
-    return _buildExpandableCard(
-      theme: theme,
-      title: "Trạng thái tài khoản",
-      expanded: _isOnboardingExpanded,
-      onTap: () {
-        setState(() {
-          _isOnboardingExpanded = !_isOnboardingExpanded;
-        });
-      },
-      child: onboarding == null
-          ? const Align(
-        alignment: Alignment.centerLeft,
-        child: Text(
-          "Không có dữ liệu trạng thái tài khoản",
-          style: TextStyle(color: Colors.white70),
-        ),
-      )
-          : Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final bool showKycWarning = onboarding != null && onboarding.kycStatus != 2;
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Column(
         children: [
-          _buildInfoRow("KYC", _mapKycStatusLabel(onboarding.kycStatusText)),
-          _buildInfoRow(
-            "Đã đăng ký tuyến",
-            onboarding.hasRegisteredRoute ? "Có" : "Chưa",
-          ),
-          _buildInfoRow(
-            "Số tỉnh đã chọn",
-            onboarding.selectedProvinceCount.toString(),
-          ),
-          _buildInfoRow(
-            "Có thể nhận chuyến",
-            _boolToVietnamese(onboarding.canReceiveRide),
-          ),
-          _buildInfoRow(
-            "Trạng thái xử lý",
-            _mapNextStepLabel(onboarding.nextStep),
-          ),
-          if ((onboarding.kycRejectReason ?? '').isNotEmpty)
-            _buildInfoRow(
-              "Lý do từ chối KYC",
-              onboarding.kycRejectReason!,
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () {
+              setState(() {
+                _isOnboardingExpanded = !_isOnboardingExpanded;
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Row(
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Icon(
+                        Icons.person_rounded,
+                        color: theme.colorScheme.secondary,
+                        size: 24,
+                      ),
+                      if (showKycWarning)
+                        Positioned(
+                          right: -3,
+                          top: -3,
+                          child: Container(
+                            width: 16,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 1.5),
+                            ),
+                            child: const Center(
+                              child: Text(
+                                '!',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  height: 1,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      "Trạng thái tài khoản",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: theme.colorScheme.secondary,
+                      ),
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: _isOnboardingExpanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: theme.colorScheme.secondary,
+                      size: 28,
+                    ),
+                  ),
+                ],
+              ),
             ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: onboarding == null
+                  ? const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Không có dữ liệu trạng thái tài khoản",
+                  style: TextStyle(color: Colors.white70),
+                ),
+              )
+                  : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildInfoRow(
+                    "KYC",
+                    _mapKycStatusLabel(onboarding.kycStatusText),
+                    valueColor: _kycStatusColor(onboarding.kycStatus),
+                  ),
+                  _buildInfoRow(
+                    "Đã đăng ký tuyến",
+                    onboarding.hasRegisteredRoute ? "Có" : "Chưa",
+                  ),
+                  _buildInfoRow(
+                    "Số tỉnh đã chọn",
+                    onboarding.selectedProvinceCount.toString(),
+                  ),
+                  _buildInfoRow(
+                    "Có thể nhận chuyến",
+                    _boolToVietnamese(onboarding.canReceiveRide),
+                  ),
+                  _buildInfoRow(
+                    "Trạng thái xử lý",
+                    _mapNextStepLabel(onboarding.nextStep),
+                  ),
+                  if ((onboarding.kycRejectReason ?? '').isNotEmpty)
+                    _buildInfoRow(
+                      "Lý do từ chối KYC",
+                      onboarding.kycRejectReason!,
+                    ),
+                ],
+              ),
+            ),
+            crossFadeState: _isOnboardingExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 220),
+          ),
         ],
       ),
     );
@@ -694,7 +782,11 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
     );
   }
 
-  Widget _buildInfoRow(String title, String value) {
+  Widget _buildInfoRow(
+      String title,
+      String value, {
+        Color valueColor = Colors.white,
+      }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -716,8 +808,8 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: valueColor,
                 fontWeight: FontWeight.w600,
               ),
             ),

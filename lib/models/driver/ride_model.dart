@@ -15,10 +15,11 @@ class RideModel {
   final String toAddress;
 
   final double price;
+  final double netIncome;
   final int status;
   final String paymentMethod;
 
-  final int rideSource; // 👈 thêm
+  final int rideSource;
 
   RideModel({
     required this.id,
@@ -31,36 +32,50 @@ class RideModel {
     required this.toDistrict,
     required this.toAddress,
     required this.price,
+    required this.netIncome,
     required this.status,
     required this.paymentMethod,
-    required this.rideSource, // 👈 thêm
+    required this.rideSource,
   });
 
   factory RideModel.fromJson(Map<String, dynamic> json) {
     return RideModel(
-      id: json['rideId'] ?? json['id'] ?? 0,
-      code: json['code'] ?? '',
-      createdAt: json['createdAt'] ?? DateTime.now().toIso8601String(),
+      id: _parseInt(json['rideId'] ?? json['id']),
+      code: (json['code'] ?? '').toString(),
+      createdAt: (json['createdAt'] ?? DateTime.now().toIso8601String()).toString(),
 
-      fromProvince: json['fromProvince'] ?? '',
-      fromDistrict: json['fromDistrict'] ?? '',
-      fromAddress: json['fromAddress'] ?? '',
+      fromProvince: (json['fromProvince'] ?? '').toString(),
+      fromDistrict: (json['fromDistrict'] ?? '').toString(),
+      fromAddress: (json['fromAddress'] ?? '').toString(),
 
-      toProvince: json['toProvince'] ?? '',
-      toDistrict: json['toDistrict'] ?? '',
-      toAddress: json['toAddress'] ?? '',
+      toProvince: (json['toProvince'] ?? '').toString(),
+      toDistrict: (json['toDistrict'] ?? '').toString(),
+      toAddress: (json['toAddress'] ?? '').toString(),
 
-      price: (json['price'] as num?)?.toDouble() ?? 0,
-      status: json['status'] ?? -1,
-      paymentMethod: json['paymentMethod'] ?? '',
+      price: _parseDouble(json['price']),
+      netIncome: _parseDouble(json['netIncome']),
 
-      rideSource: json['rideSource'] ?? 1, // 👈 thêm
+      status: _parseInt(json['status'], defaultValue: -1),
+      paymentMethod: (json['paymentMethod'] ?? '').toString(),
+
+      rideSource: _parseInt(json['rideSource'], defaultValue: 1),
     );
   }
 
-  // ------------ Helper getters used by UI ------------
+  static int _parseInt(dynamic value, {int defaultValue = 0}) {
+    if (value == null) return defaultValue;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    return int.tryParse(value.toString()) ?? defaultValue;
+  }
 
-  // Format createdAt (ISO string) -> "dd/MM/yyyy HH:mm"
+  static double _parseDouble(dynamic value, {double defaultValue = 0}) {
+    if (value == null) return defaultValue;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    return double.tryParse(value.toString()) ?? defaultValue;
+  }
+
   String get formattedDate {
     try {
       final dt = DateTime.parse(createdAt);
@@ -70,7 +85,6 @@ class RideModel {
     }
   }
 
-  // Format price as Vietnamese dong
   String get formattedPrice {
     try {
       final fmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
@@ -80,7 +94,15 @@ class RideModel {
     }
   }
 
-  // Map status -> readable text
+  String get formattedNetIncome {
+    try {
+      final fmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
+      return fmt.format(netIncome);
+    } catch (_) {
+      return '${netIncome.toStringAsFixed(0)} ₫';
+    }
+  }
+
   String get statusText {
     switch (status) {
       case 0:
@@ -100,7 +122,6 @@ class RideModel {
     }
   }
 
-  // Map status -> Color
   Color get statusColor {
     switch (status) {
       case 0:

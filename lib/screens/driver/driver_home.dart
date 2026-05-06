@@ -62,9 +62,13 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
     _tryShowOnboardingPopup();
   }
 
+  // TODO: Bật lại khi cần — tạm vô hiệu hoá popup ký quỹ
   Future<void> _showDepositRequirementPopupIfNeeded(
-    HomeProvider provider,
-  ) async {
+      HomeProvider provider,
+      ) async {
+    return; // DISABLED
+
+    // ignore: dead_code
     final prefs = await SharedPreferences.getInstance();
     final hasShown = prefs.getBool(_depositPopupShownKey) ?? false;
 
@@ -85,7 +89,7 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
       context: context,
       barrierDismissible: false,
       builder: (_) =>
-          const KycDepositRequirementPopup(amount: _requiredDepositAmount),
+      const KycDepositRequirementPopup(amount: _requiredDepositAmount),
     );
 
     await prefs.setBool(_depositPopupShownKey, true);
@@ -213,9 +217,9 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
   }
 
   Future<void> _handleNavigationRequest(
-    int index,
-    HomeProvider homeProvider,
-  ) async {
+      int index,
+      HomeProvider homeProvider,
+      ) async {
     final isReceiveOrderTab = index == 0;
     final isKycApproved = homeProvider.kycStatus == 2;
 
@@ -259,10 +263,10 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
       extendBody: true,
       appBar: _currentIndex == 2
           ? _buildCustomAppBar(
-              theme,
-              homeProvider.profile,
-              homeProvider.isLoadingProfile,
-            )
+        theme,
+        homeProvider.profile,
+        homeProvider.isLoadingProfile,
+      )
           : null,
       body: screens[_currentIndex],
       bottomNavigationBar: Container(
@@ -323,8 +327,37 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
               icon: Icon(Icons.access_time_rounded),
               label: 'Hoạt động',
             ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.person_rounded),
+            BottomNavigationBarItem(
+              icon: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(Icons.person_rounded),
+                  if (homeProvider.kycStatus != 2)
+                    Positioned(
+                      top: -4,
+                      right: -6,
+                      child: Container(
+                        width: 16,
+                        height: 16,
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Center(
+                          child: Text(
+                            '!',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              height: 1,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
               label: 'Cá nhân',
             ),
           ],
@@ -334,10 +367,10 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
   }
 
   PreferredSizeWidget _buildCustomAppBar(
-    ThemeData theme,
-    DriverProfileModel? profile,
-    bool isLoadingProfile,
-  ) {
+      ThemeData theme,
+      DriverProfileModel? profile,
+      bool isLoadingProfile,
+      ) {
     return AppBar(
       toolbarHeight: 95,
       backgroundColor: theme.colorScheme.primary,
@@ -459,28 +492,28 @@ class _HomeDashboard extends StatelessWidget {
                   "NHẬN ĐƠN MỚI",
                   Icons.near_me_rounded,
                   Colors.orange,
-                  () => onNavigate(0),
+                      () => onNavigate(0),
                 ),
                 _buildMenuCard(
                   context,
                   "ĐẨY ĐƠN",
                   Icons.upload_file_rounded,
                   theme.colorScheme.secondary,
-                  () => onNavigate(1),
+                      () => onNavigate(1),
                 ),
                 _buildMenuCard(
                   context,
                   "LỊCH SỬ CHUYẾN",
                   Icons.assignment_rounded,
                   Colors.blue,
-                  () => onNavigate(3),
+                      () => onNavigate(3),
                 ),
                 _buildMenuCard(
                   context,
                   "NHÓM CHAT",
                   Icons.forum_rounded,
                   const Color(0xFF145E44),
-                  () => Navigator.push(
+                      () => Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => const DriverChatGroupListScreen(),
@@ -492,21 +525,21 @@ class _HomeDashboard extends StatelessWidget {
                   "NẠP TIỀN VÍ",
                   Icons.account_balance_wallet_rounded,
                   Colors.green,
-                  () => _showDepositDialog(context, theme),
+                      () => _showDepositDialog(context, theme),
                 ),
                 _buildMenuCard(
                   context,
                   "RÚT TIỀN",
                   Icons.payments_outlined,
                   Colors.redAccent,
-                  () => _showWithdrawDialog(context),
+                      () => _showWithdrawDialog(context),
                 ),
                 _buildMenuCard(
                   context,
                   "LỊCH SỬ RÚT",
                   Icons.history_rounded,
                   Colors.purple,
-                  () => Navigator.push(
+                      () => Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => const WithdrawalHistoryScreen(),
@@ -523,12 +556,12 @@ class _HomeDashboard extends StatelessWidget {
   }
 
   Widget _buildMenuCard(
-    BuildContext context,
-    String title,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
+      BuildContext context,
+      String title,
+      IconData icon,
+      Color color,
+      VoidCallback onTap,
+      ) {
     final goldColor = Theme.of(context).colorScheme.secondary;
     return InkWell(
       onTap: onTap,
@@ -593,76 +626,76 @@ class _HomeDashboard extends StatelessWidget {
               onPressed: isSubmitting
                   ? null
                   : () async {
-                      final amount = int.tryParse(
-                        amountController.text.replaceAll(',', '').trim(),
-                      );
+                final amount = int.tryParse(
+                  amountController.text.replaceAll(',', '').trim(),
+                );
 
-                      if (amount == null || amount <= 0) {
-                        ScaffoldMessenger.of(parentContext).showSnackBar(
-                          const SnackBar(
-                            content: Text("Vui lòng nhập số tiền hợp lệ"),
-                          ),
-                        );
-                        return;
-                      }
+                if (amount == null || amount <= 0) {
+                  ScaffoldMessenger.of(parentContext).showSnackBar(
+                    const SnackBar(
+                      content: Text("Vui lòng nhập số tiền hợp lệ"),
+                    ),
+                  );
+                  return;
+                }
 
-                      final prefs = await SharedPreferences.getInstance();
-                      final token = prefs.getString('accessToken') ?? '';
+                final prefs = await SharedPreferences.getInstance();
+                final token = prefs.getString('accessToken') ?? '';
 
-                      if (token.isEmpty) {
-                        ScaffoldMessenger.of(parentContext).showSnackBar(
-                          const SnackBar(
-                            content: Text("Không tìm thấy access token"),
-                          ),
-                        );
-                        return;
-                      }
+                if (token.isEmpty) {
+                  ScaffoldMessenger.of(parentContext).showSnackBar(
+                    const SnackBar(
+                      content: Text("Không tìm thấy access token"),
+                    ),
+                  );
+                  return;
+                }
 
-                      setState(() => isSubmitting = true);
+                setState(() => isSubmitting = true);
 
-                      final ok = await depositProvider.createDepositRequest(
-                        accessToken: token,
-                        amount: amount,
-                      );
+                final ok = await depositProvider.createDepositRequest(
+                  accessToken: token,
+                  amount: amount,
+                );
 
-                      if (!parentContext.mounted) return;
+                if (!parentContext.mounted) return;
 
-                      setState(() => isSubmitting = false);
+                setState(() => isSubmitting = false);
 
-                      if (!ok) {
-                        ScaffoldMessenger.of(parentContext).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              depositProvider.errorMessage ??
-                                  "Không thể tạo yêu cầu nạp tiền",
-                            ),
-                          ),
-                        );
-                        return;
-                      }
+                if (!ok) {
+                  ScaffoldMessenger.of(parentContext).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        depositProvider.errorMessage ??
+                            "Không thể tạo yêu cầu nạp tiền",
+                      ),
+                    ),
+                  );
+                  return;
+                }
 
-                      final content = depositProvider.depositContent;
-                      if (content == null || content.isEmpty) {
-                        ScaffoldMessenger.of(parentContext).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              "Không nhận được nội dung chuyển khoản",
-                            ),
-                          ),
-                        );
-                        return;
-                      }
+                final content = depositProvider.depositContent;
+                if (content == null || content.isEmpty) {
+                  ScaffoldMessenger.of(parentContext).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        "Không nhận được nội dung chuyển khoản",
+                      ),
+                    ),
+                  );
+                  return;
+                }
 
-                      Navigator.pop(dialogContext);
+                Navigator.pop(dialogContext);
 
-                      _showQRDialog(parentContext, theme, amount, content);
-                    },
+                _showQRDialog(parentContext, theme, amount, content);
+              },
               child: isSubmitting
                   ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
                   : const Text("TẠO YÊU CẦU"),
             ),
           ],
@@ -672,11 +705,11 @@ class _HomeDashboard extends StatelessWidget {
   }
 
   void _showQRDialog(
-    BuildContext parentContext,
-    ThemeData theme,
-    int amount,
-    String content,
-  ) async {
+      BuildContext parentContext,
+      ThemeData theme,
+      int amount,
+      String content,
+      ) async {
     final confirmed = await showDialog<bool>(
       context: parentContext,
       barrierDismissible: false,
@@ -888,8 +921,8 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
                         _filteredBanks = _banks.where((bank) {
                           final q = value.toLowerCase();
                           return bank['name'].toString().toLowerCase().contains(
-                                q,
-                              ) ||
+                            q,
+                          ) ||
                               bank['shortName']
                                   .toString()
                                   .toLowerCase()
