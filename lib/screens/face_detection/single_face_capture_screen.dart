@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'face_capture_mode.dart';
 
@@ -45,6 +46,9 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
   bool _isCountingDown = false;
   bool _isTakingShot = false;
   bool _hasLoggedFirstFrameMetadata = false;
+
+  // Gallery picker state
+  bool _isPickingFromGallery = false;
 
   Timer? _captureTimer;
 
@@ -142,41 +146,41 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
     final required = requiredStableFrames ?? _requiredStableFrames;
     debugPrint(
       '[FACE][$tag] '
-      'step=$_stepLabel '
-      'yaw=${yaw?.toStringAsFixed(1) ?? "--"} '
-      'ratio=${ratio?.toStringAsFixed(3) ?? "--"} '
-      'centerX=${centerOffsetX?.toStringAsFixed(3) ?? "--"} '
-      'centerY=${centerOffsetY?.toStringAsFixed(3) ?? "--"} '
-      'count=$_detectedFaceCount '
-      'pose=$_debugPoseMatched '
-      'large=$_debugLargeEnough '
-      'center=$_debugCenterOk '
-      'stable=$_stableFrames/$required '
-      'counting=$_isCountingDown '
-      'taking=$_isTakingShot '
-      'token=$_countdownToken',
+          'step=$_stepLabel '
+          'yaw=${yaw?.toStringAsFixed(1) ?? "--"} '
+          'ratio=${ratio?.toStringAsFixed(3) ?? "--"} '
+          'centerX=${centerOffsetX?.toStringAsFixed(3) ?? "--"} '
+          'centerY=${centerOffsetY?.toStringAsFixed(3) ?? "--"} '
+          'count=$_detectedFaceCount '
+          'pose=$_debugPoseMatched '
+          'large=$_debugLargeEnough '
+          'center=$_debugCenterOk '
+          'stable=$_stableFrames/$required '
+          'counting=$_isCountingDown '
+          'taking=$_isTakingShot '
+          'token=$_countdownToken',
     );
   }
 
   void _logFail(
-    String reason, {
-    double? yaw,
-    double? ratio,
-    double? centerOffsetX,
-    double? centerOffsetY,
-    int? requiredStableFrames,
-  }) {
+      String reason, {
+        double? yaw,
+        double? ratio,
+        double? centerOffsetX,
+        double? centerOffsetY,
+        int? requiredStableFrames,
+      }) {
     final required = requiredStableFrames ?? _requiredStableFrames;
     debugPrint(
       '[FACE][FAIL] '
-      'step=$_stepLabel '
-      'reason=$reason '
-      'yaw=${yaw?.toStringAsFixed(1) ?? "--"} '
-      'ratio=${ratio?.toStringAsFixed(3) ?? "--"} '
-      'centerX=${centerOffsetX?.toStringAsFixed(3) ?? "--"} '
-      'centerY=${centerOffsetY?.toStringAsFixed(3) ?? "--"} '
-      'stable=$_stableFrames/$required '
-      'token=$_countdownToken',
+          'step=$_stepLabel '
+          'reason=$reason '
+          'yaw=${yaw?.toStringAsFixed(1) ?? "--"} '
+          'ratio=${ratio?.toStringAsFixed(3) ?? "--"} '
+          'centerX=${centerOffsetX?.toStringAsFixed(3) ?? "--"} '
+          'centerY=${centerOffsetY?.toStringAsFixed(3) ?? "--"} '
+          'stable=$_stableFrames/$required '
+          'token=$_countdownToken',
     );
   }
 
@@ -190,7 +194,7 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
       }
 
       final selectedCamera = cameras.firstWhere(
-        (camera) => camera.lensDirection == CameraLensDirection.front,
+            (camera) => camera.lensDirection == CameraLensDirection.front,
         orElse: () => cameras.first,
       );
 
@@ -363,7 +367,7 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
         if (!isStillValid) {
           _log(
             'COUNTDOWN CANCEL (lost pose) '
-            'pose=$isPoseMatched large=$isFaceLargeEnough center=$isCenterOk',
+                'pose=$isPoseMatched large=$isFaceLargeEnough center=$isCenterOk',
           );
           _stableFrames = 0;
           _resetCaptureState();
@@ -537,7 +541,7 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
       if (!mounted) return;
       _detectedFaceCount = faces.length;
 
-      // Default “bad frame” values (no reset, only decay).
+      // Default "bad frame" values (no reset, only decay).
       bool poseOk = false;
       bool sizeOk = false;
       bool centerOk = false;
@@ -605,191 +609,104 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
       final face = faces.first;
       final rawYaw = face.headEulerAngleY;
       if (rawYaw == null) {
-        if (_isCountingDown) {
-          _androidCountdownBadFrames++;
-          if (_androidCountdownBadFrames >
-              _androidCountdownGraceBadFrames) {
-            _androidCountdownBadFrames = 0;
-            _stableFrames = 0;
-            _resetCaptureState();
-            if (mounted) {
-              setState(() {
-                _statusText = 'Đang phân tích góc khuôn mặt...';
-                _lastYaw = null;
-                _lastFaceRatio = 0;
-                _lastCenterOffsetX = 0;
-                _lastCenterOffsetY = 0;
-              });
-            }
-          }
-        } else {
-          _stableFrames = (_stableFrames > 0) ? _stableFrames - 1 : 0;
-          if (mounted) {
-            setState(() {
-              _statusText = 'Đang phân tích góc khuôn mặt...';
-              _lastYaw = null;
-              _lastFaceRatio = 0;
-              _lastCenterOffsetX = 0;
-              _lastCenterOffsetY = 0;
-            });
-          }
-        }
-
+        _stableFrames = (_stableFrames > 0) ? _stableFrames - 1 : 0;
         _debugPoseMatched = false;
-        _debugLargeEnough = false;
-        _debugCenterOk = false;
-        if (_androidLastFailReason != 'missing yaw' ||
-            nowMs - _androidLastFailLogMs > 500) {
-          _androidLastFailReason = 'missing yaw';
-          _androidLastFailLogMs = nowMs;
-          _logFail(
-            'missing yaw',
-            requiredStableFrames: _requiredStableFramesAndroid,
-          );
+        if (mounted) {
+          setState(() {
+            _statusText = 'Đang phân tích góc khuôn mặt...';
+            _lastYaw = null;
+          });
         }
         return;
       }
 
       yaw = rawYaw;
-      ratio = _getFaceRatio(face, image);
-      final centerOffsets = _getFaceCenterOffsetsAndroid(face, image);
-      centerOffsetX = centerOffsets.$1;
-      centerOffsetY = centerOffsets.$2;
+      ratio = _getFaceRatioAndroid(face, image);
+      final offsets = _getFaceCenterOffsetsAndroid(face, image);
+      centerOffsetX = offsets.$1;
+      centerOffsetY = offsets.$2;
 
       _lastYaw = yaw;
       _lastFaceRatio = ratio;
       _lastCenterOffsetX = centerOffsetX;
       _lastCenterOffsetY = centerOffsetY;
 
-      poseOk = _isPoseMatchedAndroid(yaw);
-      sizeOk = ratio > _androidMinFaceRatio;
-      centerOk = _isFaceCenteredAndroid(centerOffsetX, centerOffsetY);
+      // --- Soft scoring ---
+      final double poseScore = _androidPoseScore(yaw);
+      final double sizeScore = _androidSizeScore(ratio);
+      final double centerScore = _androidCenterScore(centerOffsetX, centerOffsetY);
 
+      poseOk = poseScore > 0;
+      sizeOk = sizeScore > 0;
+      centerOk = centerScore > 0;
+
+      totalScore = _androidPoseScoreWeight * poseScore +
+          _androidSizeScoreWeight * sizeScore +
+          _androidCenterScoreWeight * centerScore;
+
+      _androidLastScore = totalScore;
       _debugPoseMatched = poseOk;
       _debugLargeEnough = sizeOk;
       _debugCenterOk = centerOk;
 
-      final poseScore = _scoreAndroidPose(yaw);
-      final sizeScore = _scoreAndroidFaceSize(ratio);
-      final centerScore =
-          _scoreAndroidCenter(centerOffsetX: centerOffsetX, centerOffsetY: centerOffsetY);
-
-      totalScore = poseScore * _androidPoseScoreWeight +
-          sizeScore * _androidSizeScoreWeight +
-          centerScore * _androidCenterScoreWeight;
-
-      _androidLastScore = totalScore;
-
-      // While counting down, don't “reset”, just cancel after sustained loss.
       if (_isCountingDown) {
-        if (totalScore >= _androidCountdownCancelScore) {
-          _androidCountdownBadFrames = 0;
-        } else {
+        if (totalScore < _androidCountdownCancelScore) {
           _androidCountdownBadFrames++;
-          if (_androidCountdownBadFrames >
-              _androidCountdownGraceBadFrames) {
+          if (_androidCountdownBadFrames > _androidCountdownGraceBadFrames) {
             _androidCountdownBadFrames = 0;
             _stableFrames = 0;
             _resetCaptureState();
-
             if (mounted) {
               setState(() {
                 _statusText = _getDynamicPoseInstructionAndroid(
                   yaw: yaw,
-                  isFaceLargeEnough: sizeOk,
-                  isCenterOk: centerOk,
+                  sizeOk: sizeOk,
+                  centerOk: centerOk,
                 );
               });
             }
           }
+        } else {
+          _androidCountdownBadFrames = 0;
         }
         return;
       }
 
-      // Soft-stable tracking: decay on failures instead of all-or-nothing reset.
       if (totalScore >= _androidFramePassScore) {
         _stableFrames++;
       } else {
         _stableFrames = (_stableFrames > 0) ? _stableFrames - 1 : 0;
       }
 
-      if (_stableFrames < _requiredStableFramesAndroid) {
-        final shouldShowGeneric = totalScore >= _androidFramePassScore &&
-            _debugPoseMatched &&
-            _debugLargeEnough &&
-            _debugCenterOk;
-        final guidance = shouldShowGeneric
-            ? 'Giữ ổn định khuôn mặt một chút'
-            : _getDynamicPoseInstructionAndroid(
-                yaw: yaw,
-                isFaceLargeEnough: sizeOk,
-                isCenterOk: centerOk,
-              );
-
-        if (mounted && _statusText != guidance) {
-          setState(() {
-            _statusText = guidance;
-          });
-        }
-
-        final poseFailReason = switch (widget.mode) {
-          FaceCaptureMode.front =>
-            'pose fail (abs(yaw)<${_androidYawFrontAbsTolerance.toStringAsFixed(0)})',
-          FaceCaptureMode.left =>
-            'pose fail (yaw<-${_androidYawSideAbsTolerance.toStringAsFixed(0)})',
-          FaceCaptureMode.right =>
-            'pose fail (yaw>${_androidYawSideAbsTolerance.toStringAsFixed(0)})',
-        };
-
-        final failReason = !_debugPoseMatched
-            ? poseFailReason
-            : !_debugLargeEnough
-                ? 'size fail (ratio>${_androidMinFaceRatio.toStringAsFixed(3)})'
-                : !_debugCenterOk
-                    ? 'center fail (x<${_androidMaxCenterOffsetX.toStringAsFixed(2)} y<${_androidMaxCenterOffsetY.toStringAsFixed(2)})'
-                    : 'score too low (score<${_androidFramePassScore.toStringAsFixed(2)})';
-
-        if ((failReason != _androidLastFailReason ||
-                nowMs - _androidLastFailLogMs > 500) &&
-            totalScore < _androidFramePassScore) {
-          _androidLastFailReason = failReason;
-          _androidLastFailLogMs = nowMs;
-          _logFail(
-            failReason,
-            requiredStableFrames: _requiredStableFramesAndroid,
-            yaw: yaw,
-            ratio: ratio,
-            centerOffsetX: centerOffsetX,
-            centerOffsetY: centerOffsetY,
-          );
-        }
-        return;
+      if (mounted) {
+        final instruction = _getDynamicPoseInstructionAndroid(
+          yaw: yaw,
+          sizeOk: sizeOk,
+          centerOk: centerOk,
+          score: totalScore,
+        );
+        setState(() {
+          _statusText = instruction;
+        });
       }
 
-      // At this point we have enough “soft stable” frames.
+      if (_stableFrames < _requiredStableFramesAndroid) return;
+
       if (totalScore < _androidStartScore) {
-        // Still wait for better score (prevents borderline false positives).
-        _stableFrames = _stableFrames - 1;
-        if (mounted) {
-          setState(() {
-            _statusText = 'Giữ ổn định khuôn mặt thêm một chút';
-          });
-        }
+        _logFail(
+          'score_too_low',
+          yaw: yaw,
+          ratio: ratio,
+          centerOffsetX: centerOffsetX,
+          centerOffsetY: centerOffsetY,
+          requiredStableFrames: _requiredStableFramesAndroid,
+        );
         return;
       }
-
-      _logState(
-        tag: 'PASS',
-        yaw: yaw,
-        ratio: ratio,
-        centerOffsetX: centerOffsetX,
-        centerOffsetY: centerOffsetY,
-        requiredStableFrames: _requiredStableFramesAndroid,
-      );
 
       _isCountingDown = true;
-      _stableFrames = 0;
       _androidCountdownBadFrames = 0;
+      _stableFrames = 0;
       final token = ++_countdownToken;
 
       if (mounted) {
@@ -798,7 +715,7 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
         });
       }
 
-      _log('COUNTDOWN START step=$_stepLabel token=$token');
+      _log('COUNTDOWN START step=$_stepLabel token=$token score=${totalScore.toStringAsFixed(2)}');
       _speak('Vui lòng giữ nguyên trong 2 giây');
 
       _captureTimer = Timer(const Duration(seconds: 2), () async {
@@ -852,153 +769,112 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
     }
   }
 
-  bool _isPoseMatchedAndroid(double yaw) {
-    switch (widget.mode) {
-      case FaceCaptureMode.front:
-        return yaw.abs() < _androidYawFrontAbsTolerance;
-      case FaceCaptureMode.left:
-        return yaw < -_androidYawSideAbsTolerance;
-      case FaceCaptureMode.right:
-        return yaw > _androidYawSideAbsTolerance;
-    }
+  double _androidPoseScore(double yaw) {
+    final target = widget.mode == FaceCaptureMode.front
+        ? 0.0
+        : widget.mode == FaceCaptureMode.left
+        ? -40.0
+        : 40.0;
+    final tolerance = widget.mode == FaceCaptureMode.front
+        ? _androidYawFrontAbsTolerance
+        : _androidYawSideAbsTolerance;
+    final diff = (yaw - target).abs();
+    if (diff > tolerance) return 0.0;
+    return (1.0 - (diff / tolerance)).clamp(0.0, 1.0);
   }
 
-  bool _isFaceCenteredAndroid(double offsetX, double offsetY) {
-    return offsetX < _androidMaxCenterOffsetX &&
-        offsetY < _androidMaxCenterOffsetY;
+  double _androidSizeScore(double ratio) {
+    if (ratio < _androidMinFaceRatio) return 0.0;
+    return (ratio * _androidRatioScoreFullMultiplier).clamp(0.0, 1.0);
   }
 
-  double _scoreAndroidPose(double yaw) {
-    final falloff = _androidYawScoreFalloffDeg;
-    switch (widget.mode) {
-      case FaceCaptureMode.front:
-        final excess = yaw.abs() - _androidYawFrontAbsTolerance;
-        if (excess <= 0) return 1;
-        return (1 - excess / falloff).clamp(0.0, 1.0);
-      case FaceCaptureMode.left:
-        // Need yaw <= -tol
-        final excess = yaw - (-_androidYawSideAbsTolerance);
-        if (excess <= 0) return 1;
-        return (1 - excess / falloff).clamp(0.0, 1.0);
-      case FaceCaptureMode.right:
-        // Need yaw >= tol
-        final excess = _androidYawSideAbsTolerance - yaw;
-        if (excess <= 0) return 1;
-        return (1 - excess / falloff).clamp(0.0, 1.0);
+  double _androidCenterScore(double offsetX, double offsetY) {
+    final relaxX = _androidCenterRelaxRangeX;
+    final relaxY = _androidCenterRelaxRangeY;
+    final maxX = _androidMaxCenterOffsetX;
+    final maxY = _androidMaxCenterOffsetY;
+
+    double sx = 1.0;
+    if (offsetX.abs() > relaxX) {
+      sx = 1.0 - ((offsetX.abs() - relaxX) / (maxX - relaxX)).clamp(0.0, 1.0);
     }
+
+    double sy = 1.0;
+    if (offsetY.abs() > relaxY) {
+      sy = 1.0 - ((offsetY.abs() - relaxY) / (maxY - relaxY)).clamp(0.0, 1.0);
+    }
+
+    return (sx * sy).clamp(0.0, 1.0);
   }
 
-  double _scoreAndroidFaceSize(double ratio) {
-    final minRatio = _androidMinFaceRatio;
-    final fullRatio = minRatio * _androidRatioScoreFullMultiplier;
-    if (ratio <= minRatio) return 0;
-    if (ratio >= fullRatio) return 1;
-    return ((ratio - minRatio) / (fullRatio - minRatio)).clamp(0.0, 1.0);
-  }
-
-  double _scoreAndroidCenter({
-    required double centerOffsetX,
-    required double centerOffsetY,
-  }) {
-    double scoreX = 1;
-    if (centerOffsetX > _androidMaxCenterOffsetX) {
-      scoreX =
-          1 - (centerOffsetX - _androidMaxCenterOffsetX) / _androidCenterRelaxRangeX;
-    }
-    scoreX = scoreX.clamp(0.0, 1.0);
-
-    double scoreY = 1;
-    if (centerOffsetY > _androidMaxCenterOffsetY) {
-      scoreY =
-          1 - (centerOffsetY - _androidMaxCenterOffsetY) / _androidCenterRelaxRangeY;
-    }
-    scoreY = scoreY.clamp(0.0, 1.0);
-
-    return (scoreX + scoreY) / 2.0;
+  double _getFaceRatioAndroid(Face face, CameraImage image) {
+    final rotation = _lastInputImageRotationRaw ?? 90;
+    final isPortrait = rotation == 90 || rotation == 270;
+    final screenW = isPortrait ? image.height.toDouble() : image.width.toDouble();
+    final screenH = isPortrait ? image.width.toDouble() : image.height.toDouble();
+    final faceW = face.boundingBox.width;
+    final faceH = face.boundingBox.height;
+    return (faceW * faceH) / (screenW * screenH);
   }
 
   (double, double) _getFaceCenterOffsetsAndroid(Face face, CameraImage image) {
-    final center = face.boundingBox.center;
-    final rotationRaw = _lastInputImageRotationRaw;
-    if (rotationRaw == null) {
-      // Fallback to existing iOS math (may be slightly off on 90/270 rotations).
-      final offsetX = (center.dx - image.width / 2).abs() / image.width;
-      final offsetY = (center.dy - image.height / 2).abs() / image.height;
-      return (offsetX, offsetY);
-    }
-
-    final rotationMod = rotationRaw % 180;
-    final effectiveWidth = rotationMod != 0 ? image.height.toDouble() : image.width.toDouble();
-    final effectiveHeight = rotationMod != 0 ? image.width.toDouble() : image.height.toDouble();
-
-    final offsetX = (center.dx - effectiveWidth / 2).abs() / effectiveWidth;
-    final offsetY =
-        (center.dy - effectiveHeight / 2).abs() / effectiveHeight;
+    final rotation = _lastInputImageRotationRaw ?? 90;
+    final isPortrait = rotation == 90 || rotation == 270;
+    final screenW = isPortrait ? image.height.toDouble() : image.width.toDouble();
+    final screenH = isPortrait ? image.width.toDouble() : image.height.toDouble();
+    final faceCenterX = face.boundingBox.left + face.boundingBox.width / 2;
+    final faceCenterY = face.boundingBox.top + face.boundingBox.height / 2;
+    final offsetX = (faceCenterX - screenW / 2) / screenW;
+    final offsetY = (faceCenterY - screenH / 2) / screenH;
     return (offsetX, offsetY);
   }
 
   String _getDynamicPoseInstructionAndroid({
     required double yaw,
-    required bool isFaceLargeEnough,
-    required bool isCenterOk,
+    required bool sizeOk,
+    required bool centerOk,
+    double? score,
   }) {
-    if (!isFaceLargeEnough) return 'Đưa mặt lại gần hơn một chút';
-    if (!isCenterOk) return 'Đưa mặt vào gần giữa màn hình hơn';
+    if (!sizeOk) return 'Đưa mặt lại gần hơn một chút';
+    if (!centerOk) return 'Đưa mặt vào gần giữa màn hình hơn';
+    return _getDynamicPoseInstruction(
+      yaw: yaw,
+      isFaceLargeEnough: sizeOk,
+      isCenterOk: centerOk,
+    );
+  }
 
-    switch (widget.mode) {
-      case FaceCaptureMode.front:
-        if (yaw >= _androidYawFrontAbsTolerance) {
-          return 'Quay mặt về giữa từ từ sang trái';
-        }
-        if (yaw <= -_androidYawFrontAbsTolerance) {
-          return 'Quay mặt về giữa từ từ sang phải';
-        }
-        return 'Vui lòng nhìn thẳng vào camera';
-      case FaceCaptureMode.left:
-        if (yaw > -12) return 'Quay sang trái thêm một chút';
-        if (yaw >= -_androidYawSideAbsTolerance) {
-          return 'Quay sang trái thêm';
-        }
-        return 'Vui lòng quay sang trái';
-      case FaceCaptureMode.right:
-        if (yaw < 12) return 'Quay sang phải thêm một chút';
-        if (yaw <= _androidYawSideAbsTolerance) {
-          return 'Quay sang phải thêm';
-        }
-        return 'Vui lòng quay sang phải';
-    }
+  void _resetCaptureState() {
+    _captureTimer?.cancel();
+    _captureTimer = null;
+    _isCountingDown = false;
+    _isTakingShot = false;
+    _countdownToken++;
   }
 
   bool _isPoseMatched(double yaw) {
     switch (widget.mode) {
       case FaceCaptureMode.front:
-        return yaw.abs() < 14;
+        return yaw.abs() <= 14;
       case FaceCaptureMode.left:
-        return yaw < -18;
+        return yaw >= -55 && yaw <= -25;
       case FaceCaptureMode.right:
-        return yaw > 18;
+        return yaw >= 25 && yaw <= 55;
     }
   }
 
-  (double, double) _getFaceCenterOffsets(Face face, CameraImage image) {
-    final center = face.boundingBox.center;
-    final offsetX = (center.dx - image.width / 2).abs() / image.width;
-    final offsetY = (center.dy - image.height / 2).abs() / image.height;
-    return (offsetX, offsetY);
-  }
-
   bool _isFaceCentered(double offsetX, double offsetY) {
-    return offsetX < 0.20 && offsetY < 0.25;
+    return offsetX.abs() <= 0.20 && offsetY.abs() <= 0.25;
   }
 
   String _initialInstruction() {
     switch (widget.mode) {
       case FaceCaptureMode.front:
-        return 'Đưa mặt vào camera và nhìn thẳng';
+        return 'Nhìn thẳng vào camera';
       case FaceCaptureMode.left:
-        return 'Đưa mặt vào camera và quay sang trái';
+        return 'Quay đầu sang trái khoảng 45°';
       case FaceCaptureMode.right:
-        return 'Đưa mặt vào camera và quay sang phải';
+        return 'Quay đầu sang phải khoảng 45°';
     }
   }
 
@@ -1007,279 +883,102 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
     required bool isFaceLargeEnough,
     required bool isCenterOk,
   }) {
-    if (!isFaceLargeEnough) {
-      return 'Đưa mặt lại gần hơn một chút';
-    }
-
-    if (!isCenterOk) {
-      return 'Đưa mặt vào gần giữa màn hình hơn';
-    }
-
+    if (!isFaceLargeEnough) return 'Đưa mặt lại gần hơn một chút';
+    if (!isCenterOk) return 'Đưa mặt vào gần giữa màn hình hơn';
     switch (widget.mode) {
       case FaceCaptureMode.front:
-        if (yaw > 14) return 'Quay mặt về giữa từ từ sang trái';
-        if (yaw < -14) return 'Quay mặt về giữa từ từ sang phải';
-        return 'Vui lòng nhìn thẳng vào camera';
-
+        if (yaw > 14) return 'Quay mặt sang trái một chút';
+        if (yaw < -14) return 'Quay mặt sang phải một chút';
+        return 'Nhìn thẳng vào camera';
       case FaceCaptureMode.left:
-        if (yaw > -10) return 'Quay sang trái thêm một chút';
-        if (yaw > -18) return 'Quay sang trái thêm';
-        return 'Vui lòng quay sang trái';
-
+        if (yaw > -25) return 'Quay đầu sang trái thêm';
+        if (yaw < -55) return 'Quay đầu sang phải một chút';
+        return 'Giữ nguyên góc này';
       case FaceCaptureMode.right:
-        if (yaw < 10) return 'Quay sang phải thêm một chút';
-        if (yaw < 18) return 'Quay sang phải thêm';
-        return 'Vui lòng quay sang phải';
+        if (yaw < 25) return 'Quay đầu sang phải thêm';
+        if (yaw > 55) return 'Quay đầu sang trái một chút';
+        return 'Giữ nguyên góc này';
     }
   }
 
-  Future<void> _ensureTtsReady() {
-    final initFuture = _ttsInitFuture;
-    if (initFuture != null) return initFuture;
-
-    final future = _initTts();
-    _ttsInitFuture = future;
-    return future;
+  double _getFaceRatio(Face face, CameraImage image) {
+    final screenW = image.width.toDouble();
+    final screenH = image.height.toDouble();
+    final faceW = face.boundingBox.width;
+    final faceH = face.boundingBox.height;
+    return (faceW * faceH) / (screenW * screenH);
   }
 
-  String? _nonEmptyString(dynamic value) {
-    if (value == null) return null;
-
-    final text = value.toString().trim();
-    if (text.isEmpty || text.toLowerCase() == 'null') {
-      return null;
-    }
-
-    return text;
+  (double, double) _getFaceCenterOffsets(Face face, CameraImage image) {
+    final screenW = image.width.toDouble();
+    final screenH = image.height.toDouble();
+    final faceCenterX = face.boundingBox.left + face.boundingBox.width / 2;
+    final faceCenterY = face.boundingBox.top + face.boundingBox.height / 2;
+    final offsetX = (faceCenterX - screenW / 2) / screenW;
+    final offsetY = (faceCenterY - screenH / 2) / screenH;
+    return (offsetX, offsetY);
   }
 
-  bool _ttsCallSucceeded(dynamic result) => result == 1 || result == true;
-
-  Map<String, String>? _voiceFromDynamic(dynamic value) {
-    if (value is! Map) return null;
-
-    final name = _nonEmptyString(value['name']);
-    final locale = _nonEmptyString(value['locale']);
-    if (name == null || locale == null) {
-      return null;
-    }
-
-    return <String, String>{'name': name, 'locale': locale};
-  }
-
-  List<Map<String, String>> _voicesFromDynamic(dynamic value) {
-    if (value is! List) return const <Map<String, String>>[];
-
-    final voices = <Map<String, String>>[];
-    for (final item in value) {
-      final voice = _voiceFromDynamic(item);
-      if (voice != null) {
-        voices.add(voice);
-      }
-    }
-    return voices;
-  }
-
-  Map<String, String>? _pickPreferredVoice(List<Map<String, String>> voices) {
-    for (final voice in voices) {
-      final locale = (voice['locale'] ?? '').toLowerCase();
-      if (locale.startsWith('vi')) {
-        return voice;
-      }
-    }
-
-    if (voices.isEmpty) return null;
-    return voices.first;
-  }
-
-  String _describeVoice(Map<String, String> voice) =>
-      'name=${voice['name'] ?? "unknown"} locale=${voice['locale'] ?? "unknown"}';
-
-  Future<void> _initTts() async {
-    try {
-      Map<String, String>? defaultVoice;
-      Map<String, String>? selectedVoice;
-      var selectedVoiceApplied = false;
-
-      if (Platform.isIOS) {
-        // iOS sometimes fails silently if the audio session category isn't set.
-        // Configure it explicitly for TTS playback prompts.
-        await _tts.setSharedInstance(true);
-        await _tts.autoStopSharedSession(true);
-        final iosAudioResult = await _tts.setIosAudioCategory(
-          IosTextToSpeechAudioCategory.playback,
-          const <IosTextToSpeechAudioCategoryOptions>[
-            IosTextToSpeechAudioCategoryOptions.defaultToSpeaker,
-          ],
-          IosTextToSpeechAudioMode.voicePrompt,
-        );
-        _log('TTS iOS audio category configured: $iosAudioResult');
-      }
-
-      if (Platform.isAndroid) {
-        final enginesRaw = await _tts.getEngines;
-        final engines = enginesRaw is List
-            ? enginesRaw.map((engine) => engine.toString()).toList()
-            : <String>[];
-
-        _log('TTS ENGINES: ${engines.join(', ')}');
-
-        if (engines.isEmpty) {
-          _log('TTS unavailable: no installed engines found');
-          _isTtsReady = false;
-          return;
-        }
-
-        final defaultEngine = _nonEmptyString(await _tts.getDefaultEngine);
-        _log('TTS DEFAULT ENGINE: ${defaultEngine ?? "null"}');
-
-        final selectedEngine = defaultEngine ?? engines.first;
-        _log('TTS SELECTED ENGINE: $selectedEngine');
-        final engineResult = await _tts.setEngine(selectedEngine);
-        _log('TTS SET ENGINE RESULT: $engineResult');
-
-        await _tts.setAudioAttributesForNavigation();
-        defaultVoice = _voiceFromDynamic(await _tts.getDefaultVoice);
-
-        if (defaultVoice != null) {
-          _log('TTS DEFAULT VOICE: ${_describeVoice(defaultVoice)}');
-        } else {
-          _log('TTS DEFAULT VOICE: null');
-        }
-
-        final voices = _voicesFromDynamic(await _tts.getVoices);
-        if (voices.isNotEmpty) {
-          final preview = voices.take(3).map(_describeVoice).join(' | ');
-          _log('TTS VOICES: total=${voices.length} sample=$preview');
-        } else {
-          _log('TTS VOICES: none reported by engine');
-        }
-
-        selectedVoice = defaultVoice ?? _pickPreferredVoice(voices);
-        if (selectedVoice != null) {
-          final setVoiceResult = await _tts.setVoice(selectedVoice);
-          selectedVoiceApplied = _ttsCallSucceeded(setVoiceResult);
-          _log(
-            'TTS SET VOICE RESULT: $setVoiceResult ${_describeVoice(selectedVoice)}',
-          );
-        }
-      }
-
-      dynamic languageResult = await _tts.setLanguage('vi-VN');
-      _log('TTS LANGUAGE vi-VN: $languageResult');
-
-      if (!_ttsCallSucceeded(languageResult)) {
-        languageResult = await _tts.setLanguage('vi');
-        _log('TTS LANGUAGE vi: $languageResult');
-      }
-
-      final vietnameseReady = _ttsCallSucceeded(languageResult);
-      var usedVoiceFallback = false;
-      if (!vietnameseReady) {
-        if (Platform.isAndroid) {
-          usedVoiceFallback = true;
-          _log(
-            selectedVoiceApplied
-                ? 'TTS fallback to selected voice'
-                : 'TTS fallback to engine default configuration',
-          );
-        } else {
-          _log('TTS unavailable: failed to set Vietnamese language');
-          _isTtsReady = false;
-          return;
-        }
-      }
-
-      await _tts.setSpeechRate(0.45);
-      await _tts.setVolume(1.0);
-
+  Future<void> _ensureTtsReady() async {
+    if (_isTtsReady) return;
+    _ttsInitFuture ??= _tts
+        .setLanguage('vi-VN')
+        .then((_) => _tts.setSpeechRate(0.5))
+        .then((_) => _tts.setVolume(1.0))
+        .then((_) {
       _isTtsReady = true;
-      _log(usedVoiceFallback ? 'TTS READY (voice fallback)' : 'TTS READY');
-    } catch (e, st) {
-      _isTtsReady = false;
+      _log('TTS READY');
+    }).catchError((e) {
       _log('TTS INIT ERROR: $e');
-      _log('$st');
-    } finally {
-      if (!_isTtsReady) {
-        _ttsInitFuture = null;
-      }
-    }
+      _isTtsReady = false;
+      _ttsInitFuture = null;
+    });
+    await _ttsInitFuture;
   }
 
   Future<void> _speak(String text) async {
     try {
       await _ensureTtsReady();
-      if (!_isTtsReady) {
-        _log('TTS SKIP: engine not ready');
-        return;
+      if (_isTtsReady) {
+        await _tts.speak(text);
       }
-
-      _log('TTS: $text');
-      await _tts.stop();
-      final result = await _tts.speak(text, focus: Platform.isAndroid);
-      _log('TTS speak result: $result');
-
-      // Some iOS setups may return a falsy value without throwing.
-      if (!_ttsCallSucceeded(result)) {
-        _log('TTS speak not confirmed; retrying with language vi');
-        await _tts.setLanguage('vi');
-        final retry = await _tts.speak(text, focus: Platform.isAndroid);
-        _log('TTS retry result: $retry');
-      }
-    } catch (e, st) {
-      _log('tts error: $e');
-      _log('$st');
+    } catch (e) {
+      _log('_speak error: $e');
     }
-  }
-
-  void _resetCaptureState() {
-    if (_captureTimer != null || _isCountingDown) {
-      _log('RESET STATE token=$_countdownToken');
-    }
-    _countdownToken++;
-    _captureTimer?.cancel();
-    _captureTimer = null;
-    _isCountingDown = false;
-  }
-
-  double _getFaceRatio(Face face, CameraImage image) {
-    final box = face.boundingBox;
-    return (box.width * box.height) / (image.width * image.height);
   }
 
   InputImage? _convertCameraImageToInputImage(CameraImage image) {
     try {
       final controller = _controller;
       if (controller == null) return null;
+
       final camera = controller.description;
       final sensorOrientation = camera.sensorOrientation;
 
-      InputImageRotation? rotation;
+      InputImageRotation rotation;
+
       if (Platform.isIOS) {
-        rotation = InputImageRotationValue.fromRawValue(sensorOrientation);
-      } else if (Platform.isAndroid) {
-        var rotationCompensation =
-            _orientations[controller.value.deviceOrientation];
-        if (rotationCompensation == null) {
-          // Device orientation can be temporarily unavailable; assume portrait
-          // instead of skipping the whole frame to keep detection stable.
-          rotationCompensation = 0;
-          _log('ANDROID frame: missing device orientation, assume 0°');
-        }
+        rotation = InputImageRotationValue.fromRawValue(sensorOrientation) ??
+            InputImageRotation.rotation0deg;
+      } else {
+        final deviceOrientation = controller.value.deviceOrientation;
+        final orientationOffset = _orientations[deviceOrientation] ?? 0;
+
+        int rotationCompensation = sensorOrientation - orientationOffset;
 
         if (camera.lensDirection == CameraLensDirection.front) {
-          rotationCompensation =
-              (sensorOrientation + rotationCompensation) % 360;
+          rotationCompensation = (sensorOrientation + orientationOffset) % 360;
         } else {
           rotationCompensation =
-              (sensorOrientation - rotationCompensation + 360) % 360;
+              (sensorOrientation - orientationOffset + 360) % 360;
         }
 
-        rotation = InputImageRotationValue.fromRawValue(rotationCompensation);
+        rotation = InputImageRotationValue.fromRawValue(rotationCompensation) ??
+            InputImageRotation.rotation0deg;
       }
 
-      if (rotation == null) {
-        _log('SKIP FRAME: unsupported rotation=$sensorOrientation');
+      if (image.width == 0 || image.height == 0) {
+        _log('SKIP FRAME: zero dimension');
         return null;
       }
 
@@ -1311,7 +1010,7 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
         } else {
           _log(
             'SKIP FRAME: unsupported Android stream '
-            'raw=${image.format.raw} group=${image.format.group} planes=${image.planes.length}',
+                'raw=${image.format.raw} group=${image.format.group} planes=${image.planes.length}',
           );
           return null;
         }
@@ -1361,14 +1060,14 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
         final vLen = image.planes.length > 2 ? image.planes[2].bytes.length : 0;
         _log(
           'FRAME META raw=${image.format.raw} '
-          'group=${image.format.group} '
-          'planes=${image.planes.length} '
-          'yLen=$yLen uLen=$uLen vLen=$vLen '
-          'bytesPerRow=${plane0.bytesPerRow} '
-          'rotation=${rotation.rawValue} '
-          'sensorOrientation=$sensorOrientation '
-          'deviceOrientation=${controller.value.deviceOrientation} '
-          'lens=${camera.lensDirection}',
+              'group=${image.format.group} '
+              'planes=${image.planes.length} '
+              'yLen=$yLen uLen=$uLen vLen=$vLen '
+              'bytesPerRow=${plane0.bytesPerRow} '
+              'rotation=${rotation.rawValue} '
+              'sensorOrientation=$sensorOrientation '
+              'deviceOrientation=${controller.value.deviceOrientation} '
+              'lens=${camera.lensDirection}',
         );
       }
 
@@ -1435,6 +1134,54 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
       }
     }
   }
+
+  // ── NEW: Pick from gallery ────────────────────────────────────────────────
+
+  Future<void> _pickFromGallery() async {
+    if (_isPickingFromGallery || _isTakingShot) return;
+
+    setState(() => _isPickingFromGallery = true);
+    _log('GALLERY PICK START step=$_stepLabel');
+
+    // Pause the camera stream while the gallery is open so the detector
+    // does not compete with the OS photo picker.
+    await _stopImageStreamIfNeeded();
+
+    try {
+      final picker = ImagePicker();
+      final XFile? picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 90,
+      );
+
+      if (!mounted) return;
+
+      if (picked != null) {
+        _log('GALLERY PICK DONE step=$_stepLabel path=${picked.path}');
+        Navigator.of(context).pop(picked.path);
+      } else {
+        _log('GALLERY PICK CANCELLED step=$_stepLabel');
+        // User cancelled — resume the camera stream.
+        await _startImageStream();
+      }
+    } catch (e, st) {
+      _log('_pickFromGallery error: $e');
+      _log('$st');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Không thể mở thư viện ảnh'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        await _startImageStream();
+      }
+    } finally {
+      if (mounted) setState(() => _isPickingFromGallery = false);
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
 
   void _setError(String message) {
     _log('ERROR: $message');
@@ -1512,6 +1259,51 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
     );
   }
 
+  // ── NEW: Gallery button pinned to top-right ───────────────────────────────
+
+  Widget _buildGalleryButton() {
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 12,
+      right: 12,
+      child: SafeArea(
+        child: Material(
+          color: Colors.black54,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: _isPickingFromGallery ? null : _pickFromGallery,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: _isPickingFromGallery
+                  ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+                  : const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.photo_library_outlined,
+                      color: Colors.white, size: 20),
+                  SizedBox(width: 6),
+                  Text(
+                    'Chọn từ thư viện',
+                    style: TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     if (_errorText != null) {
@@ -1545,6 +1337,7 @@ class _SingleFaceCaptureScreenState extends State<SingleFaceCaptureScreen> {
             ),
           ),
           if (widget.showDebugInfo) _buildDebugInfo(),
+          _buildGalleryButton(),   // ← NEW
           _buildBottomStatus(),
         ],
       ),
