@@ -51,6 +51,7 @@ class CreateBrokerRideRequest {
   final String fromAddress;
   final String toAddress;
   final int type;
+  final String customerName;
   final String customerPhone;
   final int quantity;
 
@@ -67,6 +68,7 @@ class CreateBrokerRideRequest {
     required this.fromAddress,
     required this.toAddress,
     required this.type,
+    required this.customerName,
     required this.customerPhone,
     required this.quantity,
     required this.pickupTime,
@@ -85,6 +87,7 @@ class CreateBrokerRideRequest {
     "fromAddress": fromAddress,
     "toAddress": toAddress,
     "type": type,
+    "customerName": customerName,
     "customerPhone": customerPhone,
     "quantity": normalizedQuantity,
     "pickupTime": pickupTime,
@@ -104,6 +107,7 @@ class CreateBrokerRideRequest {
     if (fromAddress.trim().isEmpty) throw ArgumentError("fromAddress rỗng");
     if (toAddress.trim().isEmpty) throw ArgumentError("toAddress rỗng");
     if (!BrokerRideType.isValid(type)) throw ArgumentError("type không hợp lệ");
+    if (customerName.trim().isEmpty) throw ArgumentError("customerName rỗng");
     if (customerPhone.trim().isEmpty) throw ArgumentError("customerPhone rỗng");
     if (normalizedQuantity <= 0) throw ArgumentError("quantity phải > 0");
     if (offerPrice <= 0) throw ArgumentError("offerPrice phải > 0");

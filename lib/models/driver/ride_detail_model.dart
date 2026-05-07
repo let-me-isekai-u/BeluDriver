@@ -48,6 +48,41 @@ class RideDetailModel {
   });
 
   factory RideDetailModel.fromJson(Map<String, dynamic> json) {
+    String pickCustomerName() {
+      // Ver2 (rideSource=2) có thể trả tên ở key khác nhau so với Ver1.
+      // Ưu tiên customerNameV2 trước, sau đó fallback sang V1, rồi tới customerName.
+      final candidates = <String?>[
+        json['customerNameV2']?.toString(),
+        json['customer_name_v2']?.toString(),
+        json['customerNameV1']?.toString(),
+        json['customer_name_v1']?.toString(),
+        json['customerName']?.toString(),
+        json['customer_name']?.toString(),
+      ];
+      for (final v in candidates) {
+        if (v != null && v.trim().isNotEmpty) return v.trim();
+      }
+      return 'Khách hàng';
+    }
+
+    String pickCustomerPhone() {
+      final candidates = <String?>[
+        json['customerPhoneV2']?.toString(),
+        json['customer_phone_v2']?.toString(),
+        json['customerPhoneV1']?.toString(),
+        json['customer_phone_v1']?.toString(),
+        json['customerPhone']?.toString(),
+        json['customer_number']?.toString(),
+        json['customerNumber']?.toString(),
+      ].whereType<String>();
+
+      for (final v in candidates) {
+        final trimmed = v.trim();
+        if (trimmed.isNotEmpty) return trimmed;
+      }
+      return '';
+    }
+
     return RideDetailModel(
       id: _parseInt(json['id']),
       code: (json['code'] ?? '').toString(),
@@ -58,8 +93,8 @@ class RideDetailModel {
       paymentMethod: (json['paymentMethod'] ?? 'Tiền mặt').toString(),
       pickupTime: json['pickupTime']?.toString(),
       note: json['note']?.toString(),
-      customerName: (json['customerName'] ?? 'Khách hàng').toString(),
-      customerPhone: (json['customerPhone'] ?? json['customerNumber'] ?? '').toString(),
+      customerName: pickCustomerName(),
+      customerPhone: pickCustomerPhone(),
       fromAddress: (json['fromAddress'] ?? '').toString(),
       fromProvince: (json['fromProvince'] ?? '').toString(),
       fromDistrict: (json['fromDistrict'] ?? '').toString(),

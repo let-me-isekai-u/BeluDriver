@@ -54,7 +54,7 @@ class WaitingRide {
       fromDistrict: json['fromDistrict']?.toString(),
       toDistrict: json['toDistrict']?.toString(),
       type: _parseInt(json['type']),
-      quantity: _parseInt(json['quantity']),
+      quantity: _parseNullableInt(json['quantity']),
     );
   }
 
@@ -63,6 +63,13 @@ class WaitingRide {
     if (value is int) return value;
     if (value is double) return value.toInt();
     return int.tryParse(value.toString()) ?? defaultValue;
+  }
+
+  static int? _parseNullableInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    return int.tryParse(value.toString());
   }
 
   static double _parseDouble(dynamic value, {double defaultValue = 0.0}) {

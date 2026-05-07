@@ -560,6 +560,9 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
       ]);
     }
 
+    final String rideTypeOrQuantityText = provider.rideTypeOrQuantityText(ride);
+    final bool shouldShowRideTypeOrQuantityText = provider.shouldShowRideTypeOrQuantity(ride);
+
     final String fromText = provider.buildFullAddress(
       fromAddressRaw,
       fromDistrictRaw,
@@ -612,6 +615,49 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
                   ],
                 ),
                 const SizedBox(height: 8),
+                //thêm thằng số ghế hoăc bao xe
+                if (shouldShowRideTypeOrQuantityText)
+                  Tooltip(
+                    message: rideTypeOrQuantityText,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.secondary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.event_seat_rounded,
+                              size: 14,
+                              color: theme.colorScheme.secondary,
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                rideTypeOrQuantityText,
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: theme.colorScheme.onSurface,
+                                  letterSpacing: -0.2,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [

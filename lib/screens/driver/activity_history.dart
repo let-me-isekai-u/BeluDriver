@@ -313,6 +313,28 @@ class _ActivityScreenState extends State<ActivityScreen>
     });
   }
 
+  void _navigateBrokerToDetail(BrokerRideItem ride) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RideDetailScreen(
+          rideId: ride.rideId,
+          rideSource: 2,
+        ),
+      ),
+    ).then((_) async {
+      if (_tabController.index == 2) {
+        await _fetchBrokerRides();
+      }
+      if (_tabController.index == 0) {
+        await _fetchOngoingRides();
+      }
+      if (_isHistoryLoaded) {
+        await _fetchHistoryRides();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -649,106 +671,110 @@ class _ActivityScreenState extends State<ActivityScreen>
     final statusColor = _brokerStatusColor(ride.status);
     final statusText = _brokerStatusText(ride.status);
 
-    final canCancel = ride.status == 0 || ride.status == 1 ;
+    final canCancel = ride.status == 0 || ride.status == 1;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 3,
       color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  _formatDateTime(ride.createdAt),
-                  style: const TextStyle(color: Colors.grey, fontSize: 13),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+      child: InkWell(
+        onTap: () => _navigateBrokerToDetail(ride),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _formatDateTime(ride.createdAt),
+                    style: const TextStyle(color: Colors.grey, fontSize: 13),
                   ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: statusColor.withOpacity(0.45)),
-                  ),
-                  child: Text(
-                    statusText,
-                    style: TextStyle(
-                      color: statusColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
                     ),
-                  ),
-                ),
-              ],
-            ),
-            const Divider(height: 24),
-            _buildLocationLine(
-              '${ride.fromProvince} - ${ride.fromDistrict} - ${ride.fromAddress}',
-              '${ride.toProvince} - ${ride.toDistrict} - ${ride.toAddress}',
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      ride.code,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: Colors.blueGrey,
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: statusColor.withOpacity(0.45)),
+                    ),
+                    child: Text(
+                      statusText,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      ride.paymentMethod,
-                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
+                ],
+              ),
+              const Divider(height: 24),
+              _buildLocationLine(
+                '${ride.fromProvince} - ${ride.fromDistrict} - ${ride.fromAddress}',
+                '${ride.toProvince} - ${ride.toDistrict} - ${ride.toAddress}',
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        ride.code,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: Colors.blueGrey,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        ride.paymentMethod,
+                        style: const TextStyle(fontSize: 11, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    _formatMoney(ride.price),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.primary,
                     ),
-                  ],
-                ),
-                Text(
-                  _formatMoney(ride.price),
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
+                  ),
+                ],
+              ),
+              if (canCancel) ...[
+                const Divider(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _isLoadingBroker
+                        ? null
+                        : () => _handleCancelBrokerRide(ride),
+                    icon: const Icon(Icons.cancel_outlined),
+                    label: const Text(
+                      "HUỶ ĐƠN ĐÃ ĐẨY",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.error,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
                   ),
                 ),
               ],
-            ),
-            if (canCancel) ...[
-              const Divider(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _isLoadingBroker
-                      ? null
-                      : () => _handleCancelBrokerRide(ride),
-                  icon: const Icon(Icons.cancel_outlined),
-                  label: const Text(
-                    "HUỶ ĐƠN ĐÃ ĐẨY",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colorScheme.error,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
             ],
-          ],
+          ),
         ),
       ),
     );

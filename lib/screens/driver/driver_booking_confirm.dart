@@ -234,6 +234,7 @@ class _DriverBookingConfirmScreenState
         fromAddress: req.fromAddress,
         toAddress: req.toAddress,
         type: req.type,
+        customerName: req.customerName,
         customerPhone: req.customerPhone,
         quantity: req.normalizedQuantity,
         pickupTime: req.pickupTime,
@@ -362,6 +363,7 @@ class _DriverBookingConfirmScreenState
                         "Số lượng:",
                         req.normalizedQuantity.toString(),
                       ),
+                    _buildInfoRow("Tên khách:", req.customerName),
                     _buildInfoRow("SĐT khách:", req.customerPhone),
                     if (req.note.trim().isNotEmpty)
                       _buildInfoRow("Ghi chú:", req.note),

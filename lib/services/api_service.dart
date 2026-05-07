@@ -817,8 +817,8 @@ class ApiService {
     }
   }
 
-  // API #23: Tạo đơn / Đẩy đơn (create-broker)
-  // POST https://xeghepdongduong.com/api/rideapi/create-broker
+  // API #23.5: Tạo đơn / Đẩy đơn (create-broker-ver2)
+  // POST https://xeghepdongduong.com/api/rideapi/create-broker-ver2
   // Bearer Token: Access Token
   static Future<http.Response> createBrokerRide({
     required String accessToken,
@@ -827,6 +827,7 @@ class ApiService {
     required String fromAddress,
     required String toAddress,
     required int type,
+    required String customerName,
     required String customerPhone,
     required int quantity,
     required String pickupTime,
@@ -836,7 +837,7 @@ class ApiService {
     int? groupId,
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/rideapi/create-broker",
+      "https://xeghepdongduong.com/api/rideapi/create-broker-ver2",
     );
 
     try {
@@ -850,6 +851,7 @@ class ApiService {
         "fromAddress": fromAddress,
         "toAddress": toAddress,
         "type": type,
+        "customerName": customerName,
         "customerPhone": customerPhone,
         "quantity": normalizedQuantity,
         "pickupTime": pickupTime,
