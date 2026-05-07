@@ -40,6 +40,16 @@ class DriverChatMessageModel {
       return int.tryParse(value.toString());
     }
 
+    String? parseMetadataJson(dynamic value) {
+      if (value == null) return null;
+      if (value is String) return value;
+      try {
+        return jsonEncode(value);
+      } catch (_) {
+        return value.toString();
+      }
+    }
+
     return DriverChatMessageModel(
       id: parseInt(json['id']),
       groupId: parseInt(json['groupId']),
@@ -48,7 +58,7 @@ class DriverChatMessageModel {
       senderName: json['senderName']?.toString() ?? '',
       messageType: parseInt(json['messageType']),
       content: json['content']?.toString() ?? '',
-      metadataJson: json['metadataJson']?.toString(),
+      metadataJson: parseMetadataJson(json['metadataJson']),
       createdAt: json['createdAt'] == null
           ? null
           : DateTime.tryParse(json['createdAt'].toString()),

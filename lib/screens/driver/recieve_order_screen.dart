@@ -4,7 +4,7 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/waiting_ride_model.dart';
-import '../../providers/recieve_order_provider.dart';
+import '../../providers/received_order_provider.dart';
 import '../popup_list/insufficient_balance_popup.dart';
 import '../popup_list/has_accepted_popup.dart';
 import '../popup_list/received_success_popup.dart';

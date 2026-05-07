@@ -433,7 +433,9 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
     final ride = message.brokerRideMeta;
     if (ride == null) return false;
 
-    return ride.status == BrokerRideStatus.findingDriver;
+    return ride.status == BrokerRideStatus.findingDriver ||
+        ride.status == BrokerRideStatus.completed ||
+        ride.status == BrokerRideStatus.cancelled;
   }
 
   @override
@@ -819,15 +821,14 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
     final canCancel =
         ride != null &&
         isCreatedByMe &&
-        (ride.status == BrokerRideStatus.findingDriver ||
-            ride.status == BrokerRideStatus.accepted ||
-            ride.status == BrokerRideStatus.inProgress);
+        ride.status == BrokerRideStatus.findingDriver;
     final canAccept =
         ride != null &&
         !isCreatedByMe &&
         !isAcceptedByMe &&
         ride.status == BrokerRideStatus.findingDriver &&
         ride.acceptedDriverId == null;
+    final isFindingDriver = ride?.status == BrokerRideStatus.findingDriver;
     final isBusy = ride != null && _isBrokerRideBusy(ride.brokerRideId);
 
     final Color headerColor;
@@ -1021,7 +1022,7 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
                             ),
                           ),
                         ),
-                      if (canCancel || canAccept) ...[
+                      if (isFindingDriver && (canCancel || canAccept)) ...[
                         const Divider(height: 24),
                         SizedBox(
                           width: double.infinity,
@@ -1085,6 +1086,29 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
                               fontSize: 12.5,
                               fontWeight: FontWeight.w600,
                               color: beluDarkGreen,
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (ride.status != BrokerRideStatus.findingDriver) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: const Text(
+                            'Đơn đã được đẩy',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black54,
                             ),
                           ),
                         ),

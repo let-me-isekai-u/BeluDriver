@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/paged_response_model.dart';
 import '../models/waiting_ride_model.dart';
 import '../models/driver/broker_rides_model.dart';
-import '../services/api_service.dart';
+import '../services/v2/api_service.dart';
 
 enum WaitingRideSortOption { createdAtDesc, pickupTimeAsc }
 
@@ -137,6 +137,45 @@ class RecieveOrderProvider extends ChangeNotifier {
       return _parseDouble(ride['netIncome'] ?? ride['net_income']);
     }
     return 0;
+  }
+
+  int extractRideType(dynamic ride){
+    if (ride is WaitingRide) return ride.type;
+    if (ride is Map) {
+      return int.tryParse(ride['type']?.toString() ?? '0') ?? 0;
+    } return 0;
+  }
+
+  int? extractRideQuantity(dynamic ride){
+    if (ride is WaitingRide) return ride.quantity;
+    if (ride is Map) {
+      final value = ride['quantity'];
+      if (value == null) return null;
+      return int.tryParse(value.toString());
+    } return null;
+  }
+
+  String rideTypeOrQuantityText (dynamic ride) {
+    final int type = extractRideType(ride);
+    final int? quantity = extractRideQuantity(ride);
+
+    switch (type) {
+      case 1:
+        if (quantity != null) {
+          return '$quantity ghế';
+        }
+        return '';
+      case 2:
+        return 'Bao xe 5 ghế';
+      case 3:
+        return 'Bao xe 7 ghế';
+      default:
+        return '';
+    }
+  }
+
+  bool shouldShowRideTypeOrQuantity(dynamic ride){
+    return rideTypeOrQuantityText(ride).isNotEmpty;
   }
 
   Future<void> fetchNewRidesPage(int pageKey) async {
