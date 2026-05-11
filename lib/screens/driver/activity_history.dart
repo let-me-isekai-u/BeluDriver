@@ -55,7 +55,9 @@ class _ActivityScreenState extends State<ActivityScreen>
   void _handleTabChange() {
     if (_tabController.indexIsChanging) return;
 
-    if (_tabController.index == 0 && ongoingRides.isEmpty && !_isLoadingOngoing) {
+    if (_tabController.index == 0 &&
+        ongoingRides.isEmpty &&
+        !_isLoadingOngoing) {
       _fetchOngoingRides();
     }
 
@@ -86,28 +88,107 @@ class _ActivityScreenState extends State<ActivityScreen>
 
     try {
       final token = await _getToken();
+      if (token.isEmpty) {
+        if (!mounted) return;
+        setState(() => ongoingRides = []);
+        return;
+      }
 
-      debugPrint("🔵 [ACTIVITY][TAB 1] CALL getProcessingRides");
-      final res = await ApiService.getProcessingRides(accessToken: token);
-      debugPrint("🔵 [ACTIVITY][TAB 1] STATUS: ${res.statusCode}");
-      debugPrint("🔵 [ACTIVITY][TAB 1] BODY: ${res.body}");
+      debugPrint(
+        "🔵 [ACTIVITY][TAB 1] START fetch ongoing rides (status 2 + 3)",
+      );
+      debugPrint(
+        "🔵 [ACTIVITY][TAB 1] CALL API /api/driverapi/ride-confirmed -> lấy đơn đã nhận (status = 2)",
+      );
+      debugPrint(
+        "🔵 [ACTIVITY][TAB 1] CALL API /api/driverapi/ride-process -> lấy đơn đang chạy (status = 3)",
+      );
+      final responses = await Future.wait([
+        ApiService.getAcceptedRides(accessToken: token),
+        ApiService.getProcessingRides(accessToken: token),
+      ]);
 
-      if (res.statusCode == 200) {
-        final body = jsonDecode(res.body);
+      final acceptedRes = responses[0];
+      final processingRes = responses[1];
+
+      debugPrint(
+        "🔵 [ACTIVITY][TAB 1][ACCEPTED] STATUS: ${acceptedRes.statusCode}",
+      );
+      debugPrint("🔵 [ACTIVITY][TAB 1][ACCEPTED] BODY: ${acceptedRes.body}");
+      debugPrint(
+        "🔵 [ACTIVITY][TAB 1][PROCESSING] STATUS: ${processingRes.statusCode}",
+      );
+      debugPrint(
+        "🔵 [ACTIVITY][TAB 1][PROCESSING] BODY: ${processingRes.body}",
+      );
+
+      final List<RideModel> mergedRides = [];
+
+      if (acceptedRes.statusCode == 200) {
+        final body = jsonDecode(acceptedRes.body);
         if (body['success'] == true) {
-          if (!mounted) return;
-          setState(() {
-            ongoingRides = (body['data'] as List)
+          final acceptedData = (body['data'] as List? ?? const []);
+          debugPrint(
+            "🔵 [ACTIVITY][TAB 1][ACCEPTED] COUNT FROM API: ${acceptedData.length}",
+          );
+          mergedRides.addAll(
+            acceptedData
                 .map((e) => RideModel.fromJson(e))
-                .toList();
-          });
+                .where((ride) => ride.status == 2),
+          );
         }
       }
+
+      if (processingRes.statusCode == 200) {
+        final body = jsonDecode(processingRes.body);
+        if (body['success'] == true) {
+          final processingData = (body['data'] as List? ?? const []);
+          debugPrint(
+            "🔵 [ACTIVITY][TAB 1][PROCESSING] COUNT FROM API: ${processingData.length}",
+          );
+          mergedRides.addAll(
+            processingData
+                .map((e) => RideModel.fromJson(e))
+                .where((ride) => ride.status == 3),
+          );
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        ongoingRides = _dedupeAndSortOngoingRides(mergedRides);
+      });
+      debugPrint(
+        "🔵 [ACTIVITY][TAB 1] DONE merged ongoing rides: ${ongoingRides.length} items",
+      );
     } catch (e) {
       debugPrint("🔥 Fetch ongoing error: $e");
     } finally {
       if (mounted) setState(() => _isLoadingOngoing = false);
     }
+  }
+
+  List<RideModel> _dedupeAndSortOngoingRides(List<RideModel> rides) {
+    final Map<String, RideModel> uniqueRides = {};
+
+    for (final ride in rides) {
+      if (ride.status != 2 && ride.status != 3) continue;
+      final key = '${ride.id}_${ride.rideSource}';
+      uniqueRides[key] = ride;
+    }
+
+    final result = uniqueRides.values.toList()
+      ..sort((a, b) {
+        try {
+          return DateTime.parse(
+            b.createdAt,
+          ).compareTo(DateTime.parse(a.createdAt));
+        } catch (_) {
+          return 0;
+        }
+      });
+
+    return result;
   }
 
   Future<void> _fetchHistoryRides() async {
@@ -317,10 +398,7 @@ class _ActivityScreenState extends State<ActivityScreen>
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => RideDetailScreen(
-          rideId: ride.rideId,
-          rideSource: 2,
-        ),
+        builder: (_) => RideDetailScreen(rideId: ride.rideId, rideSource: 2),
       ),
     ).then((_) async {
       if (_tabController.index == 2) {
@@ -473,10 +551,10 @@ class _ActivityScreenState extends State<ActivityScreen>
   }
 
   Widget _buildList(
-      List<RideModel> rides,
-      ThemeData theme, {
-        required String emptyMessage,
-      }) {
+    List<RideModel> rides,
+    ThemeData theme, {
+    required String emptyMessage,
+  }) {
     final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
     final bottomPadding = 12.0 + 24.0 + bottomSafe;
 
@@ -735,7 +813,10 @@ class _ActivityScreenState extends State<ActivityScreen>
                       const SizedBox(height: 2),
                       Text(
                         ride.paymentMethod,
-                        style: const TextStyle(fontSize: 11, color: Colors.grey),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey,
+                        ),
                       ),
                     ],
                   ),
@@ -826,7 +907,6 @@ class _ActivityScreenState extends State<ActivityScreen>
       default:
         return "Khác";
     }
-
   }
 
   Widget _buildLocationLine(String from, String to) {
