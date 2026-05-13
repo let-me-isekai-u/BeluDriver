@@ -51,6 +51,7 @@ class _DriverHomeView extends StatefulWidget {
 class _DriverHomeViewState extends State<_DriverHomeView> {
   int _currentIndex = 2;
   bool _didTryShowPopup = false;
+  int _activityScreenSeed = 0;
 
   static const String _depositPopupShownKey =
       'hasShownKycDepositRequirementPopup';
@@ -232,6 +233,14 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
     setState(() => _currentIndex = index);
   }
 
+  void _navigateToActivityOngoingTab() {
+    if (!mounted) return;
+    setState(() {
+      _activityScreenSeed++;
+      _currentIndex = 3;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -245,9 +254,11 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
     });
 
     final List<Widget> screens = [
-      const RecieveOrderScreen(),
+      RecieveOrderScreen(
+        onReceiveSuccessNavigateToActivity: _navigateToActivityOngoingTab,
+      ),
       DriverBookingScreen(
-        onGoToPushedOrdersTab: () => setState(() => _currentIndex = 3),
+        onGoToPushedOrdersTab: _navigateToActivityOngoingTab,
       ),
       _HomeDashboard(
         profile: homeProvider.profile,
@@ -255,7 +266,10 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
         onNavigate: (index) => _handleNavigationRequest(index, homeProvider),
         onRefreshProfile: homeProvider.refreshProfile,
       ),
-      const ActivityScreen(initialTabIndex: 2),
+      ActivityScreen(
+        key: ValueKey('activity_$_activityScreenSeed'),
+        initialTabIndex: 0,
+      ),
       const DriverProfileScreen(),
     ];
 

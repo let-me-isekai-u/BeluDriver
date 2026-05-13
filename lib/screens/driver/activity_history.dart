@@ -338,6 +338,58 @@ class _ActivityScreenState extends State<ActivityScreen>
     }
   }
 
+  Future<void> _handleStartRide(RideModel ride) async {
+    final theme = Theme.of(context);
+    final token = await _getToken();
+    if (token.isEmpty) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    final res = await ApiService.startRide(
+      accessToken: token,
+      rideId: ride.id,
+      rideSource: ride.rideSource,
+    );
+
+    if (mounted) Navigator.pop(context);
+
+    if (!mounted) return;
+
+    final ok = res.statusCode >= 200 && res.statusCode < 300;
+    if (ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Đã xuất phát chuyến ${ride.code}."),
+          backgroundColor: theme.colorScheme.secondary,
+        ),
+      );
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              RideDetailScreen(rideId: ride.id, rideSource: ride.rideSource),
+        ),
+      );
+
+      if (!mounted) return;
+      if (_tabController.index == 0) {
+        await _fetchOngoingRides();
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text("Không thể xuất phát, vui lòng thử lại."),
+          backgroundColor: theme.colorScheme.error,
+        ),
+      );
+    }
+  }
+
   Future<void> _handleCompleteRide(RideModel ride) async {
     final theme = Theme.of(context);
     final token = await _getToken();
@@ -357,7 +409,8 @@ class _ActivityScreenState extends State<ActivityScreen>
 
     if (mounted) Navigator.pop(context);
 
-    if (res.statusCode == 200) {
+    final ok = res.statusCode >= 200 && res.statusCode < 300;
+    if (ok) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Chuyến xe ${ride.code} đã hoàn thành!"),
@@ -487,7 +540,7 @@ class _ActivityScreenState extends State<ActivityScreen>
       child: _buildList(
         historyRides,
         theme,
-        emptyMessage: "Hiện tại b���n không có lịch sử chuyến xe nào.",
+        emptyMessage: "Hiện tại bạn không có lịch sử chuyến xe nào.",
       ),
     );
   }
@@ -716,6 +769,28 @@ class _ActivityScreenState extends State<ActivityScreen>
                   ),
                 ],
               ),
+              if (ride.status == 2) ...[
+                const Divider(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _handleStartRide(ride),
+                    icon: const Icon(Icons.play_arrow_rounded),
+                    label: const Text(
+                      "XUẤT PHÁT",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
               if (ride.status == 3) ...[
                 const Divider(height: 24),
                 SizedBox(
@@ -724,7 +799,7 @@ class _ActivityScreenState extends State<ActivityScreen>
                     onPressed: () => _handleCompleteRide(ride),
                     icon: const Icon(Icons.check_circle_outline),
                     label: const Text(
-                      "XÁC NHẬN ĐẾN NƠI",
+                      "HOÀN THÀNH",
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     style: ElevatedButton.styleFrom(

@@ -33,6 +33,7 @@ class RecieveOrderProvider extends ChangeNotifier {
 
   final PagingController<int, WaitingRideListItem> pagingController =
   PagingController(firstPageKey: 1);
+  final Set<int> _pagesInFlight = <int>{};
 
   final List<WaitingRide> _waitingRides = <WaitingRide>[];
   WaitingRideSortOption _sortOption = WaitingRideSortOption.createdAtDesc;
@@ -66,6 +67,47 @@ class RecieveOrderProvider extends ChangeNotifier {
 
   Future<void> init() async {
     await Future.wait([loadProvinces(), loadMyBrokerRideIds()]);
+  }
+
+  Future<void> ensureInitialWaitingOrdersLoaded() async {
+    final firstPageKey = pagingController.firstPageKey;
+
+    if (_pagesInFlight.contains(firstPageKey)) return;
+    if (pagingController.itemList != null) return;
+    if (pagingController.error != null) return;
+
+    await fetchNewRidesPage(firstPageKey);
+  }
+
+  /// Gọi sau khi nhận đơn thành công: đồng bộ lại danh sách chờ từ server.
+  Future<void> refreshWaitingOrdersAfterAccept() async {
+    await loadMyBrokerRideIds();
+    await refreshWaitingOrders();
+  }
+
+  Future<void> syncWaitingOrdersAfterAccept() async {
+    try {
+      final token = await _getToken();
+      if (token.isEmpty) return;
+
+      final res = await ApiService.getWaitingRidesPaged(
+        accessToken: token,
+        page: pagingController.firstPageKey,
+        pageSize: pageSize,
+      );
+
+      debugPrint("=== SYNC WAITING RIDES AFTER ACCEPT ===");
+      debugPrint("statusCode: ${res.statusCode}");
+      debugPrint("body: ${res.body}");
+    } catch (e) {
+      debugPrint("Lỗi sync waiting rides after accept: $e");
+    }
+  }
+
+  Future<void> refreshWaitingOrders() async {
+    _waitingRides.clear();
+    pagingController.refresh();
+    await ensureInitialWaitingOrdersLoaded();
   }
 
   void applyFilter() {
@@ -179,6 +221,9 @@ class RecieveOrderProvider extends ChangeNotifier {
   }
 
   Future<void> fetchNewRidesPage(int pageKey) async {
+    if (_pagesInFlight.contains(pageKey)) return;
+    _pagesInFlight.add(pageKey);
+
     try {
       if (pageKey == pagingController.firstPageKey) {
         _waitingRides.clear();
@@ -257,6 +302,8 @@ class RecieveOrderProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint("Lỗi phân trang: $e");
       pagingController.error = e;
+    } finally {
+      _pagesInFlight.remove(pageKey);
     }
   }
 
@@ -363,22 +410,38 @@ class RecieveOrderProvider extends ChangeNotifier {
       rideSource: ride.rideSource,
     );
 
-    if (res.statusCode == 200) {
-      final body = jsonDecode(res.body);
+    final int code = res.statusCode;
+    final bool httpOk = code >= 200 && code < 300;
+
+    Map<String, dynamic>? body;
+    if (res.body.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(res.body);
+        if (decoded is Map<String, dynamic>) body = decoded;
+      } catch (_) {}
+    }
+
+    if (httpOk) {
+      if (body != null && body['success'] == false) {
+        final message =
+            body['message']?.toString() ?? "Không thể nhận đơn, vui lòng thử lại.";
+        pagingController.refresh();
+        return {'success': false, 'reason': 'error', 'message': message};
+      }
 
       _waitingRides.removeWhere(
-            (item) => item.id == ride.id && item.rideSource == ride.rideSource,
+        (item) => item.id == ride.id && item.rideSource == ride.rideSource,
       );
-      _rebuildWaitingRideItems();
-
-      // Đánh dấu cần reload — screen sẽ tự gọi loadAcceptedRides sau khi show popup
-      isAcceptedLoaded = false;
+      _rebuildWaitingRideItems(
+        nextPageKey: pagingController.nextPageKey,
+        preserveExistingNextPageKey: false,
+      );
       notifyListeners();
 
       return {
         'success': true,
         'reason': 'success',
-        'message': body['message'] ?? "Nhận đơn thành công",
+        'message': body?['message']?.toString() ?? "Nhận đơn thành công",
       };
     }
 
@@ -446,37 +509,6 @@ class RecieveOrderProvider extends ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> startRide(dynamic ride) async {
-    final token = await _getToken();
-    if (token.isEmpty) {
-      return {'success': false, 'message': 'Token không hợp lệ'};
-    }
-
-    final int rideId = extractRideId(ride);
-    if (rideId == 0) {
-      return {'success': false, 'message': 'Ride không hợp lệ'};
-    }
-
-    final int rideSource = extractRideSource(ride);
-
-    final res = await ApiService.startRide(
-      accessToken: token,
-      rideId: rideId,
-      rideSource: rideSource,
-    );
-
-    if (res.statusCode == 200) {
-      return {
-        'success': true,
-        'message': 'Bắt đầu chuyến đi thành công',
-        'rideId': rideId,
-        'rideSource': rideSource,
-      };
-    }
-
-    return {'success': false, 'message': 'Không thể bắt đầu chuyến đi'};
-  }
-
   List<Map<String, dynamic>> get acceptedRidesStatus2 {
     return acceptedRides
         .where((ride) => (int.tryParse(ride['status'].toString()) ?? 0) == 2)
@@ -514,10 +546,16 @@ class RecieveOrderProvider extends ChangeNotifier {
       }
     }
 
-    _rebuildWaitingRideItems(nextPageKey: nextPageKey);
+    _rebuildWaitingRideItems(
+      nextPageKey: nextPageKey,
+      preserveExistingNextPageKey: false,
+    );
   }
 
-  void _rebuildWaitingRideItems({int? nextPageKey}) {
+  void _rebuildWaitingRideItems({
+    int? nextPageKey,
+    bool preserveExistingNextPageKey = true,
+  }) {
     final sortedRides = List<WaitingRide>.from(_waitingRides)
       ..sort(_compareWaitingRides);
 
@@ -539,7 +577,9 @@ class RecieveOrderProvider extends ChangeNotifier {
     pagingController.value = PagingState<int, WaitingRideListItem>(
       itemList: displayItems,
       error: null,
-      nextPageKey: nextPageKey ?? pagingController.nextPageKey,
+      nextPageKey: preserveExistingNextPageKey
+          ? (nextPageKey ?? pagingController.nextPageKey)
+          : nextPageKey,
     );
   }
 

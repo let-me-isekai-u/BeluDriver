@@ -8,38 +8,35 @@ import '../../providers/received_order_provider.dart';
 import '../popup_list/insufficient_balance_popup.dart';
 import '../popup_list/has_accepted_popup.dart';
 import '../popup_list/received_success_popup.dart';
-import 'ride_detail_screen.dart';
 
 class RecieveOrderScreen extends StatelessWidget {
-  const RecieveOrderScreen({super.key});
+  const RecieveOrderScreen({super.key, this.onReceiveSuccessNavigateToActivity});
+
+  /// Sau khi đóng popup nhận đơn thành công — chuyển sang tab Hoạt động (Đang diễn ra).
+  final VoidCallback? onReceiveSuccessNavigateToActivity;
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => RecieveOrderProvider(),
-      child: const _RecieveOrderView(),
+      child: _RecieveOrderView(
+        onReceiveSuccessNavigateToActivity: onReceiveSuccessNavigateToActivity,
+      ),
     );
   }
 }
 
 class _RecieveOrderView extends StatefulWidget {
-  const _RecieveOrderView();
+  const _RecieveOrderView({this.onReceiveSuccessNavigateToActivity});
+
+  final VoidCallback? onReceiveSuccessNavigateToActivity;
 
   @override
   State<_RecieveOrderView> createState() => _RecieveOrderViewState();
 }
 
-class _RecieveOrderViewState extends State<_RecieveOrderView>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _RecieveOrderViewState extends State<_RecieveOrderView> {
   bool _didInitProvider = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(_handleTabSelection);
-  }
 
   @override
   void didChangeDependencies() {
@@ -52,25 +49,8 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
       if (!mounted) return;
       final provider = context.read<RecieveOrderProvider>();
       await provider.init();
+      await provider.ensureInitialWaitingOrdersLoaded();
     });
-  }
-
-  /// Mỗi lần chuyển sang tab "Đơn đã nhận" đều gọi API load lại danh sách,
-  /// không cache — đảm bảo luôn có dữ liệu mới nhất.
-  void _handleTabSelection() {
-    if (!_tabController.indexIsChanging) return;
-
-    if (_tabController.index == 1) {
-      final provider = context.read<RecieveOrderProvider>();
-      provider.loadAcceptedRides();
-    }
-  }
-
-  @override
-  void dispose() {
-    _tabController.removeListener(_handleTabSelection);
-    _tabController.dispose();
-    super.dispose();
   }
 
   Future<void> _acceptRide(
@@ -80,42 +60,44 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
       ) async {
     final result = await provider.acceptRide(ride);
 
-    if (!mounted) return;
+    if (!mounted || !context.mounted) return;
 
     final reason = result['reason'] as String? ?? 'error';
 
     switch (reason) {
       case 'success':
-        await showDialog(
+        provider.syncWaitingOrdersAfterAccept();
+        await showDialog<void>(
           context: context,
           barrierDismissible: false,
+          useRootNavigator: true,
           builder: (_) => const ReceivedSuccessPopup(),
         );
-        // Reload danh sách đơn đã nhận sau khi user đóng popup
-        if (mounted) {
-          provider.loadAcceptedRides();
-        }
+        if (!mounted || !context.mounted) return;
+        widget.onReceiveSuccessNavigateToActivity?.call();
         break;
 
       case 'insufficient_balance':
-        await showDialog(
+        await showDialog<void>(
           context: context,
           barrierDismissible: false,
+          useRootNavigator: true,
           builder: (_) => const InsufficientBalancePopup(),
         );
         break;
 
       case 'already_accepted':
-        await showDialog(
+        await showDialog<void>(
           context: context,
           barrierDismissible: false,
+          useRootNavigator: true,
           builder: (_) => const HasAcceptedPopup(),
         );
         break;
 
       default:
       // Lỗi không xác định — giữ snackbar để dễ debug
-        if (mounted) {
+        if (mounted && context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(result['message'] ?? 'Có lỗi xảy ra'),
@@ -172,63 +154,6 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
             : theme.colorScheme.error,
       ),
     );
-  }
-
-  Future<void> _startRide(
-      BuildContext context,
-      RecieveOrderProvider provider,
-      dynamic ride,
-      ) async {
-    final theme = Theme.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-    final result = await provider.startRide(ride);
-
-    if (!mounted) return;
-
-    if (result['success'] == true) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(result['message'] ?? ''),
-          backgroundColor: theme.colorScheme.secondary,
-        ),
-      );
-
-      navigator.push(
-        MaterialPageRoute(
-          builder: (_) => RideDetailScreen(
-            rideId: result['rideId'],
-            rideSource: result['rideSource'],
-          ),
-        ),
-      );
-    } else {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(result['message'] ?? ''),
-          backgroundColor: theme.colorScheme.error,
-        ),
-      );
-    }
-  }
-
-  void _navigateToDetail(
-      BuildContext context,
-      RecieveOrderProvider provider,
-      dynamic ride,
-      ) {
-    final int rideId = provider.extractRideId(ride);
-    final int rideSource = provider.extractRideSource(ride);
-
-    if (rideId != 0) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) =>
-              RideDetailScreen(rideId: rideId, rideSource: rideSource),
-        ),
-      );
-    }
   }
 
   Color _rideSourceColor(int rideSource, ThemeData theme) {
@@ -289,101 +214,54 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
             elevation: 0,
             backgroundColor: theme.colorScheme.primary,
             foregroundColor: Colors.white,
-            bottom: TabBar(
-              controller: _tabController,
-              labelColor: theme.colorScheme.secondary,
-              labelStyle: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-              ),
-              unselectedLabelColor: Colors.white70,
-              unselectedLabelStyle: const TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
-              indicatorColor: theme.colorScheme.secondary,
-              indicatorWeight: 5.5,
-              tabs: const [
-                Tab(text: "ĐƠN MỚI", icon: Icon(Icons.fiber_new_rounded)),
-                Tab(
-                  text: "ĐƠN ĐÃ NHẬN",
-                  icon: Icon(Icons.assignment_turned_in_rounded),
-                ),
-              ],
-            ),
           ),
-          body: TabBarView(
-            controller: _tabController,
+          body: Column(
             children: [
-              // ── Tab 1: Đơn mới ──────────────────────────────────────────
-              Column(
-                children: [
-                  _buildSortFilter(context, provider),
-                  Expanded(
-                    child: RefreshIndicator(
-                      onRefresh: () async {
-                        await provider.loadMyBrokerRideIds();
-                        provider.pagingController.refresh();
-                      },
-                      child: SafeArea(
-                        bottom: true,
-                        child: PagedListView<int, WaitingRideListItem>(
-                          pagingController: provider.pagingController,
-                          padding: EdgeInsets.fromLTRB(
-                            12,
-                            12,
-                            12,
-                            bottomPadding,
-                          ),
-                          physics: const BouncingScrollPhysics(
-                            parent: AlwaysScrollableScrollPhysics(),
-                          ),
-                          builderDelegate:
+              _buildSortFilter(context, provider),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    await provider.loadMyBrokerRideIds();
+                    await provider.refreshWaitingOrders();
+                  },
+                  child: SafeArea(
+                    bottom: true,
+                    child: PagedListView<int, WaitingRideListItem>(
+                      pagingController: provider.pagingController,
+                      padding: EdgeInsets.fromLTRB(
+                        12,
+                        12,
+                        12,
+                        bottomPadding,
+                      ),
+                      physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
+                      ),
+                      builderDelegate:
                           PagedChildBuilderDelegate<WaitingRideListItem>(
-                            itemBuilder: (context, item, index) {
-                              if (item is WaitingRideDateHeaderItem) {
-                                return _buildCreatedAtHeader(
-                                  context,
-                                  provider,
-                                  item,
-                                );
-                              }
+                        itemBuilder: (context, item, index) {
+                          if (item is WaitingRideDateHeaderItem) {
+                            return _buildCreatedAtHeader(
+                              context,
+                              provider,
+                              item,
+                            );
+                          }
 
-                              if (item is WaitingRideCardItem) {
-                                return _buildRideCard(
-                                  context,
-                                  provider,
-                                  item.ride,
-                                  true,
-                                );
-                              }
+                          if (item is WaitingRideCardItem) {
+                            return _buildRideCard(
+                              context,
+                              provider,
+                              item.ride,
+                            );
+                          }
 
-                              return const SizedBox.shrink();
-                            },
-                            noItemsFoundIndicatorBuilder: (_) =>
-                                _buildEmptyPlaceholder(context),
-                          ),
-                        ),
+                          return const SizedBox.shrink();
+                        },
+                        noItemsFoundIndicatorBuilder: (_) =>
+                            _buildEmptyPlaceholder(context),
                       ),
                     ),
-                  ),
-                ],
-              ),
-
-              // ── Tab 2: Đơn đã nhận ──────────────────────────────────────
-              provider.isLoadingAcceptedRides
-                  ? Center(
-                child: CircularProgressIndicator(
-                  color: theme.colorScheme.secondary,
-                ),
-              )
-                  : RefreshIndicator(
-                onRefresh: provider.loadAcceptedRides,
-                child: SafeArea(
-                  bottom: true,
-                  child: _buildOldOrderList(
-                    context,
-                    provider,
-                    provider.acceptedRidesStatus2,
                   ),
                 ),
               ),
@@ -492,73 +370,24 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
   }
 
   Widget _buildRideCard(
-      BuildContext context,
-      RecieveOrderProvider provider,
-      dynamic ride,
-      bool isNew,
-      ) {
+    BuildContext context,
+    RecieveOrderProvider provider,
+    WaitingRide ride,
+  ) {
     final theme = Theme.of(context);
 
     final int rideSource = provider.extractRideSource(ride);
 
-    final String code = (ride is WaitingRide)
-        ? (ride.code ?? '---')
-        : (ride['code'] ?? '---');
+    final String code = ride.code ?? '---';
 
-    final dynamic pickupTime = (ride is WaitingRide)
-        ? ride.pickupTime
-        : provider.extractDynamicFromMap(ride, [
-      'pickupTime',
-      'pickup_time',
-      'pickupAt',
-      'pickup_at',
-      'pickuptime',
-      'pickupDate',
-      'pickup_date',
-    ]);
+    final dynamic pickupTime = ride.pickupTime;
 
-    String fromAddressRaw = '';
-    String fromDistrictRaw = '';
-    String fromProvinceRaw = '';
-    String toAddressRaw = '';
-    String toDistrictRaw = '';
-    String toProvinceRaw = '';
-
-    if (ride is WaitingRide) {
-      fromAddressRaw = ride.fromAddress ?? '';
-      fromDistrictRaw = ride.fromDistrict ?? '';
-      fromProvinceRaw = ride.fromProvince ?? '';
-      toAddressRaw = ride.toAddress ?? '';
-      toDistrictRaw = ride.toDistrict ?? '';
-      toProvinceRaw = ride.toProvince ?? '';
-    } else if (ride is Map) {
-      fromAddressRaw = ride['fromAddress']?.toString() ?? '';
-      fromDistrictRaw = provider.extractProvinceFromMap(ride, [
-        'fromDistrict',
-        'fromDistrictName',
-        'from_district',
-        'from_district_name',
-      ]);
-      fromProvinceRaw = provider.extractProvinceFromMap(ride, [
-        'fromProvince',
-        'fromProvinceName',
-        'from_province',
-        'from_province_name',
-      ]);
-      toAddressRaw = ride['toAddress']?.toString() ?? '';
-      toDistrictRaw = provider.extractProvinceFromMap(ride, [
-        'toDistrict',
-        'toDistrictName',
-        'to_district',
-        'to_district_name',
-      ]);
-      toProvinceRaw = provider.extractProvinceFromMap(ride, [
-        'toProvince',
-        'toProvinceName',
-        'to_province',
-        'to_province_name',
-      ]);
-    }
+    final String fromAddressRaw = ride.fromAddress ?? '';
+    final String fromDistrictRaw = ride.fromDistrict ?? '';
+    final String fromProvinceRaw = ride.fromProvince ?? '';
+    final String toAddressRaw = ride.toAddress ?? '';
+    final String toDistrictRaw = ride.toDistrict ?? '';
+    final String toProvinceRaw = ride.toProvince ?? '';
 
     final String rideTypeOrQuantityText = provider.rideTypeOrQuantityText(ride);
     final bool shouldShowRideTypeOrQuantityText = provider.shouldShowRideTypeOrQuantity(ride);
@@ -579,10 +408,6 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
     final double totalPrice = provider.extractRidePrice(ride);
     final double netIncome = provider.extractRideNetIncome(ride);
 
-    final VoidCallback? onTapCard = isNew
-        ? null
-        : () => _navigateToDetail(context, provider, ride);
-
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
@@ -590,14 +415,9 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Material(
         color: Colors.transparent,
-        child: InkWell(
-          onTap: onTapCard,
-          borderRadius: BorderRadius.circular(12),
-          splashColor: isNew ? Colors.transparent : null,
-          highlightColor: isNew ? Colors.transparent : null,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
               children: [
                 Row(
                   children: [
@@ -627,7 +447,9 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.secondary.withOpacity(0.1),
+                          color: theme.colorScheme.secondary.withValues(
+                            alpha: 0.1,
+                          ),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Row(
@@ -704,27 +526,24 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
                   provider,
                   ride,
                   theme,
-                  isNew,
                   totalPrice,
                   netIncome,
                 ),
               ],
             ),
-          ),
         ),
       ),
     );
   }
 
   Widget _buildCardFooter(
-      BuildContext context,
-      RecieveOrderProvider provider,
-      dynamic ride,
-      ThemeData theme,
-      bool isNew,
-      double totalPrice,
-      double netIncome,
-      ) {
+    BuildContext context,
+    RecieveOrderProvider provider,
+    WaitingRide ride,
+    ThemeData theme,
+    double totalPrice,
+    double netIncome,
+  ) {
     final bool isMyBrokerRide = provider.isMyBrokerRide(ride);
     final int rideSource = provider.extractRideSource(ride);
 
@@ -756,7 +575,7 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
           ),
         ),
         const SizedBox(width: 8),
-        if (isNew && rideSource == 2 && isMyBrokerRide) ...[
+        if (rideSource == 2 && isMyBrokerRide)
           ElevatedButton(
             onPressed: provider.loadingMyBrokerRides
                 ? null
@@ -765,29 +584,12 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
               backgroundColor: theme.colorScheme.error,
             ),
             child: const Text("HUỶ ĐƠN"),
-          ),
-        ] else if (isNew) ...[
+          )
+        else
           ElevatedButton(
-            onPressed: () =>
-                _acceptRide(context, provider, ride as WaitingRide),
+            onPressed: () => _acceptRide(context, provider, ride),
             child: const Text("NHẬN ĐƠN"),
           ),
-        ] else ...[
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              OutlinedButton(
-                onPressed: () => _navigateToDetail(context, provider, ride),
-                child: const Text("CHI TIẾT"),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: () => _startRide(context, provider, ride),
-                child: const Text("XUẤT PHÁT"),
-              ),
-            ],
-          ),
-        ],
       ],
     );
   }
@@ -815,27 +617,6 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
     );
   }
 
-  Widget _buildOldOrderList(
-      BuildContext context,
-      RecieveOrderProvider provider,
-      List<Map<String, dynamic>> rides,
-      ) {
-    if (rides.isEmpty) return _buildEmptyList(context);
-
-    final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
-    final bottomPadding = 12.0 + 24.0 + bottomSafe;
-
-    return ListView.builder(
-      physics: const BouncingScrollPhysics(
-        parent: AlwaysScrollableScrollPhysics(),
-      ),
-      padding: EdgeInsets.fromLTRB(12, 12, 12, bottomPadding),
-      itemCount: rides.length,
-      itemBuilder: (context, index) =>
-          _buildRideCard(context, provider, rides[index], false),
-    );
-  }
-
   Widget _buildEmptyPlaceholder(BuildContext context) {
     final theme = Theme.of(context);
     return SizedBox(
@@ -847,26 +628,6 @@ class _RecieveOrderViewState extends State<_RecieveOrderView>
           style: TextStyle(
             color: theme.colorScheme.secondary,
             fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyList(BuildContext context) {
-    final theme = Theme.of(context);
-    return SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      child: SizedBox(
-        height: 320,
-        child: Center(
-          child: Text(
-            "Không có đơn hàng nào.\nVuốt xuống để cập nhật mới.",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: theme.colorScheme.secondary,
-              fontWeight: FontWeight.w600,
-            ),
           ),
         ),
       ),
