@@ -1,11 +1,14 @@
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../app_theme.dart';
 import '../../models/driver/driver_profile_model.dart';
 import '../../services/api_service.dart';
+import '../../widgets/driver_ui.dart';
 
 class DriverUpdateProfileScreen extends StatefulWidget {
   final DriverProfileModel profile;
@@ -30,8 +33,9 @@ class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
     super.initState();
     _fullNameController = TextEditingController(text: widget.profile.fullName);
     _emailController = TextEditingController(text: widget.profile.email);
-    _licenseNumberController =
-        TextEditingController(text: widget.profile.licenseNumber);
+    _licenseNumberController = TextEditingController(
+      text: widget.profile.licenseNumber,
+    );
   }
 
   @override
@@ -89,6 +93,16 @@ class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
     }
   }
 
+  ImageProvider? _avatarProvider() {
+    if (_avatar != null) {
+      return FileImage(File(_avatar!.path));
+    }
+    if (widget.profile.avatarUrl.isNotEmpty) {
+      return NetworkImage(widget.profile.avatarUrl);
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -100,109 +114,89 @@ class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
           'Cập nhật hồ sơ',
           style: TextStyle(
             color: theme.colorScheme.secondary,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w800,
           ),
         ),
-        centerTitle: true,
-        elevation: 0,
         backgroundColor: theme.colorScheme.primary,
         iconTheme: IconThemeData(color: theme.colorScheme.secondary),
       ),
       body: Stack(
         children: [
+          Positioned(
+            top: -70,
+            right: -40,
+            child: Container(
+              width: 220,
+              height: 220,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: theme.colorScheme.secondary.withValues(alpha: 0.06),
+              ),
+            ),
+          ),
           SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Avatar
-                Stack(
-                  children: [
-                    CircleAvatar(
-                      radius: 60,
-                      backgroundColor:
-                      theme.colorScheme.secondary.withOpacity(0.15),
-                      backgroundImage: _avatar != null
-                          ? FileImage(File(_avatar!.path))
-                          : (widget.profile.avatarUrl.isNotEmpty
-                          ? NetworkImage(widget.profile.avatarUrl)
-                          : null) as ImageProvider?,
-                      child: (_avatar == null &&
-                          widget.profile.avatarUrl.isEmpty)
-                          ? Icon(
-                        Icons.person,
-                        size: 70,
-                        color: theme.colorScheme.secondary,
-                      )
-                          : null,
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 4,
-                      child: InkWell(
-                        onTap: _loading ? null : _pickAvatar,
-                        child: CircleAvatar(
-                          radius: 18,
-                          backgroundColor: theme.colorScheme.secondary,
-                          child: const Icon(Icons.camera_alt,
-                              size: 18, color: Colors.black87),
-                        ),
+                _buildHero(theme),
+                const SizedBox(height: 16),
+                DriverSectionCard(
+                  title: "Thông tin hiển thị",
+                  subtitle:
+                      "Chỉnh sửa hồ sơ cá nhân, email liên hệ và biển số xe.",
+                  icon: Icons.edit_note_rounded,
+                  child: Column(
+                    children: [
+                      _buildTextField(
+                        controller: _fullNameController,
+                        label: 'Họ và tên',
+                        hint: 'Nhập họ tên tài xế',
+                        icon: Icons.badge_rounded,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 14),
+                      _buildTextField(
+                        controller: _emailController,
+                        label: 'Email',
+                        hint: 'Nhập email liên hệ',
+                        icon: Icons.email_outlined,
+                      ),
+                      const SizedBox(height: 14),
+                      _buildTextField(
+                        controller: _licenseNumberController,
+                        label: 'Biển số xe',
+                        hint: 'Ví dụ: 51A-12345',
+                        icon: Icons.directions_car_filled_rounded,
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 30),
-
-                _buildTextField(
-                  controller: _fullNameController,
-                  label: 'Họ và tên',
-                  icon: Icons.badge,
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  controller: _emailController,
-                  label: 'Email',
-                  icon: Icons.email,
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  controller: _licenseNumberController,
-                  label: 'Biển số xe',
-                  icon: Icons.directions_car,
-                ),
-
-                const SizedBox(height: 30),
+                const SizedBox(height: 18),
                 SizedBox(
-                  height: 50,
-                  width: double.infinity,
-                  child: ElevatedButton(
+                  height: 54,
+                  child: ElevatedButton.icon(
                     onPressed: _loading ? null : _handleUpdate,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.colorScheme.secondary,
-                      foregroundColor: Colors.black87,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                    ),
-                    child: _loading
+                    icon: _loading
                         ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.black87,
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              color: Colors.black87,
+                            ),
+                          )
+                        : const Icon(Icons.save_rounded),
+                    label: Text(_loading ? 'Đang cập nhật...' : 'Lưu thay đổi'),
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
                       ),
-                    )
-                        : const Text(
-                      'Lưu thay đổi',
-                      style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ),
-                )
+                ),
               ],
             ),
           ),
-
           if (_loading)
             Container(
               color: Colors.black26,
@@ -211,7 +205,107 @@ class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
                   color: theme.colorScheme.secondary,
                 ),
               ),
-            )
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHero(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primaryGreen,
+            AppColors.surfaceGreen.withValues(alpha: 0.95),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: theme.colorScheme.secondary.withValues(alpha: 0.16),
+        ),
+      ),
+      child: Row(
+        children: [
+          Stack(
+            children: [
+              CircleAvatar(
+                radius: 42,
+                backgroundColor: theme.colorScheme.secondary.withValues(
+                  alpha: 0.14,
+                ),
+                backgroundImage: _avatarProvider(),
+                child: _avatarProvider() == null
+                    ? Icon(
+                        Icons.person_rounded,
+                        size: 46,
+                        color: theme.colorScheme.secondary,
+                      )
+                    : null,
+              ),
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _loading ? null : _pickAvatar,
+                    borderRadius: BorderRadius.circular(999),
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.secondary,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.primaryGreen,
+                          width: 2,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.camera_alt_rounded,
+                        size: 18,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const DriverPill(
+                  label: "Hồ sơ tài xế",
+                  icon: Icons.workspace_premium_rounded,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  widget.profile.fullName.isEmpty
+                      ? "Cập nhật thông tin"
+                      : widget.profile.fullName,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                    fontSize: 22,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  "Ảnh đại diện và thông tin cơ bản sẽ được hiển thị xuyên suốt ứng dụng.",
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textSubtle,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -220,31 +314,19 @@ class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
+    required String hint,
     required IconData icon,
   }) {
     final theme = Theme.of(context);
 
     return TextField(
       controller: controller,
-      style: TextStyle(color: theme.colorScheme.onSurface),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
-        prefixIcon: Icon(icon, color: theme.colorScheme.secondary),
-        filled: true,
-        fillColor: theme.colorScheme.surface,
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.12)),
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.12)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: theme.colorScheme.secondary, width: 2),
-        ),
+      style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white),
+      decoration: driverInputDecoration(
+        theme,
+        label: label,
+        hint: hint,
+        icon: icon,
       ),
     );
   }

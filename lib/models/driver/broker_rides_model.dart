@@ -1,14 +1,13 @@
 //Model dùng cho API 24
 import 'dart:convert';
 
+import '../broker_ride_models.dart';
+
 class BrokerRidesResponse {
   final bool success;
   final List<BrokerRideItem> data;
 
-  const BrokerRidesResponse({
-    required this.success,
-    required this.data,
-  });
+  const BrokerRidesResponse({required this.success, required this.data});
 
   factory BrokerRidesResponse.fromJson(Map<String, dynamic> json) {
     final rawList = json['data'];
@@ -16,9 +15,9 @@ class BrokerRidesResponse {
       success: json['success'] == true,
       data: rawList is List
           ? rawList
-          .whereType<Map<String, dynamic>>()
-          .map(BrokerRideItem.fromJson)
-          .toList()
+                .whereType<Map<String, dynamic>>()
+                .map(BrokerRideItem.fromJson)
+                .toList()
           : <BrokerRideItem>[],
     );
   }
@@ -44,6 +43,8 @@ class BrokerRideItem {
   final num price;
   final int status;
   final String paymentMethod;
+  final int type;
+  final int? quantity;
 
   const BrokerRideItem({
     required this.rideId,
@@ -59,6 +60,8 @@ class BrokerRideItem {
     required this.price,
     required this.status,
     required this.paymentMethod,
+    required this.type,
+    required this.quantity,
   });
 
   static DateTime? _parseNullableDateTime(String? raw) {
@@ -97,6 +100,24 @@ class BrokerRideItem {
       price: (json['price'] as num?) ?? 0,
       status: int.tryParse(json['status']?.toString() ?? '0') ?? 0,
       paymentMethod: (json['paymentMethod'] ?? '').toString(),
+      type: int.tryParse(json['type']?.toString() ?? '1') ?? 1,
+      quantity: int.tryParse(json['quantity']?.toString() ?? ''),
     );
+  }
+
+  String get rideTypeOrQuantityText {
+    switch (type) {
+      case BrokerRideType.passenger:
+        if (quantity != null) {
+          return '$quantity ghế';
+        }
+        return '';
+      case BrokerRideType.charter5Seats:
+        return 'Bao xe 5 chỗ';
+      case BrokerRideType.charter7Seats:
+        return 'Bao xe 7 chỗ';
+      default:
+        return '';
+    }
   }
 }

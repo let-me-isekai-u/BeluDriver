@@ -6,10 +6,12 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../app_theme.dart';
 import '../../models/driver/driver_profile_model.dart';
 import '../../providers/home_provider.dart';
 import '../../providers/driver/deposit_provider.dart';
 import '../../services/api_service.dart';
+import '../../widgets/driver_ui.dart';
 import '../chat_to_order/chat_group_list_screen.dart';
 import '../kyc/kyc_deposit_requirement_popup.dart';
 import '../kyc/kyc_popup.dart';
@@ -22,7 +24,6 @@ import 'withdrawal_history_screen.dart';
 import '../../providers/kyc/kyc_provider.dart';
 import '../../providers/routes/register_route_provider.dart';
 import '../register_route/register_route_popup.dart';
-
 
 ///test màn hình facedetection
 
@@ -65,8 +66,8 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
 
   // TODO: Bật lại khi cần — tạm vô hiệu hoá popup ký quỹ
   Future<void> _showDepositRequirementPopupIfNeeded(
-      HomeProvider provider,
-      ) async {
+    HomeProvider provider,
+  ) async {
     return; // DISABLED
 
     // ignore: dead_code
@@ -90,7 +91,7 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
       context: context,
       barrierDismissible: false,
       builder: (_) =>
-      const KycDepositRequirementPopup(amount: _requiredDepositAmount),
+          const KycDepositRequirementPopup(amount: _requiredDepositAmount),
     );
 
     await prefs.setBool(_depositPopupShownKey, true);
@@ -218,9 +219,9 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
   }
 
   Future<void> _handleNavigationRequest(
-      int index,
-      HomeProvider homeProvider,
-      ) async {
+    int index,
+    HomeProvider homeProvider,
+  ) async {
     final isReceiveOrderTab = index == 0;
     final isKycApproved = homeProvider.kycStatus == 2;
 
@@ -257,12 +258,11 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
       RecieveOrderScreen(
         onReceiveSuccessNavigateToActivity: _navigateToActivityOngoingTab,
       ),
-      DriverBookingScreen(
-        onGoToPushedOrdersTab: _navigateToActivityOngoingTab,
-      ),
+      DriverBookingScreen(onGoToPushedOrdersTab: _navigateToActivityOngoingTab),
       _HomeDashboard(
         profile: homeProvider.profile,
         isLoading: homeProvider.isLoadingProfile,
+        homeProvider: homeProvider,
         onNavigate: (index) => _handleNavigationRequest(index, homeProvider),
         onRefreshProfile: homeProvider.refreshProfile,
       ),
@@ -277,10 +277,10 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
       extendBody: true,
       appBar: _currentIndex == 2
           ? _buildCustomAppBar(
-        theme,
-        homeProvider.profile,
-        homeProvider.isLoadingProfile,
-      )
+              theme,
+              homeProvider.profile,
+              homeProvider.isLoadingProfile,
+            )
           : null,
       body: screens[_currentIndex],
       bottomNavigationBar: Container(
@@ -321,7 +321,7 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
                   boxShadow: [
                     if (_currentIndex == 2)
                       BoxShadow(
-                        color: goldColor.withOpacity(0.4),
+                        color: goldColor.withValues(alpha: 0.4),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -381,10 +381,10 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
   }
 
   PreferredSizeWidget _buildCustomAppBar(
-      ThemeData theme,
-      DriverProfileModel? profile,
-      bool isLoadingProfile,
-      ) {
+    ThemeData theme,
+    DriverProfileModel? profile,
+    bool isLoadingProfile,
+  ) {
     return AppBar(
       toolbarHeight: 95,
       backgroundColor: theme.colorScheme.primary,
@@ -395,7 +395,7 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
         children: [
           CircleAvatar(
             radius: 26,
-            backgroundColor: Colors.white.withOpacity(0.2),
+            backgroundColor: Colors.white.withValues(alpha: 0.2),
             foregroundImage: (profile != null && profile.avatarUrl.isNotEmpty)
                 ? NetworkImage(profile.avatarUrl)
                 : null,
@@ -443,12 +443,14 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
 class _HomeDashboard extends StatelessWidget {
   final DriverProfileModel? profile;
   final bool isLoading;
+  final HomeProvider homeProvider;
   final Function(int) onNavigate;
   final Future<void> Function() onRefreshProfile;
 
   const _HomeDashboard({
     required this.profile,
     required this.isLoading,
+    required this.homeProvider,
     required this.onNavigate,
     required this.onRefreshProfile,
   });
@@ -456,156 +458,432 @@ class _HomeDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primary,
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(30),
-                bottomRight: Radius.circular(30),
+    final wallet = profile?.wallet ?? 0;
+    final routeCount = profile?.routes.length ?? 0;
+    final canReceiveRide =
+        homeProvider.onboardingStatus?.canReceiveRide ?? false;
+
+    return RefreshIndicator(
+      onRefresh: onRefreshProfile,
+      color: theme.colorScheme.secondary,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 96),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeroCard(context, wallet, routeCount, canReceiveRide),
+            const SizedBox(height: 18),
+            if (!canReceiveRide || !homeProvider.hasRegisteredRoute)
+              _buildStatusBanner(context),
+            if (!canReceiveRide || !homeProvider.hasRegisteredRoute)
+              const SizedBox(height: 18),
+            Text(
+              "Lối vào nhanh",
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: 12),
+            Row(
               children: [
-                Text(
-                  "Sẵn sàng nhận chuyến?",
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.secondary,
-                    fontWeight: FontWeight.w700,
+                Expanded(
+                  child: _buildPrimaryActionCard(
+                    context: context,
+                    title: "Nhận đơn",
+                    subtitle: "Vào danh sách đơn đang chờ và thao tác ngay.",
+                    icon: Icons.near_me_rounded,
+                    accent: Colors.orange,
+                    onTap: () => onNavigate(0),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  "Vào tab Nhận đơn để bắt đầu làm việc",
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: theme.colorScheme.secondary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 14),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio: 1.3,
-              children: [
-                _buildMenuCard(
-                  context,
-                  "NHẬN ĐƠN MỚI",
-                  Icons.near_me_rounded,
-                  Colors.orange,
-                      () => onNavigate(0),
-                ),
-                _buildMenuCard(
-                  context,
-                  "ĐẨY ĐƠN",
-                  Icons.upload_file_rounded,
-                  theme.colorScheme.secondary,
-                      () => onNavigate(1),
-                ),
-                _buildMenuCard(
-                  context,
-                  "LỊCH SỬ CHUYẾN",
-                  Icons.assignment_rounded,
-                  Colors.blue,
-                      () => onNavigate(3),
-                ),
-                _buildMenuCard(
-                  context,
-                  "NHÓM CHAT",
-                  Icons.forum_rounded,
-                  const Color(0xFF145E44),
-                      () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const DriverChatGroupListScreen(),
-                    ),
-                  ),
-                ),
-                _buildMenuCard(
-                  context,
-                  "NẠP TIỀN VÍ",
-                  Icons.account_balance_wallet_rounded,
-                  Colors.green,
-                      () => _showDepositDialog(context, theme),
-                ),
-                _buildMenuCard(
-                  context,
-                  "RÚT TIỀN",
-                  Icons.payments_outlined,
-                  Colors.redAccent,
-                      () => _showWithdrawDialog(context),
-                ),
-                _buildMenuCard(
-                  context,
-                  "LỊCH SỬ RÚT",
-                  Icons.history_rounded,
-                  Colors.purple,
-                      () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const WithdrawalHistoryScreen(),
-                    ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: _buildPrimaryActionCard(
+                    context: context,
+                    title: "Đẩy đơn",
+                    subtitle: "Tạo chuyến cộng đồng với biểu mẫu rõ hơn.",
+                    icon: Icons.upload_file_rounded,
+                    accent: theme.colorScheme.secondary,
+                    onTap: () => onNavigate(1),
                   ),
                 ),
               ],
             ),
+            const SizedBox(height: 18),
+            DriverSectionCard(
+              title: "Tiện ích vận hành",
+              subtitle: "Các công cụ phụ trợ cho lịch sử, chat và ví.",
+              icon: Icons.dashboard_customize_outlined,
+              child: GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 2,
+                mainAxisSpacing: 14,
+                crossAxisSpacing: 14,
+                childAspectRatio: 1.15,
+                children: [
+                  _buildSecondaryActionCard(
+                    context,
+                    "Lịch sử chuyến",
+                    Icons.assignment_rounded,
+                    Colors.blue,
+                    () => onNavigate(3),
+                  ),
+                  _buildSecondaryActionCard(
+                    context,
+                    "Nhóm chat",
+                    Icons.forum_rounded,
+                    const Color(0xFF2AA876),
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const DriverChatGroupListScreen(),
+                      ),
+                    ),
+                  ),
+                  _buildSecondaryActionCard(
+                    context,
+                    "Nạp tiền ví",
+                    Icons.account_balance_wallet_rounded,
+                    Colors.green,
+                    () => _showDepositDialog(context, theme),
+                  ),
+                  _buildSecondaryActionCard(
+                    context,
+                    "Rút tiền",
+                    Icons.payments_outlined,
+                    Colors.redAccent,
+                    () => _showWithdrawDialog(context),
+                  ),
+                  _buildSecondaryActionCard(
+                    context,
+                    "Lịch sử rút",
+                    Icons.history_rounded,
+                    Colors.purple,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const WithdrawalHistoryScreen(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            if (profile != null && profile!.routes.isNotEmpty)
+              DriverSectionCard(
+                title: "Tuyến đã đăng ký",
+                subtitle: "Các tuyến hiện tại đang gắn với tài khoản tài xế.",
+                icon: Icons.alt_route_rounded,
+                child: Column(
+                  children: profile!.routes.take(3).map((route) {
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.08,
+                          ),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.secondary.withValues(
+                                alpha: 0.12,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.route_rounded,
+                              color: theme.colorScheme.secondary,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  route.name.isNotEmpty
+                                      ? route.name
+                                      : route.code,
+                                  style: theme.textTheme.bodyLarge?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  "${route.fromProvinceName} -> ${route.toProvinceName}",
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: AppColors.textSubtle,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeroCard(
+    BuildContext context,
+    double wallet,
+    int routeCount,
+    bool canReceiveRide,
+  ) {
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [theme.colorScheme.primary, theme.colorScheme.surface],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.22),
+            blurRadius: 26,
+            offset: const Offset(0, 14),
           ),
-          const SizedBox(height: 80),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isLoading ? "Đang tải hồ sơ..." : "Sẵn sàng làm việc?",
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: theme.colorScheme.secondary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      canReceiveRide
+                          ? "Vào tab Nhận đơn để bắt đầu ca làm việc"
+                          : "Hoàn tất trạng thái tài khoản để mở nhận đơn",
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontSize: 24,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              DriverPill(
+                label: homeProvider.kycStatusTextSafe,
+                icon: canReceiveRide
+                    ? Icons.verified_rounded
+                    : Icons.pending_actions_rounded,
+                color: canReceiveRide
+                    ? Colors.greenAccent
+                    : theme.colorScheme.secondary,
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(
+                child: DriverStatTile(
+                  label: "Số dư ví",
+                  value: "${NumberFormat('#,###').format(wallet)} đ",
+                  icon: Icons.account_balance_wallet_outlined,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: DriverStatTile(
+                  label: "Tuyến đã đăng ký",
+                  value: "$routeCount tuyến",
+                  icon: Icons.alt_route_rounded,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildMenuCard(
-      BuildContext context,
-      String title,
-      IconData icon,
-      Color color,
-      VoidCallback onTap,
-      ) {
-    final goldColor = Theme.of(context).colorScheme.secondary;
+  Widget _buildStatusBanner(BuildContext context) {
+    final theme = Theme.of(context);
+
+    String message;
+    if (!homeProvider.hasRegisteredRoute) {
+      message = "Bạn cần đăng ký tuyến trước khi bắt đầu nhận chuyến.";
+    } else if (homeProvider.kycPendingReview) {
+      message =
+          "Hồ sơ KYC đang chờ duyệt. Trong thời gian này bạn vẫn có thể xem thông tin và chuẩn bị công việc.";
+    } else if (homeProvider.kycStatus == 3) {
+      message =
+          "Hồ sơ KYC cần bổ sung lại. Vui lòng cập nhật sớm để mở nhận đơn.";
+    } else {
+      message =
+          "Tài khoản chưa đủ điều kiện nhận đơn. Hệ thống sẽ tiếp tục hướng dẫn các bước còn thiếu.";
+    }
+
+    return DriverSectionCard(
+      title: "Trạng thái tài khoản",
+      subtitle: message,
+      icon: Icons.info_outline_rounded,
+      trailing: DriverPill(
+        label: homeProvider.kycStatusTextSafe,
+        icon: Icons.flag_rounded,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              "Hành động ưu tiên: ${homeProvider.nextStepLabel}",
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: Colors.white,
+                height: 1.5,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrimaryActionCard({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color accent,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Card(
-        elevation: 4,
-        shadowColor: goldColor.withOpacity(0.2),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: goldColor, width: 1.5),
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceGreen.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: accent.withValues(alpha: 0.28)),
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                Icon(
-                  Icons.circle,
-                  color: goldColor.withOpacity(0.15),
-                  size: 45,
-                ),
-                Icon(icon, size: 38, color: color),
-              ],
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(icon, color: accent),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              title,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              subtitle,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: AppColors.textSubtle,
+                height: 1.45,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSecondaryActionCard(
+    BuildContext context,
+    String title,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    final theme = Theme.of(context);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: color),
+            ),
+            const SizedBox(height: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Mở nhanh",
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSubtle,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -640,76 +918,76 @@ class _HomeDashboard extends StatelessWidget {
               onPressed: isSubmitting
                   ? null
                   : () async {
-                final amount = int.tryParse(
-                  amountController.text.replaceAll(',', '').trim(),
-                );
+                      final amount = int.tryParse(
+                        amountController.text.replaceAll(',', '').trim(),
+                      );
 
-                if (amount == null || amount <= 0) {
-                  ScaffoldMessenger.of(parentContext).showSnackBar(
-                    const SnackBar(
-                      content: Text("Vui lòng nhập số tiền hợp lệ"),
-                    ),
-                  );
-                  return;
-                }
+                      if (amount == null || amount <= 0) {
+                        ScaffoldMessenger.of(parentContext).showSnackBar(
+                          const SnackBar(
+                            content: Text("Vui lòng nhập số tiền hợp lệ"),
+                          ),
+                        );
+                        return;
+                      }
 
-                final prefs = await SharedPreferences.getInstance();
-                final token = prefs.getString('accessToken') ?? '';
+                      final prefs = await SharedPreferences.getInstance();
+                      final token = prefs.getString('accessToken') ?? '';
 
-                if (token.isEmpty) {
-                  ScaffoldMessenger.of(parentContext).showSnackBar(
-                    const SnackBar(
-                      content: Text("Không tìm thấy access token"),
-                    ),
-                  );
-                  return;
-                }
+                      if (token.isEmpty) {
+                        ScaffoldMessenger.of(parentContext).showSnackBar(
+                          const SnackBar(
+                            content: Text("Không tìm thấy access token"),
+                          ),
+                        );
+                        return;
+                      }
 
-                setState(() => isSubmitting = true);
+                      setState(() => isSubmitting = true);
 
-                final ok = await depositProvider.createDepositRequest(
-                  accessToken: token,
-                  amount: amount,
-                );
+                      final ok = await depositProvider.createDepositRequest(
+                        accessToken: token,
+                        amount: amount,
+                      );
 
-                if (!parentContext.mounted) return;
+                      if (!parentContext.mounted) return;
 
-                setState(() => isSubmitting = false);
+                      setState(() => isSubmitting = false);
 
-                if (!ok) {
-                  ScaffoldMessenger.of(parentContext).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        depositProvider.errorMessage ??
-                            "Không thể tạo yêu cầu nạp tiền",
-                      ),
-                    ),
-                  );
-                  return;
-                }
+                      if (!ok) {
+                        ScaffoldMessenger.of(parentContext).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              depositProvider.errorMessage ??
+                                  "Không thể tạo yêu cầu nạp tiền",
+                            ),
+                          ),
+                        );
+                        return;
+                      }
 
-                final content = depositProvider.depositContent;
-                if (content == null || content.isEmpty) {
-                  ScaffoldMessenger.of(parentContext).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        "Không nhận được nội dung chuyển khoản",
-                      ),
-                    ),
-                  );
-                  return;
-                }
+                      final content = depositProvider.depositContent;
+                      if (content == null || content.isEmpty) {
+                        ScaffoldMessenger.of(parentContext).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              "Không nhận được nội dung chuyển khoản",
+                            ),
+                          ),
+                        );
+                        return;
+                      }
 
-                Navigator.pop(dialogContext);
+                      Navigator.pop(dialogContext);
 
-                _showQRDialog(parentContext, theme, amount, content);
-              },
+                      _showQRDialog(parentContext, theme, amount, content);
+                    },
               child: isSubmitting
                   ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : const Text("TẠO YÊU CẦU"),
             ),
           ],
@@ -719,11 +997,11 @@ class _HomeDashboard extends StatelessWidget {
   }
 
   void _showQRDialog(
-      BuildContext parentContext,
-      ThemeData theme,
-      int amount,
-      String content,
-      ) async {
+    BuildContext parentContext,
+    ThemeData theme,
+    int amount,
+    String content,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: parentContext,
       barrierDismissible: false,
@@ -869,13 +1147,11 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
 
   String? _selectedBankCode;
   String? _selectedBankName;
-  String? _selectedBankLogo;
   String? _selectedBankShortName;
 
   List<dynamic> _banks = [];
   List<dynamic> _filteredBanks = [];
 
-  bool _loadingBanks = true;
   bool _isSubmitting = false;
 
   @override
@@ -893,13 +1169,10 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
           setState(() {
             _banks = body["data"];
             _filteredBanks = body["data"];
-            _loadingBanks = false;
           });
         }
       }
-    } catch (_) {
-      if (mounted) setState(() => _loadingBanks = false);
-    }
+    } catch (_) {}
   }
 
   void _showBankPicker(BuildContext context) {
@@ -935,8 +1208,8 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
                         _filteredBanks = _banks.where((bank) {
                           final q = value.toLowerCase();
                           return bank['name'].toString().toLowerCase().contains(
-                            q,
-                          ) ||
+                                q,
+                              ) ||
                               bank['shortName']
                                   .toString()
                                   .toLowerCase()
@@ -959,7 +1232,6 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
                               _selectedBankCode = bank['code'];
                               _selectedBankName = bank['name'];
                               _selectedBankShortName = bank['shortName'];
-                              _selectedBankLogo = bank['logo'];
                             });
                             Navigator.pop(ctx);
                           },

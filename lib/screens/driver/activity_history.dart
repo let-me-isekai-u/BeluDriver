@@ -1,15 +1,18 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../services/api_service.dart';
-import '../../services/api_chat_service.dart';
-import '../../models/driver/ride_model.dart';
+import '../../app_theme.dart';
 import '../../models/driver/broker_rides_model.dart';
+import '../../models/driver/ride_model.dart';
+import '../../services/api_service.dart';
+import '../../widgets/driver_ui.dart';
 import 'ride_detail_screen.dart';
 
 class ActivityScreen extends StatefulWidget {
   final int initialTabIndex;
+
   const ActivityScreen({super.key, this.initialTabIndex = 0});
 
   @override
@@ -22,11 +25,10 @@ class _ActivityScreenState extends State<ActivityScreen>
 
   List<RideModel> ongoingRides = [];
   List<RideModel> historyRides = [];
-
   List<BrokerRideItem> brokerRides = [];
+
   bool _isLoadingBroker = false;
   bool _isBrokerLoaded = false;
-
   bool _isLoadingOngoing = false;
   bool _isLoadingHistory = false;
   bool _isHistoryLoaded = false;
@@ -45,11 +47,18 @@ class _ActivityScreenState extends State<ActivityScreen>
       _fetchOngoingRides();
     } else if (safeInitial == 1) {
       _fetchHistoryRides();
-    } else if (safeInitial == 2) {
+    } else {
       _fetchBrokerRides();
     }
 
     _tabController.addListener(_handleTabChange);
+  }
+
+  @override
+  void dispose() {
+    _tabController.removeListener(_handleTabChange);
+    _tabController.dispose();
+    super.dispose();
   }
 
   void _handleTabChange() {
@@ -60,21 +69,12 @@ class _ActivityScreenState extends State<ActivityScreen>
         !_isLoadingOngoing) {
       _fetchOngoingRides();
     }
-
     if (_tabController.index == 1 && !_isHistoryLoaded && !_isLoadingHistory) {
       _fetchHistoryRides();
     }
-
     if (_tabController.index == 2 && !_isBrokerLoaded && !_isLoadingBroker) {
       _fetchBrokerRides();
     }
-  }
-
-  @override
-  void dispose() {
-    _tabController.removeListener(_handleTabChange);
-    _tabController.dispose();
-    super.dispose();
   }
 
   Future<String> _getToken() async {
@@ -263,10 +263,12 @@ class _ActivityScreenState extends State<ActivityScreen>
     final theme = Theme.of(context);
     final token = await _getToken();
     if (token.isEmpty) return;
+    if (!mounted) return;
 
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surfaceGreen,
         title: Text(
           "Huỷ đơn đã đẩy",
           style: TextStyle(
@@ -274,7 +276,10 @@ class _ActivityScreenState extends State<ActivityScreen>
             fontWeight: FontWeight.w700,
           ),
         ),
-        content: Text("Bạn chắc chắn muốn huỷ đơn ${ride.code} không?"),
+        content: Text(
+          "Bạn chắc chắn muốn huỷ đơn ${ride.code} không?",
+          style: const TextStyle(color: Colors.white),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -294,6 +299,7 @@ class _ActivityScreenState extends State<ActivityScreen>
     );
 
     if (ok != true) return;
+    if (!mounted) return;
 
     showDialog(
       context: context,
@@ -342,6 +348,7 @@ class _ActivityScreenState extends State<ActivityScreen>
     final theme = Theme.of(context);
     final token = await _getToken();
     if (token.isEmpty) return;
+    if (!mounted) return;
 
     showDialog(
       context: context,
@@ -356,7 +363,6 @@ class _ActivityScreenState extends State<ActivityScreen>
     );
 
     if (mounted) Navigator.pop(context);
-
     if (!mounted) return;
 
     final ok = res.statusCode >= 200 && res.statusCode < 300;
@@ -394,6 +400,7 @@ class _ActivityScreenState extends State<ActivityScreen>
     final theme = Theme.of(context);
     final token = await _getToken();
     if (token.isEmpty) return;
+    if (!mounted) return;
 
     showDialog(
       context: context,
@@ -408,6 +415,7 @@ class _ActivityScreenState extends State<ActivityScreen>
     );
 
     if (mounted) Navigator.pop(context);
+    if (!mounted) return;
 
     final ok = res.statusCode >= 200 && res.statusCode < 300;
     if (ok) {
@@ -466,48 +474,187 @@ class _ActivityScreenState extends State<ActivityScreen>
     });
   }
 
+  String _tabTitle() {
+    switch (_tabController.index) {
+      case 1:
+        return "Lịch sử chuyến";
+      case 2:
+        return "Đơn đã đẩy";
+      default:
+        return "Đang vận hành";
+    }
+  }
+
+  String _formatPickupTime(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return '';
+    try {
+      return '${DateTime.parse(raw).hour.toString().padLeft(2, '0')}:${DateTime.parse(raw).minute.toString().padLeft(2, '0')} ${DateTime.parse(raw).day.toString().padLeft(2, '0')}/${DateTime.parse(raw).month.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return raw;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           "Hoạt động chuyến xe",
           style: TextStyle(
             fontSize: 20,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w800,
             color: theme.colorScheme.secondary,
           ),
         ),
-        elevation: 0,
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: Colors.white,
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: theme.colorScheme.secondary,
-          labelStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
+      ),
+      body: Stack(
+        children: [
+          Positioned(
+            top: -70,
+            right: -20,
+            child: Container(
+              width: 180,
+              height: 180,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: theme.colorScheme.secondary.withValues(alpha: 0.05),
+              ),
+            ),
           ),
-          unselectedLabelColor: Colors.white70,
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
-          indicatorColor: theme.colorScheme.secondary,
-          indicatorWeight: 5.5,
-          tabs: const [
-            Tab(text: "ĐANG DIỄN RA"),
-            Tab(text: "LỊCH SỬ"),
-            Tab(text: "ĐƠN ĐÃ ĐẨY"),
-          ],
+          Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                child: _buildTabSwitcher(theme),
+              ),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildOngoingTab(theme),
+                    _buildHistoryTab(theme),
+                    _buildBrokerTab(theme),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryHeader(ThemeData theme) {
+    return AnimatedBuilder(
+      animation: _tabController,
+      builder: (context, _) {
+        return Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primaryGreen,
+                AppColors.surfaceGreen.withValues(alpha: 0.95),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: theme.colorScheme.secondary.withValues(alpha: 0.16),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const DriverPill(
+                label: "Bảng điều phối",
+                icon: Icons.local_shipping_rounded,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _tabTitle(),
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  color: Colors.white,
+                  fontSize: 22,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                "Theo dõi chuyến đang chạy, lịch sử hoàn thành và các đơn đã đẩy trong cùng một nơi.",
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: AppColors.textSubtle,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: DriverStatTile(
+                      label: "Đang chạy",
+                      value: ongoingRides.length.toString(),
+                      icon: Icons.timelapse_rounded,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: DriverStatTile(
+                      label: "Lịch sử",
+                      value: historyRides.length.toString(),
+                      icon: Icons.history_rounded,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: DriverStatTile(
+                      label: "Đã đẩy",
+                      value: brokerRides.length.toString(),
+                      icon: Icons.share_location_rounded,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTabSwitcher(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceGreen.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: theme.colorScheme.secondary.withValues(alpha: 0.12),
         ),
       ),
-      body: TabBarView(
+      child: TabBar(
         controller: _tabController,
-        children: [
-          _buildOngoingTab(theme),
-          _buildHistoryTab(theme),
-          _buildBrokerTab(theme),
+        dividerColor: Colors.transparent,
+        indicator: BoxDecoration(
+          color: theme.colorScheme.secondary.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        labelColor: theme.colorScheme.secondary,
+        unselectedLabelColor: Colors.white70,
+        labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+        unselectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+        ),
+        tabs: const [
+          Tab(text: "Đang diễn ra"),
+          Tab(text: "Lịch sử"),
+          Tab(text: "Đơn đã đẩy"),
         ],
       ),
     );
@@ -521,10 +668,11 @@ class _ActivityScreenState extends State<ActivityScreen>
     }
     return RefreshIndicator(
       onRefresh: _fetchOngoingRides,
-      child: _buildList(
-        ongoingRides,
-        theme,
-        emptyMessage: "Hiện tại bạn không có chuyến xe nào.",
+      child: _buildRideList(
+        rides: ongoingRides,
+        emptyTitle: "Chưa có chuyến đang diễn ra",
+        emptyMessage:
+            "Khi nhận đơn thành công, chuyến xe sẽ xuất hiện tại đây để bạn bắt đầu và hoàn tất hành trình.",
       ),
     );
   }
@@ -537,10 +685,11 @@ class _ActivityScreenState extends State<ActivityScreen>
     }
     return RefreshIndicator(
       onRefresh: _fetchHistoryRides,
-      child: _buildList(
-        historyRides,
-        theme,
-        emptyMessage: "Hiện tại bạn không có lịch sử chuyến xe nào.",
+      child: _buildRideList(
+        rides: historyRides,
+        emptyTitle: "Chưa có lịch sử chuyến",
+        emptyMessage:
+            "Sau khi hoàn thành chuyến, thông tin hành trình và doanh thu sẽ được lưu ở đây.",
       ),
     );
   }
@@ -552,268 +701,297 @@ class _ActivityScreenState extends State<ActivityScreen>
       );
     }
 
-    final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
-    final bottomPadding = 12.0 + 24.0 + bottomSafe;
-
     if (brokerRides.isEmpty) {
-      return SafeArea(
-        bottom: true,
-        child: RefreshIndicator(
-          onRefresh: _fetchBrokerRides,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(12, 12, 12, bottomPadding),
-            child: SizedBox(
-              height: MediaQuery.of(context).size.height * 0.65,
-              child: _buildEmptyState("Hiện tại bạn chưa có đơn nào đã đẩy."),
-            ),
+      return RefreshIndicator(
+        onRefresh: _fetchBrokerRides,
+        child: ListView(
+          physics: const ClampingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
           ),
+          padding: _listPadding(context),
+          children: [
+            _buildSummaryHeader(theme),
+            const SizedBox(height: 16),
+            const DriverSectionCard(
+              title: "Đơn đã đẩy",
+              subtitle: "Các chuyến chia sẻ của bạn sẽ xuất hiện tại đây.",
+              icon: Icons.share_rounded,
+              child: DriverEmptyState(
+                icon: Icons.move_down_rounded,
+                title: "Chưa có đơn nào được đẩy",
+                message:
+                    "Khi bạn tạo hoặc chia sẻ chuyến đi cho tài xế khác, danh sách sẽ được cập nhật tại màn hình này.",
+              ),
+            ),
+          ],
         ),
       );
     }
 
-    return SafeArea(
-      bottom: true,
-      child: RefreshIndicator(
-        onRefresh: _fetchBrokerRides,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Opacity(
-                opacity: 0.06,
-                child: Image.asset(
-                  'lib/assets/icons/ActivityLogo.png',
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                ),
-              ),
-            ),
-            ListView.builder(
-              physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics(),
-              ),
-              padding: EdgeInsets.fromLTRB(12, 12, 12, bottomPadding),
-              itemCount: brokerRides.length,
-              itemBuilder: (context, index) =>
-                  _buildBrokerRideCard(brokerRides[index], theme),
-            ),
-          ],
+    return RefreshIndicator(
+      onRefresh: _fetchBrokerRides,
+      child: ListView.builder(
+        physics: const ClampingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
         ),
+        padding: _listPadding(context),
+        itemCount: brokerRides.length + 2,
+        itemBuilder: (context, index) {
+          if (index == 0) return _buildSummaryHeader(theme);
+          if (index == 1) return const SizedBox(height: 16);
+          return _buildBrokerRideCard(brokerRides[index - 2], theme);
+        },
       ),
     );
   }
 
-  Widget _buildList(
-    List<RideModel> rides,
-    ThemeData theme, {
+  Widget _buildRideList({
+    required List<RideModel> rides,
+    required String emptyTitle,
     required String emptyMessage,
   }) {
-    final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
-    final bottomPadding = 12.0 + 24.0 + bottomSafe;
+    final theme = Theme.of(context);
 
     if (rides.isEmpty) {
-      return SafeArea(
-        bottom: true,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(12, 12, 12, bottomPadding),
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height * 0.65,
-            child: _buildEmptyState(emptyMessage),
-          ),
+      return ListView(
+        physics: const ClampingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
         ),
+        padding: _listPadding(context),
+        children: [
+          _buildSummaryHeader(theme),
+          const SizedBox(height: 16),
+          DriverSectionCard(
+            title: emptyTitle,
+            subtitle: "Kéo xuống để tải lại dữ liệu bất kỳ lúc nào.",
+            icon: Icons.route_rounded,
+            child: DriverEmptyState(
+              icon: Icons.location_searching_rounded,
+              title: emptyTitle,
+              message: emptyMessage,
+            ),
+          ),
+        ],
       );
     }
 
-    return SafeArea(
-      bottom: true,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0.06,
-              child: Image.asset(
-                'lib/assets/icons/ActivityLogo.png',
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-              ),
-            ),
-          ),
-          ListView.builder(
-            physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
-            ),
-            padding: EdgeInsets.fromLTRB(12, 12, 12, bottomPadding),
-            itemCount: rides.length,
-            itemBuilder: (context, index) =>
-                _buildRideCard(rides[index], theme),
-          ),
-        ],
+    return ListView.builder(
+      physics: const ClampingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
       ),
+      padding: _listPadding(context),
+      itemCount: rides.length + 2,
+      itemBuilder: (context, index) {
+        if (index == 0) return _buildSummaryHeader(theme);
+        if (index == 1) return const SizedBox(height: 16);
+        return _buildRideCard(rides[index - 2], theme);
+      },
     );
   }
 
-  Widget _buildEmptyState(String message) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(
-              'lib/assets/icons/ActivityLogo.png',
-              width: 140,
-              height: 140,
-              errorBuilder: (_, __, ___) => Icon(
-                Icons.history_rounded,
-                size: 90,
-                color: theme.colorScheme.secondary.withOpacity(0.6),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: theme.colorScheme.secondary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  EdgeInsets _listPadding(BuildContext context) {
+    final bottom = MediaQuery.of(context).padding.bottom;
+    return EdgeInsets.fromLTRB(16, 4, 16, bottom + 28);
+  }
+
+  String _rideStatusText(int status) {
+    switch (status) {
+      case 2:
+        return "Đã nhận đơn";
+      case 3:
+        return "Đang di chuyển";
+      case 4:
+        return "Hoàn thành";
+      case 5:
+        return "Đã hủy";
+      default:
+        return "Không xác định";
+    }
+  }
+
+  Color _rideStatusColor(int status) {
+    switch (status) {
+      case 2:
+        return const Color(0xFF73B7FF);
+      case 3:
+        return const Color(0xFFFFB347);
+      case 4:
+        return const Color(0xFF6ED39B);
+      case 5:
+        return const Color(0xFFFF8A8A);
+      default:
+        return Colors.grey;
+    }
   }
 
   Widget _buildRideCard(RideModel ride, ThemeData theme) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 3,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: () => _navigateToDetail(ride),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    ride.formattedDate,
-                    style: const TextStyle(color: Colors.grey, fontSize: 13),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: ride.statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: ride.statusColor.withOpacity(0.45),
+    final statusColor = _rideStatusColor(ride.status);
+    final sourceLabel = ride.rideSource == 2 ? "Đơn chia sẻ" : "Đơn BeluCar";
+    final pickupText = _formatPickupTime(ride.pickupTime);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceGreen.withValues(alpha: 0.34),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: statusColor.withValues(alpha: 0.18)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _navigateToDetail(ride),
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            ride.code,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            ride.formattedDate,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: AppColors.textSubtle,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: Text(
-                      ride.statusText,
-                      style: TextStyle(
-                        color: ride.statusColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        DriverPill(
+                          label: _rideStatusText(ride.status),
+                          color: statusColor,
+                        ),
+                        const SizedBox(height: 8),
+                        DriverPill(
+                          label: sourceLabel,
+                          icon: Icons.layers_rounded,
+                          color: ride.rideSource == 2
+                              ? const Color(0xFFC49BFF)
+                              : const Color(0xFF73B7FF),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-              const Divider(height: 24),
-              _buildLocationLine(
-                '${ride.fromProvince} - ${ride.fromDistrict} - ${ride.fromAddress}',
-                '${ride.toProvince} - ${ride.toDistrict} - ${ride.toAddress}',
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
-                      Text(
-                        ride.code,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: Colors.blueGrey,
+                      if (pickupText.isNotEmpty)
+                        DriverPill(
+                          label: "Giờ đón $pickupText",
+                          icon: Icons.access_time_rounded,
+                        ),
+                      if (ride.rideTypeOrQuantityText.isNotEmpty)
+                        DriverPill(
+                          label: ride.rideTypeOrQuantityText,
+                          icon: ride.type == 1
+                              ? Icons.event_seat_rounded
+                              : Icons.directions_car_filled_rounded,
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildLocationLine(
+                  theme,
+                  '${ride.fromProvince} - ${ride.fromDistrict}',
+                  ride.fromAddress,
+                  '${ride.toProvince} - ${ride.toDistrict}',
+                  ride.toAddress,
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _miniInfo(
+                          theme,
+                          "Thanh toán",
+                          ride.paymentMethod.isEmpty
+                              ? "Chưa xác định"
+                              : ride.paymentMethod,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(width: 12),
                       Text(
                         ride.formattedPrice,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: theme.colorScheme.secondary,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
                     ],
                   ),
-                  Text(
-                    ride.formattedPrice,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
+                ),
+                if (ride.status == 2 || ride.status == 3) ...[
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => ride.status == 2
+                          ? _handleStartRide(ride)
+                          : _handleCompleteRide(ride),
+                      icon: Icon(
+                        ride.status == 2
+                            ? Icons.play_circle_fill_rounded
+                            : Icons.task_alt_rounded,
+                      ),
+                      label: Text(
+                        ride.status == 2
+                            ? "Bắt đầu di chuyển"
+                            : "Xác nhận hoàn thành",
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: ride.status == 2
+                            ? const Color(0xFF73B7FF)
+                            : const Color(0xFF6ED39B),
+                        foregroundColor: Colors.black87,
+                        textStyle: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 15,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
                     ),
                   ),
                 ],
-              ),
-              if (ride.status == 2) ...[
-                const Divider(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () => _handleStartRide(ride),
-                    icon: const Icon(Icons.play_arrow_rounded),
-                    label: const Text(
-                      "XUẤT PHÁT",
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.colorScheme.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
               ],
-              if (ride.status == 3) ...[
-                const Divider(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () => _handleCompleteRide(ride),
-                    icon: const Icon(Icons.check_circle_outline),
-                    label: const Text(
-                      "HOÀN THÀNH",
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-              ],
-            ],
+            ),
           ),
         ),
       ),
@@ -823,122 +1001,178 @@ class _ActivityScreenState extends State<ActivityScreen>
   Widget _buildBrokerRideCard(BrokerRideItem ride, ThemeData theme) {
     final statusColor = _brokerStatusColor(ride.status);
     final statusText = _brokerStatusText(ride.status);
-
     final canCancel = ride.status == 0 || ride.status == 1;
+    final pickupText = ride.pickupTime == null
+        ? ''
+        : _formatDateTime(ride.pickupTime!);
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 3,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: () => _navigateBrokerToDetail(ride),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    _formatDateTime(ride.createdAt),
-                    style: const TextStyle(color: Colors.grey, fontSize: 13),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: statusColor.withOpacity(0.45)),
-                    ),
-                    child: Text(
-                      statusText,
-                      style: TextStyle(
-                        color: statusColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceGreen.withValues(alpha: 0.34),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: statusColor.withValues(alpha: 0.18)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _navigateBrokerToDetail(ride),
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            ride.code,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _formatDateTime(ride.createdAt),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: AppColors.textSubtle,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const Divider(height: 24),
-              _buildLocationLine(
-                '${ride.fromProvince} - ${ride.fromDistrict} - ${ride.fromAddress}',
-                '${ride.toProvince} - ${ride.toDistrict} - ${ride.toAddress}',
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    DriverPill(label: statusText, color: statusColor),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
-                      Text(
-                        ride.code,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: Colors.blueGrey,
+                      if (pickupText.isNotEmpty)
+                        DriverPill(
+                          label: "Giờ đón $pickupText",
+                          icon: Icons.access_time_rounded,
+                        ),
+                      if (ride.rideTypeOrQuantityText.isNotEmpty)
+                        DriverPill(
+                          label: ride.rideTypeOrQuantityText,
+                          icon: ride.type == 1
+                              ? Icons.event_seat_rounded
+                              : Icons.directions_car_filled_rounded,
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildLocationLine(
+                  theme,
+                  '${ride.fromProvince} - ${ride.fromDistrict}',
+                  ride.fromAddress,
+                  '${ride.toProvince} - ${ride.toDistrict}',
+                  ride.toAddress,
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _miniInfo(
+                          theme,
+                          "Thanh toán",
+                          ride.paymentMethod.isEmpty
+                              ? "Chưa xác định"
+                              : ride.paymentMethod,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(width: 12),
                       Text(
-                        ride.paymentMethod,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey,
+                        _formatMoney(ride.price),
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: theme.colorScheme.secondary,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
                     ],
                   ),
-                  Text(
-                    _formatMoney(ride.price),
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
+                ),
+                if (canCancel) ...[
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _isLoadingBroker
+                          ? null
+                          : () => _handleCancelBrokerRide(ride),
+                      icon: const Icon(Icons.cancel_outlined),
+                      label: const Text("Huỷ đơn đã đẩy"),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFFF8A8A),
+                        side: const BorderSide(color: Color(0xFFFF8A8A)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        textStyle: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 15,
+                        ),
+                      ),
                     ),
                   ),
                 ],
-              ),
-              if (canCancel) ...[
-                const Divider(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _isLoadingBroker
-                        ? null
-                        : () => _handleCancelBrokerRide(ride),
-                    icon: const Icon(Icons.cancel_outlined),
-                    label: const Text(
-                      "HUỶ ĐƠN ĐÃ ĐẨY",
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.colorScheme.error,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
               ],
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
+  Widget _miniInfo(ThemeData theme, String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: AppColors.textSubtle,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+
   String _formatMoney(num value) {
-    final v = value.toStringAsFixed(0);
-    return "$v đ";
+    return '${value.toStringAsFixed(0)} đ';
   }
 
   String _formatDateTime(DateTime dt) {
@@ -949,17 +1183,17 @@ class _ActivityScreenState extends State<ActivityScreen>
   Color _brokerStatusColor(int status) {
     switch (status) {
       case 0:
-        return Colors.orange;
+        return const Color(0xFFFFB347);
       case 1:
-        return Colors.amber;
+        return const Color(0xFFE5C17B);
       case 2:
-        return Colors.blue;
+        return const Color(0xFF73B7FF);
       case 3:
-        return Colors.indigo;
+        return const Color(0xFF8FA8FF);
       case 4:
-        return Colors.green;
+        return const Color(0xFF6ED39B);
       case 5:
-        return Colors.red;
+        return const Color(0xFFFF8A8A);
       default:
         return Colors.grey;
     }
@@ -984,54 +1218,84 @@ class _ActivityScreenState extends State<ActivityScreen>
     }
   }
 
-  Widget _buildLocationLine(String from, String to) {
+  Widget _buildLocationLine(
+    ThemeData theme,
+    String fromTitle,
+    String fromAddress,
+    String toTitle,
+    String toAddress,
+  ) {
     return Column(
       children: [
-        Row(
-          children: [
-            const Icon(
-              Icons.radio_button_checked,
-              size: 16,
-              color: Colors.green,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                from,
-                style: const TextStyle(fontSize: 14, color: Colors.black87),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 2,
-              ),
-            ),
-          ],
+        _buildLocationPoint(
+          theme,
+          icon: Icons.trip_origin_rounded,
+          color: const Color(0xFF6ED39B),
+          title: fromTitle,
+          address: fromAddress,
         ),
-        const Align(
-          alignment: Alignment.centerLeft,
-          child: Padding(
-            padding: EdgeInsets.only(left: 7.5),
-            child: SizedBox(
-              height: 12,
-              child: VerticalDivider(
-                width: 1,
-                thickness: 1,
-                color: Colors.grey,
-              ),
-            ),
+        Padding(
+          padding: const EdgeInsets.only(left: 11),
+          child: Container(
+            width: 2,
+            height: 24,
+            color: theme.colorScheme.secondary.withValues(alpha: 0.22),
           ),
         ),
-        Row(
-          children: [
-            const Icon(Icons.location_on, size: 16, color: Colors.red),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                to,
-                style: const TextStyle(fontSize: 14, color: Colors.black87),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 2,
+        _buildLocationPoint(
+          theme,
+          icon: Icons.location_on_rounded,
+          color: const Color(0xFFFF8A8A),
+          title: toTitle,
+          address: toAddress,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLocationPoint(
+    ThemeData theme, {
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String address,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.14),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 16, color: color),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text(
+                address,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppColors.textSubtle,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

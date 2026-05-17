@@ -32,7 +32,7 @@ class RecieveOrderProvider extends ChangeNotifier {
   static const int pageSize = 20;
 
   final PagingController<int, WaitingRideListItem> pagingController =
-  PagingController(firstPageKey: 1);
+      PagingController(firstPageKey: 1);
   final Set<int> _pagesInFlight = <int>{};
 
   final List<WaitingRide> _waitingRides = <WaitingRide>[];
@@ -52,6 +52,10 @@ class RecieveOrderProvider extends ChangeNotifier {
   bool loadingMyBrokerRides = false;
 
   WaitingRideSortOption get sortOption => _sortOption;
+  int get waitingRideCount => _waitingRides.length;
+  bool get isInitialLoading =>
+      _pagesInFlight.contains(pagingController.firstPageKey) &&
+      _waitingRides.isEmpty;
 
   RecieveOrderProvider() {
     pagingController.addPageRequestListener((pageKey) {
@@ -142,10 +146,10 @@ class RecieveOrderProvider extends ChangeNotifier {
     if (ride is WaitingRide) return ride.rideSource;
     if (ride is Map) {
       return int.tryParse(
-        ride['rideSource']?.toString() ??
-            ride['ride_source']?.toString() ??
-            '1',
-      ) ??
+            ride['rideSource']?.toString() ??
+                ride['ride_source']?.toString() ??
+                '1',
+          ) ??
           1;
     }
     return 1;
@@ -154,8 +158,8 @@ class RecieveOrderProvider extends ChangeNotifier {
   int extractRideId(dynamic ride) {
     if (ride is WaitingRide) return ride.id;
     return int.tryParse(
-      ride['rideId']?.toString() ?? ride['id']?.toString() ?? '0',
-    ) ??
+          ride['rideId']?.toString() ?? ride['id']?.toString() ?? '0',
+        ) ??
         0;
   }
 
@@ -181,23 +185,25 @@ class RecieveOrderProvider extends ChangeNotifier {
     return 0;
   }
 
-  int extractRideType(dynamic ride){
+  int extractRideType(dynamic ride) {
     if (ride is WaitingRide) return ride.type;
     if (ride is Map) {
       return int.tryParse(ride['type']?.toString() ?? '0') ?? 0;
-    } return 0;
+    }
+    return 0;
   }
 
-  int? extractRideQuantity(dynamic ride){
+  int? extractRideQuantity(dynamic ride) {
     if (ride is WaitingRide) return ride.quantity;
     if (ride is Map) {
       final value = ride['quantity'];
       if (value == null) return null;
       return int.tryParse(value.toString());
-    } return null;
+    }
+    return null;
   }
 
-  String rideTypeOrQuantityText (dynamic ride) {
+  String rideTypeOrQuantityText(dynamic ride) {
     final int type = extractRideType(ride);
     final int? quantity = extractRideQuantity(ride);
 
@@ -208,15 +214,15 @@ class RecieveOrderProvider extends ChangeNotifier {
         }
         return '';
       case 2:
-        return 'Bao xe 5 ghế';
+        return 'Bao xe 5 chỗ';
       case 3:
-        return 'Bao xe 7 ghế';
+        return 'Bao xe 7 chỗ';
       default:
         return '';
     }
   }
 
-  bool shouldShowRideTypeOrQuantity(dynamic ride){
+  bool shouldShowRideTypeOrQuantity(dynamic ride) {
     return rideTypeOrQuantityText(ride).isNotEmpty;
   }
 
@@ -248,7 +254,7 @@ class RecieveOrderProvider extends ChangeNotifier {
             final items = list
                 .map<WaitingRide>(
                   (json) => WaitingRide.fromJson(json as Map<String, dynamic>),
-            )
+                )
                 .toList();
 
             _setWaitingRidePage(
@@ -259,12 +265,12 @@ class RecieveOrderProvider extends ChangeNotifier {
             return;
           } else {
             pagingController.error =
-            "Không thể tải dữ liệu (filter theo huyện)";
+                "Không thể tải dữ liệu (filter theo huyện)";
             return;
           }
         } else {
           pagingController.error =
-          "Không thể tải dữ liệu từ máy chủ (filter theo huyện)";
+              "Không thể tải dữ liệu từ máy chủ (filter theo huyện)";
           return;
         }
       }
@@ -286,7 +292,7 @@ class RecieveOrderProvider extends ChangeNotifier {
 
         final pagedResponse = PagedResponse<WaitingRide>.fromJson(
           pagedData,
-              (json) => WaitingRide.fromJson(json as Map<String, dynamic>),
+          (json) => WaitingRide.fromJson(json as Map<String, dynamic>),
         );
 
         final newItems = pagedResponse.data;
@@ -424,7 +430,8 @@ class RecieveOrderProvider extends ChangeNotifier {
     if (httpOk) {
       if (body != null && body['success'] == false) {
         final message =
-            body['message']?.toString() ?? "Không thể nhận đơn, vui lòng thử lại.";
+            body['message']?.toString() ??
+            "Không thể nhận đơn, vui lòng thử lại.";
         pagingController.refresh();
         return {'success': false, 'reason': 'error', 'message': message};
       }
@@ -451,8 +458,9 @@ class RecieveOrderProvider extends ChangeNotifier {
 
     try {
       final body = jsonDecode(res.body);
-      final serverMessage =
-      (body['message'] ?? body['error'] ?? '').toString().toLowerCase();
+      final serverMessage = (body['message'] ?? body['error'] ?? '')
+          .toString()
+          .toLowerCase();
 
       if (res.statusCode == 400 &&
           (serverMessage.contains('balance') ||
@@ -525,10 +533,10 @@ class RecieveOrderProvider extends ChangeNotifier {
   }
 
   void _setWaitingRidePage(
-      List<WaitingRide> newItems, {
-        required int? nextPageKey,
-        required bool replaceExisting,
-      }) {
+    List<WaitingRide> newItems, {
+    required int? nextPageKey,
+    required bool replaceExisting,
+  }) {
     if (replaceExisting) {
       _waitingRides
         ..clear()

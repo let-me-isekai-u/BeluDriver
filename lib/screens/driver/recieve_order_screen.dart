@@ -3,14 +3,19 @@ import 'package:intl/intl.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:provider/provider.dart';
 
+import '../../app_theme.dart';
 import '../../models/waiting_ride_model.dart';
 import '../../providers/received_order_provider.dart';
+import '../../widgets/driver_ui.dart';
 import '../popup_list/insufficient_balance_popup.dart';
 import '../popup_list/has_accepted_popup.dart';
 import '../popup_list/received_success_popup.dart';
 
 class RecieveOrderScreen extends StatelessWidget {
-  const RecieveOrderScreen({super.key, this.onReceiveSuccessNavigateToActivity});
+  const RecieveOrderScreen({
+    super.key,
+    this.onReceiveSuccessNavigateToActivity,
+  });
 
   /// Sau khi đóng popup nhận đơn thành công — chuyển sang tab Hoạt động (Đang diễn ra).
   final VoidCallback? onReceiveSuccessNavigateToActivity;
@@ -54,10 +59,10 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
   }
 
   Future<void> _acceptRide(
-      BuildContext context,
-      RecieveOrderProvider provider,
-      WaitingRide ride,
-      ) async {
+    BuildContext context,
+    RecieveOrderProvider provider,
+    WaitingRide ride,
+  ) async {
     final result = await provider.acceptRide(ride);
 
     if (!mounted || !context.mounted) return;
@@ -96,7 +101,7 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
         break;
 
       default:
-      // Lỗi không xác định — giữ snackbar để dễ debug
+        // Lỗi không xác định — giữ snackbar để dễ debug
         if (mounted && context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -109,10 +114,10 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
   }
 
   Future<void> _cancelMyBrokerRide(
-      BuildContext context,
-      RecieveOrderProvider provider,
-      dynamic ride,
-      ) async {
+    BuildContext context,
+    RecieveOrderProvider provider,
+    dynamic ride,
+  ) async {
     final theme = Theme.of(context);
     final messenger = ScaffoldMessenger.of(context);
 
@@ -168,10 +173,10 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
   }
 
   Widget _rideSourceChip(
-      RecieveOrderProvider provider,
-      int rideSource,
-      ThemeData theme,
-      ) {
+    RecieveOrderProvider provider,
+    int rideSource,
+    ThemeData theme,
+  ) {
     final color = _rideSourceColor(rideSource, theme);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -217,6 +222,7 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
           ),
           body: Column(
             children: [
+              _buildTopSummary(context, provider),
               _buildSortFilter(context, provider),
               Expanded(
                 child: RefreshIndicator(
@@ -228,39 +234,42 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
                     bottom: true,
                     child: PagedListView<int, WaitingRideListItem>(
                       pagingController: provider.pagingController,
-                      padding: EdgeInsets.fromLTRB(
-                        12,
-                        12,
-                        12,
-                        bottomPadding,
-                      ),
+                      padding: EdgeInsets.fromLTRB(12, 12, 12, bottomPadding),
                       physics: const BouncingScrollPhysics(
                         parent: AlwaysScrollableScrollPhysics(),
                       ),
                       builderDelegate:
                           PagedChildBuilderDelegate<WaitingRideListItem>(
-                        itemBuilder: (context, item, index) {
-                          if (item is WaitingRideDateHeaderItem) {
-                            return _buildCreatedAtHeader(
-                              context,
-                              provider,
-                              item,
-                            );
-                          }
+                            animateTransitions: true,
+                            itemBuilder: (context, item, index) {
+                              if (item is WaitingRideDateHeaderItem) {
+                                return _buildCreatedAtHeader(
+                                  context,
+                                  provider,
+                                  item,
+                                );
+                              }
 
-                          if (item is WaitingRideCardItem) {
-                            return _buildRideCard(
-                              context,
-                              provider,
-                              item.ride,
-                            );
-                          }
+                              if (item is WaitingRideCardItem) {
+                                return _buildRideCard(
+                                  context,
+                                  provider,
+                                  item.ride,
+                                );
+                              }
 
-                          return const SizedBox.shrink();
-                        },
-                        noItemsFoundIndicatorBuilder: (_) =>
-                            _buildEmptyPlaceholder(context),
-                      ),
+                              return const SizedBox.shrink();
+                            },
+                            firstPageProgressIndicatorBuilder: (_) =>
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 80),
+                                  child: Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                ),
+                            noItemsFoundIndicatorBuilder: (_) =>
+                                _buildEmptyPlaceholder(context),
+                          ),
                     ),
                   ),
                 ),
@@ -272,16 +281,69 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
     );
   }
 
-  Widget _buildSortFilter(BuildContext context, RecieveOrderProvider provider) {
+  Widget _buildTopSummary(BuildContext context, RecieveOrderProvider provider) {
     final theme = Theme.of(context);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [theme.colorScheme.primary, AppColors.surfaceGreen],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Đơn chờ xử lý",
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: theme.colorScheme.secondary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    provider.isInitialLoading
+                        ? "Đang tải danh sách đơn..."
+                        : "${provider.waitingRideCount} đơn khả dụng để nhận",
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            const DriverPill(
+              label: "Vuốt xuống làm mới",
+              icon: Icons.swipe_down_alt_rounded,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSortFilter(BuildContext context, RecieveOrderProvider provider) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
           ),
@@ -306,10 +368,10 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
                   items: WaitingRideSortOption.values
                       .map(
                         (option) => DropdownMenuItem<WaitingRideSortOption>(
-                      value: option,
-                      child: Text(provider.sortOptionLabel(option)),
-                    ),
-                  )
+                          value: option,
+                          child: Text(provider.sortOptionLabel(option)),
+                        ),
+                      )
                       .toList(),
                   onChanged: (value) {
                     if (value != null) {
@@ -326,10 +388,10 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
   }
 
   Widget _buildCreatedAtHeader(
-      BuildContext context,
-      RecieveOrderProvider provider,
-      WaitingRideDateHeaderItem item,
-      ) {
+    BuildContext context,
+    RecieveOrderProvider provider,
+    WaitingRideDateHeaderItem item,
+  ) {
     final theme = Theme.of(context);
 
     return Padding(
@@ -390,7 +452,8 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
     final String toProvinceRaw = ride.toProvince ?? '';
 
     final String rideTypeOrQuantityText = provider.rideTypeOrQuantityText(ride);
-    final bool shouldShowRideTypeOrQuantityText = provider.shouldShowRideTypeOrQuantity(ride);
+    final bool shouldShowRideTypeOrQuantityText = provider
+        .shouldShowRideTypeOrQuantity(ride);
 
     final String fromText = provider.buildFullAddress(
       fromAddressRaw,
@@ -410,127 +473,108 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      color: theme.colorScheme.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 0,
+      color: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       child: Material(
         color: Colors.transparent,
         child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        code,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onSurface,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    _rideSourceChip(provider, rideSource, theme),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                //thêm thằng số ghế hoăc bao xe
-                if (shouldShowRideTypeOrQuantityText)
-                  Tooltip(
-                    message: rideTypeOrQuantityText,
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.secondary.withValues(
-                            alpha: 0.1,
+          padding: const EdgeInsets.all(2),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.surfaceGreen.withValues(alpha: 0.42),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: theme.colorScheme.secondary.withValues(alpha: 0.16),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          code,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface,
                           ),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.event_seat_rounded,
-                              size: 14,
-                              color: theme.colorScheme.secondary,
-                            ),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                rideTypeOrQuantityText,
-                                style: TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: theme.colorScheme.onSurface,
-                                  letterSpacing: -0.2,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
                         ),
                       ),
+                      const SizedBox(width: 10),
+                      _rideSourceChip(provider, rideSource, theme),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        DriverPill(
+                          label: "Giờ đón $pickupText",
+                          icon: Icons.access_time_rounded,
+                        ),
+                        if (shouldShowRideTypeOrQuantityText)
+                          DriverPill(
+                            label: rideTypeOrQuantityText,
+                            icon: Icons.event_seat_rounded,
+                          ),
+                      ],
                     ),
                   ),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Text(
-                      "Giờ đón: ",
-                      style: TextStyle(
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.7,
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildLocationRow(
+                          context,
+                          Icons.circle,
+                          Colors.green,
+                          fromText,
                         ),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Container(
+                              width: 2,
+                              height: 22,
+                              color: Colors.white.withValues(alpha: 0.14),
+                            ),
+                          ),
+                        ),
+                        _buildLocationRow(
+                          context,
+                          Icons.location_on,
+                          Colors.red,
+                          toText,
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      pickupText,
-                      style: TextStyle(
-                        color: theme.colorScheme.secondary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                Divider(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.12),
-                ),
-                _buildLocationRow(
-                  context,
-                  Icons.circle,
-                  Colors.green,
-                  fromText,
-                ),
-                _buildLocationRow(
-                  context,
-                  Icons.location_on,
-                  Colors.red,
-                  toText,
-                ),
-                Divider(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.12),
-                ),
-                _buildCardFooter(
-                  context,
-                  provider,
-                  ride,
-                  theme,
-                  totalPrice,
-                  netIncome,
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 14),
+                  _buildCardFooter(
+                    context,
+                    provider,
+                    ride,
+                    theme,
+                    totalPrice,
+                    netIncome,
+                  ),
+                ],
+              ),
             ),
+          ),
         ),
       ),
     );
@@ -546,70 +590,123 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
   ) {
     final bool isMyBrokerRide = provider.isMyBrokerRide(ride);
     final int rideSource = provider.extractRideSource(ride);
+    final bool isCancelAction = rideSource == 2 && isMyBrokerRide;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Giá tiền: ${NumberFormat('#,###').format(totalPrice)} đ",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.onSurface,
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Giá tiền",
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSubtle,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "${NumberFormat('#,###').format(totalPrice)} đ",
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                "Thu nhập ròng: ${NumberFormat('#,###').format(netIncome)} đ",
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        if (rideSource == 2 && isMyBrokerRide)
-          ElevatedButton(
-            onPressed: provider.loadingMyBrokerRides
-                ? null
-                : () => _cancelMyBrokerRide(context, provider, ride),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.colorScheme.error,
             ),
-            child: const Text("HUỶ ĐƠN"),
-          )
-        else
-          ElevatedButton(
-            onPressed: () => _acceptRide(context, provider, ride),
-            child: const Text("NHẬN ĐƠN"),
-          ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Thu nhập ròng",
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.greenAccent.shade100,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "${NumberFormat('#,###').format(netIncome)} đ",
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.greenAccent,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        SizedBox(
+          width: double.infinity,
+          child: isCancelAction
+              ? ElevatedButton(
+                  onPressed: provider.loadingMyBrokerRides
+                      ? null
+                      : () => _cancelMyBrokerRide(context, provider, ride),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.error,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(50),
+                  ),
+                  child: const Text("HỦY ĐƠN ĐÃ ĐẨY"),
+                )
+              : ElevatedButton(
+                  onPressed: () => _acceptRide(context, provider, ride),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(50),
+                  ),
+                  child: const Text("NHẬN ĐƠN NGAY"),
+                ),
+        ),
       ],
     );
   }
 
   Widget _buildLocationRow(
-      BuildContext context,
-      IconData icon,
-      Color color,
-      String address,
-      ) {
+    BuildContext context,
+    IconData icon,
+    Color color,
+    String address,
+  ) {
     final theme = Theme.of(context);
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 16, color: color),
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Icon(icon, size: 16, color: color),
+        ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             address,
-            style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface),
-            maxLines: 2,
+            style: TextStyle(
+              fontSize: 13.5,
+              color: theme.colorScheme.onSurface,
+            ),
+            maxLines: 3,
             overflow: TextOverflow.ellipsis,
           ),
         ),
@@ -618,18 +715,13 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
   }
 
   Widget _buildEmptyPlaceholder(BuildContext context) {
-    final theme = Theme.of(context);
-    return SizedBox(
-      height: 200,
-      child: Center(
-        child: Text(
-          "Không có đơn hàng nào.\nVuốt xuống để cập nhật mới.",
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: theme.colorScheme.secondary,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+    return const SizedBox(
+      height: 260,
+      child: DriverEmptyState(
+        icon: Icons.inbox_outlined,
+        title: "Chưa có đơn hàng chờ",
+        message:
+            "Hệ thống sẽ cập nhật ngay khi có chuyến phù hợp. Bạn có thể vuốt xuống để làm mới danh sách.",
       ),
     );
   }

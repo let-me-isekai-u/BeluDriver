@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../app_theme.dart';
 import '../../providers/driver/login_provider.dart';
+import '../../widgets/driver_ui.dart';
 import '../forgot_password_screen.dart';
 import 'driver_home.dart';
 import 'driver_register_screen.dart';
@@ -63,7 +65,7 @@ class _LoginScreenState extends State<DriverLoginScreen>
 
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const DriverHomeScreen()),
-            (Route<dynamic> route) => false,
+        (Route<dynamic> route) => false,
       );
     } else {
       _showSnack(result);
@@ -97,29 +99,46 @@ class _LoginScreenState extends State<DriverLoginScreen>
             body: Stack(
               children: [
                 Container(
-                  height: size.height * 0.38,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [
-                        theme.colorScheme.primary,
-                        theme.colorScheme.surface,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                      colors: [AppColors.darkGreenBg, AppColors.primaryGreen],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
                     ),
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(60),
-                      bottomRight: Radius.circular(60),
+                  ),
+                ),
+                Positioned(
+                  top: -80,
+                  right: -30,
+                  child: Container(
+                    width: 220,
+                    height: 220,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: theme.colorScheme.secondary.withValues(
+                        alpha: 0.08,
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: size.height * 0.14,
+                  left: -60,
+                  child: Container(
+                    width: 180,
+                    height: 180,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.04),
                     ),
                   ),
                 ),
                 SafeArea(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 40),
                         _buildLogoSection(theme),
                         const SizedBox(height: 28),
                         _buildLoginFormCard(theme, provider),
@@ -138,145 +157,203 @@ class _LoginScreenState extends State<DriverLoginScreen>
 
   Widget _buildLogoSection(ThemeData theme) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const DriverPill(
+          label: "Nền tảng tài xế",
+          icon: Icons.workspace_premium_rounded,
+        ),
+        const SizedBox(height: 18),
         ScaleTransition(
           scale: Tween<double>(begin: 1.0, end: 1.05).animate(
             CurvedAnimation(parent: _logoController, curve: Curves.easeInOut),
           ),
-          child: Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              color: theme.colorScheme.onPrimary,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.35),
-                  blurRadius: 20,
-                  spreadRadius: 3,
-                  offset: const Offset(0, 10),
+          child: Center(
+            child: Container(
+              width: 118,
+              height: 118,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(28),
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    blurRadius: 24,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(22),
+                child: Image.asset(
+                  'lib/assets/icons/dong_duong_driver_logo.png',
+                  fit: BoxFit.contain,
                 ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: Image.asset(
-                'lib/assets/icons/dong_duong_driver_logo.png',
-                fit: BoxFit.contain,
               ),
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 24),
         Text(
-          "Tài Xế Đông Dương",
+          "Tài xế Đông Dương",
           style: theme.textTheme.headlineLarge?.copyWith(
-            fontSize: 28,
-            letterSpacing: 2,
-            color: theme.colorScheme.secondary,
+            fontSize: 30,
+            letterSpacing: 0.3,
           ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          "Đăng nhập để nhận chuyến, theo dõi doanh thu và vận hành công việc mỗi ngày trong cùng một hệ thống.",
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: AppColors.textSubtle,
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: const [
+            DriverPill(label: "Nhận đơn nhanh", icon: Icons.flash_on_rounded),
+            DriverPill(label: "KYC rõ ràng", icon: Icons.verified_user_rounded),
+          ],
         ),
       ],
     );
   }
 
   Widget _buildLoginFormCard(ThemeData theme, LoginProvider provider) {
-    return Card(
-      elevation: theme.cardTheme.elevation ?? 0,
-      shape: theme.cardTheme.shape,
-      child: Padding(
-        padding: const EdgeInsets.all(28.0),
-        child: Column(
-          children: [
-            Text(
-              "Chào Tài Xế!",
-              style: theme.textTheme.headlineSmall?.copyWith(
-                color: theme.colorScheme.secondary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              "Đăng nhập để bắt đầu nhận chuyến",
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 28),
-            _buildTextField(
-              controller: provider.phoneController,
-              hint: "Số điện thoại",
-              icon: Icons.phone_android,
-              isPassword: false,
-              obscurePassword: provider.obscurePassword,
-              onTogglePassword: provider.togglePasswordVisibility,
-            ),
-            const SizedBox(height: 16),
-            _buildTextField(
-              controller: provider.passwordController,
-              hint: "Mật khẩu",
-              icon: Icons.lock_outline,
-              isPassword: true,
-              obscurePassword: provider.obscurePassword,
-              onTogglePassword: provider.togglePasswordVisibility,
-            ),
-            const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: _goToForgotPassword,
-                child: Text(
-                  "Quên mật khẩu?",
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.secondary,
-                    fontWeight: FontWeight.w700,
-                  ),
+    return DriverSectionCard(
+      title: "Bắt đầu ca làm việc",
+      subtitle: "Đăng nhập tài khoản để vào giao diện vận hành tài xế.",
+      icon: Icons.lock_open_rounded,
+      child: Column(
+        children: [
+          _buildTextField(
+            controller: provider.phoneController,
+            hint: "Số điện thoại",
+            icon: Icons.phone_android_rounded,
+            isPassword: false,
+            obscurePassword: provider.obscurePassword,
+            onTogglePassword: provider.togglePasswordVisibility,
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: provider.passwordController,
+            hint: "Mật khẩu",
+            icon: Icons.lock_outline_rounded,
+            isPassword: true,
+            obscurePassword: provider.obscurePassword,
+            onTogglePassword: provider.togglePasswordVisibility,
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: _goToForgotPassword,
+              child: Text(
+                "Quên mật khẩu?",
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.secondary,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: provider.isLoading ? null : () => _login(provider),
-                child: provider.isLoading
-                    ? SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    color: theme.colorScheme.primary,
-                  ),
-                )
-                    : const Text(
-                  "BẮT ĐẦU LÀM VIỆC",
-                  style: TextStyle(letterSpacing: 1.1),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            height: 56,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.colorScheme.secondary.withValues(alpha: 0.16),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: ElevatedButton(
+              onPressed: provider.isLoading ? null : () => _login(provider),
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
                 ),
               ),
+              child: provider.isLoading
+                  ? SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: theme.colorScheme.primary,
+                      ),
+                    )
+                  : const Text(
+                      "BẮT ĐẦU LÀM VIỆC",
+                      style: TextStyle(letterSpacing: 1.1),
+                    ),
             ),
-            const SizedBox(height: 18),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.04),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+              ),
+            ),
+            child: Row(
               children: [
-                Text(
-                  "Chưa có tài khoản?",
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.9),
-                  ),
+                Icon(
+                  Icons.info_outline_rounded,
+                  color: theme.colorScheme.secondary,
+                  size: 18,
                 ),
-                TextButton(
-                  onPressed: _goToRegister,
+                const SizedBox(width: 10),
+                Expanded(
                   child: Text(
-                    "Đăng ký ngay",
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: theme.colorScheme.secondary,
+                    "Tài khoản được duyệt KYC sẽ mở đầy đủ chức năng nhận đơn.",
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSubtle,
+                      height: 1.4,
                     ),
                   ),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                "Chưa có tài khoản?",
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.textTheme.bodyMedium?.color?.withValues(
+                    alpha: 0.9,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: _goToRegister,
+                child: Text(
+                  "Đăng ký ngay",
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: theme.colorScheme.secondary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -299,46 +376,20 @@ class _LoginScreenState extends State<DriverLoginScreen>
       style: theme.textTheme.bodyLarge?.copyWith(
         color: theme.colorScheme.onSurface,
       ),
-      decoration: InputDecoration(
-        hintText: hint,
-        labelText: hint,
-        labelStyle: theme.textTheme.bodyMedium?.copyWith(
-          color: theme.colorScheme.onSurface.withOpacity(0.75),
-        ),
-        hintStyle: theme.textTheme.bodyMedium?.copyWith(
-          color: theme.colorScheme.onSurface.withOpacity(0.60),
-        ),
-        filled: true,
-        fillColor: theme.colorScheme.surface.withOpacity(0.65),
-        prefixIcon: Icon(icon, color: theme.colorScheme.secondary),
+      decoration: driverInputDecoration(
+        theme,
+        label: hint,
+        hint: hint,
+        icon: icon,
         suffixIcon: isPassword
             ? IconButton(
-          icon: Icon(
-            obscurePassword ? Icons.visibility_off : Icons.visibility,
-            color: theme.colorScheme.onSurface.withOpacity(0.7),
-          ),
-          onPressed: onTogglePassword,
-        )
+                icon: Icon(
+                  obscurePassword ? Icons.visibility_off : Icons.visibility,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+                onPressed: onTogglePassword,
+              )
             : null,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(
-            color: theme.colorScheme.onSurface.withOpacity(0.12),
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(
-            color: theme.colorScheme.onSurface.withOpacity(0.12),
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(
-            color: theme.colorScheme.secondary,
-            width: 1.8,
-          ),
-        ),
       ),
     );
   }

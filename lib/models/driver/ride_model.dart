@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../broker_ride_models.dart';
+
 class RideModel {
   final int id;
   final String code;
   final String createdAt;
+  final String? pickupTime;
 
   final String fromProvince;
   final String fromDistrict;
@@ -18,6 +21,8 @@ class RideModel {
   final double netIncome;
   final int status;
   final String paymentMethod;
+  final int type;
+  final int? quantity;
 
   final int rideSource;
 
@@ -25,6 +30,7 @@ class RideModel {
     required this.id,
     required this.code,
     required this.createdAt,
+    required this.pickupTime,
     required this.fromProvince,
     required this.fromDistrict,
     required this.fromAddress,
@@ -35,6 +41,8 @@ class RideModel {
     required this.netIncome,
     required this.status,
     required this.paymentMethod,
+    required this.type,
+    required this.quantity,
     required this.rideSource,
   });
 
@@ -42,7 +50,9 @@ class RideModel {
     return RideModel(
       id: _parseInt(json['rideId'] ?? json['id']),
       code: (json['code'] ?? '').toString(),
-      createdAt: (json['createdAt'] ?? DateTime.now().toIso8601String()).toString(),
+      createdAt: (json['createdAt'] ?? DateTime.now().toIso8601String())
+          .toString(),
+      pickupTime: json['pickupTime']?.toString(),
 
       fromProvince: (json['fromProvince'] ?? '').toString(),
       fromDistrict: (json['fromDistrict'] ?? '').toString(),
@@ -57,6 +67,8 @@ class RideModel {
 
       status: _parseInt(json['status'], defaultValue: -1),
       paymentMethod: (json['paymentMethod'] ?? '').toString(),
+      type: _parseInt(json['type'], defaultValue: 1),
+      quantity: _parseNullableInt(json['quantity']),
 
       rideSource: _parseInt(json['rideSource'], defaultValue: 1),
     );
@@ -67,6 +79,13 @@ class RideModel {
     if (value is int) return value;
     if (value is double) return value.toInt();
     return int.tryParse(value.toString()) ?? defaultValue;
+  }
+
+  static int? _parseNullableInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    return int.tryParse(value.toString());
   }
 
   static double _parseDouble(dynamic value, {double defaultValue = 0}) {
@@ -138,6 +157,22 @@ class RideModel {
         return Colors.red;
       default:
         return Colors.black54;
+    }
+  }
+
+  String get rideTypeOrQuantityText {
+    switch (type) {
+      case BrokerRideType.passenger:
+        if (quantity != null) {
+          return '$quantity ghế';
+        }
+        return '';
+      case BrokerRideType.charter5Seats:
+        return 'Bao xe 5 chỗ';
+      case BrokerRideType.charter7Seats:
+        return 'Bao xe 7 chỗ';
+      default:
+        return '';
     }
   }
 }

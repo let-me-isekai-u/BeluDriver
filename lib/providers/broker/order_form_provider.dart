@@ -90,7 +90,7 @@ class OrderFormProvider extends ChangeNotifier {
   String getNameById(List<dynamic> items, int? id) {
     if (id == null) return '';
     final found = items.cast<dynamic>().firstWhere(
-          (e) => e != null && e['id'].toString() == id.toString(),
+      (e) => e != null && e['id'].toString() == id.toString(),
       orElse: () => null,
     );
     return found?['name']?.toString() ?? '';
@@ -116,6 +116,7 @@ class OrderFormProvider extends ChangeNotifier {
 
     try {
       fromDistricts = await ApiService.getDistricts(provinceId: provinceId);
+      _normalizeSelectedDistricts();
     } finally {
       loadingFromDistricts = false;
       notifyListeners();
@@ -131,6 +132,7 @@ class OrderFormProvider extends ChangeNotifier {
 
     try {
       toDistricts = await ApiService.getDistricts(provinceId: provinceId);
+      _normalizeSelectedDistricts();
     } finally {
       loadingToDistricts = false;
       notifyListeners();
@@ -172,14 +174,41 @@ class OrderFormProvider extends ChangeNotifier {
       return districts;
     }
 
-    if (otherDistrictId == null || otherDistrictId == noiBaiDistrictId) {
+    if (otherDistrictId == null) {
       return districts;
+    }
+
+    if (otherDistrictId == noiBaiDistrictId) {
+      return districts.where((district) {
+        final id = parseLocationId(district['id']);
+        return id != noiBaiDistrictId;
+      }).toList();
     }
 
     return districts.where((district) {
       final id = parseLocationId(district['id']);
       return id == noiBaiDistrictId;
     }).toList();
+  }
+
+  bool _containsDistrictId(List<dynamic> districts, int? districtId) {
+    if (districtId == null) return true;
+    return districts.any((district) {
+      final id = parseLocationId(district['id']);
+      return id == districtId;
+    });
+  }
+
+  void _normalizeSelectedDistricts() {
+    if (!_containsDistrictId(availableFromDistricts, fromDistrictId)) {
+      fromDistrictId = null;
+      syncAddressWithDistrict(isFrom: true, districtId: null);
+    }
+
+    if (!_containsDistrictId(availableToDistricts, toDistrictId)) {
+      toDistrictId = null;
+      syncAddressWithDistrict(isFrom: false, districtId: null);
+    }
   }
 
   int? parseLocationId(dynamic rawId) {
@@ -210,21 +239,25 @@ class OrderFormProvider extends ChangeNotifier {
 
   void setFromProvince(int? value) {
     fromProvinceId = value;
+    _normalizeSelectedDistricts();
     notifyListeners();
   }
 
   void setFromDistrict(int? value) {
     fromDistrictId = value;
+    _normalizeSelectedDistricts();
     notifyListeners();
   }
 
   void setToProvince(int? value) {
     toProvinceId = value;
+    _normalizeSelectedDistricts();
     notifyListeners();
   }
 
   void setToDistrict(int? value) {
     toDistrictId = value;
+    _normalizeSelectedDistricts();
     notifyListeners();
   }
 
@@ -319,4 +352,3 @@ class OrderFormProvider extends ChangeNotifier {
     super.dispose();
   }
 }
-

@@ -1,12 +1,14 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../services/api_service.dart';
+import '../../app_theme.dart';
 import '../../models/driver/ride_detail_model.dart';
-import '../../dashed_line_vertical.dart';
+import '../../services/api_service.dart';
+import '../../widgets/driver_ui.dart';
 
 class RideDetailScreen extends StatefulWidget {
   final int rideId;
@@ -46,9 +48,9 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
   Color get _rideSourceColor {
     switch (widget.rideSource) {
       case 1:
-        return Colors.blue;
+        return const Color(0xFF73B7FF);
       case 2:
-        return Colors.purple;
+        return const Color(0xFFC49BFF);
       default:
         return Colors.grey;
     }
@@ -136,35 +138,42 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
   }
 
   void _showSnackBar(String message, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: color),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message), backgroundColor: color));
   }
 
   Map<String, dynamic> _getStatusInfo(int status) {
     switch (status) {
       case 2:
-        return {"text": "Đã nhận đơn", "color": Colors.blue};
+        return {"text": "Đã nhận đơn", "color": const Color(0xFF73B7FF)};
       case 3:
-        return {"text": "Đang di chuyển", "color": Colors.orange};
+        return {"text": "Đang di chuyển", "color": const Color(0xFFFFB347)};
       case 4:
-        return {"text": "Hoàn thành", "color": Colors.green};
+        return {"text": "Hoàn thành", "color": const Color(0xFF6ED39B)};
       case 5:
-        return {"text": "Đã hủy", "color": Colors.red};
+        return {"text": "Đã hủy", "color": const Color(0xFFFF7B7B)};
       default:
         return {"text": "Chờ xác nhận", "color": Colors.grey};
     }
   }
 
+  String _formatMoney(num value) {
+    return NumberFormat.currency(
+      locale: 'vi_VN',
+      symbol: 'đ',
+      decimalDigits: 0,
+    ).format(value);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final bg = theme.scaffoldBackgroundColor;
 
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: bg,
-        appBar: _buildAppBar(theme, title: "Chi tiết chuyến xe"),
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: _buildAppBar(theme, title: "Chi tiết chuyến"),
         body: Center(
           child: CircularProgressIndicator(color: theme.colorScheme.secondary),
         ),
@@ -173,13 +182,12 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
 
     if (_ride == null) {
       return Scaffold(
-        backgroundColor: bg,
-        appBar: _buildAppBar(theme, title: "Chi tiết chuyến xe"),
-        body: Center(
-          child: Text(
-            "Không tìm thấy thông tin",
-            style: TextStyle(color: theme.colorScheme.onSurface),
-          ),
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: _buildAppBar(theme, title: "Chi tiết chuyến"),
+        body: const DriverEmptyState(
+          icon: Icons.search_off_rounded,
+          title: "Không tìm thấy chuyến xe",
+          message: "Dữ liệu chuyến có thể đã thay đổi hoặc không còn khả dụng.",
         ),
       );
     }
@@ -187,28 +195,50 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
     final statusInfo = _getStatusInfo(_ride!.status);
 
     return Scaffold(
-      backgroundColor: bg,
-      appBar: _buildAppBar(theme, title: "Mã đơn: ${_ride!.code}"),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildStatusHeader(statusInfo, theme),
-            const SizedBox(height: 16),
-            _buildPriceDetailCard(theme),
-            const SizedBox(height: 16),
-            _buildCustomerCard(theme),
-            const SizedBox(height: 16),
-            _buildRouteCard(theme),
-            const SizedBox(height: 16),
-            _buildExtraInfoCard(theme),
-            const SizedBox(height: 110),
-          ],
-        ),
+      backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: _buildAppBar(theme, title: "Mã đơn ${_ride!.code}"),
+      bottomNavigationBar: _ride!.status >= 4
+          ? null
+          : _buildBottomActions(_ride!.status),
+      body: Stack(
+        children: [
+          Positioned(
+            top: -80,
+            right: -60,
+            child: Container(
+              width: 220,
+              height: 220,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: theme.colorScheme.secondary.withValues(alpha: 0.06),
+              ),
+            ),
+          ),
+          RefreshIndicator(
+            onRefresh: _fetchRideDetail,
+            child: ListView(
+              physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
+              ),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+              children: [
+                _buildHeroSection(theme, statusInfo),
+                const SizedBox(height: 16),
+                _buildOverviewStats(theme),
+                const SizedBox(height: 16),
+                _buildFareSection(theme),
+                const SizedBox(height: 16),
+                _buildCustomerSection(theme),
+                const SizedBox(height: 16),
+                _buildRouteSection(theme),
+                const SizedBox(height: 16),
+                _buildDetailSection(theme),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        ],
       ),
-      bottomSheet:
-      _ride!.status >= 4 ? null : _buildBottomActions(_ride!.status),
     );
   }
 
@@ -218,151 +248,116 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
         title,
         style: TextStyle(
           color: theme.colorScheme.secondary,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w800,
         ),
       ),
-      centerTitle: true,
       backgroundColor: theme.colorScheme.primary,
-      iconTheme: IconThemeData(color: theme.colorScheme.secondary),
       foregroundColor: theme.colorScheme.secondary,
+      iconTheme: IconThemeData(color: theme.colorScheme.secondary),
     );
   }
 
-  Widget _themedCard({required Widget child, EdgeInsets? padding}) {
-    final theme = Theme.of(context);
-    return Card(
-      elevation: 2,
-      color: theme.colorScheme.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: Padding(
-        padding: padding ?? const EdgeInsets.all(16),
-        child: child,
-      ),
-    );
-  }
+  Widget _buildHeroSection(ThemeData theme, Map<String, dynamic> statusInfo) {
+    final statusColor = statusInfo['color'] as Color;
 
-  Widget _buildStatusHeader(Map<String, dynamic> statusInfo, ThemeData theme) {
-    final Color statusColor = statusInfo['color'] as Color;
-
-    return Card(
-      elevation: 3,
-      color: theme.colorScheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: statusColor.withOpacity(0.45)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Text(
-              "Mã chuyến: ${_ride!.code}",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.secondary,
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: _rideSourceColor.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: _rideSourceColor.withOpacity(0.35)),
-              ),
-              child: Text(
-                _rideSourceText,
-                style: TextStyle(
-                  color: _rideSourceColor,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.stars, color: statusColor),
-                const SizedBox(width: 8),
-                Text(
-                  (statusInfo['text'] as String).toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: statusColor,
-                  ),
-                ),
-              ],
-            ),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primaryGreen,
+            AppColors.surfaceGreen.withValues(alpha: 0.94),
           ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: statusColor.withValues(alpha: 0.28)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.22),
+            blurRadius: 24,
+            offset: const Offset(0, 14),
+          ),
+        ],
       ),
-    );
-  }
-
-  Widget _buildPriceDetailCard(ThemeData theme) {
-    final formattedPrice = NumberFormat("#,###").format(_ride!.price);
-    final formattedNetIncome = NumberFormat("#,###").format(_ride!.netIncome);
-
-    return _themedCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Giá cước",
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.secondary,
-            ),
-          ),
-          Divider(
-            height: 24,
-            color: theme.colorScheme.onSurface.withOpacity(0.12),
-          ),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                "Giá tiền",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.onSurface,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const DriverPill(
+                      label: "Chi tiết chuyến xe",
+                      icon: Icons.local_taxi_rounded,
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      _ride!.code,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 24,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Theo dõi trạng thái, hành trình và thông tin khách hàng trong một màn hình.",
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textSubtle,
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              Text(
-                "$formattedPrice đ",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.secondary,
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: statusColor.withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Icon(Icons.flag_circle_rounded, color: statusColor),
+                    const SizedBox(height: 6),
+                    Text(
+                      statusInfo['text'] as String,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: statusColor,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          const SizedBox(height: 18),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
             children: [
-              Text(
-                "Thu nhập ròng",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.onSurface,
-                ),
+              DriverPill(label: _rideSourceText, color: _rideSourceColor),
+              DriverPill(
+                label: _ride!.paymentMethod.isEmpty
+                    ? "Chưa rõ thanh toán"
+                    : _ride!.paymentMethod,
+                icon: Icons.payments_outlined,
               ),
-              Text(
-                "$formattedNetIncome đ",
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green,
-                ),
-              ),
+              DriverPill(label: _ride!.typeText, icon: Icons.category_rounded),
             ],
           ),
         ],
@@ -370,165 +365,294 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
     );
   }
 
-  Widget _buildCustomerCard(ThemeData theme) {
-    final phone = _ride!.customerPhone.trim();
-
-    return _themedCard(
-      padding: const EdgeInsets.all(8),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: theme.colorScheme.secondary.withOpacity(0.15),
-          child: Text(
-            _ride!.customerName.isNotEmpty ? _ride!.customerName[0] : '?',
-            style: TextStyle(
-              color: theme.colorScheme.secondary,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        title: Text(
-          _ride!.customerName,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: theme.colorScheme.onSurface,
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text(
-              phone.isNotEmpty ? phone : "Không có số điện thoại",
-              style: TextStyle(
-                color: phone.isNotEmpty
-                    ? theme.colorScheme.onSurface.withOpacity(0.7)
-                    : Colors.red,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-        trailing: IconButton(
-          icon: const Icon(Icons.phone, color: Colors.green, size: 28),
-          onPressed: () async {
-            debugPrint("=== CALL CUSTOMER ===");
-            debugPrint("customerName: ${_ride!.customerName}");
-            debugPrint("customerPhone: '${_ride!.customerPhone}'");
-            debugPrint("customerPhone(trim): '$phone'");
-
-            if (phone.isEmpty) {
-              _showSnackBar("Không có số điện thoại", Colors.red);
-              return;
-            }
-
-            final uri = Uri.parse('tel:$phone');
-            if (await canLaunchUrl(uri)) {
-              await launchUrl(uri);
-            } else {
-              _showSnackBar("Không thể mở ứng dụng gọi điện", Colors.red);
-            }
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRouteCard(ThemeData theme) {
-    return _themedCard(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Column(
-            children: [
-              const Icon(Icons.circle, color: Colors.green, size: 18),
-              DashedLineVertical(height: 40, color: theme.colorScheme.secondary),
-              const Icon(Icons.location_on, color: Colors.red, size: 18),
-            ],
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _routePointText(
-                  title: _ride!.fromProvince,
-                  district: _ride!.fromDistrict,
-                  address: _ride!.fromAddress,
-                  theme: theme,
-                ),
-                const SizedBox(height: 8),
-                _routePointText(
-                  title: _ride!.toProvince,
-                  district: _ride!.toDistrict,
-                  address: _ride!.toAddress,
-                  theme: theme,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _routePointText({
-    required String title,
-    required String district,
-    required String address,
-    required ThemeData theme,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildOverviewStats(ThemeData theme) {
+    return Row(
       children: [
-        Text(
-          "$title - $district",
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: theme.colorScheme.secondary,
+        Expanded(
+          child: DriverStatTile(
+            label: "Giá chuyến",
+            value: _formatMoney(_ride!.price),
+            icon: Icons.receipt_long_rounded,
           ),
         ),
-        Text(
-          address,
-          style: TextStyle(color: theme.colorScheme.onSurface),
+        const SizedBox(width: 12),
+        Expanded(
+          child: DriverStatTile(
+            label: "Thu nhập ròng",
+            value: _formatMoney(_ride!.netIncome),
+            icon: Icons.savings_rounded,
+            accentColor: const Color(0xFF6ED39B),
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildExtraInfoCard(ThemeData theme) {
-    return _themedCard(
+  Widget _buildFareSection(ThemeData theme) {
+    return DriverSectionCard(
+      title: "Chi tiết cước phí",
+      subtitle: "Tổng tiền khách trả và phần thu nhập thực nhận của tài xế.",
+      icon: Icons.account_balance_wallet_rounded,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Chi tiết bổ sung",
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.secondary,
+          _buildAmountRow(
+            theme,
+            label: "Giá chuyến",
+            value: _formatMoney(_ride!.price),
+            valueColor: theme.colorScheme.secondary,
+          ),
+          const SizedBox(height: 14),
+          _buildAmountRow(
+            theme,
+            label: "Thu nhập ròng",
+            value: _formatMoney(_ride!.netIncome),
+            valueColor: const Color(0xFF6ED39B),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAmountRow(
+    ThemeData theme, {
+    required String label,
+    required String value,
+    required Color valueColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
-          Divider(
-            height: 20,
-            color: theme.colorScheme.onSurface.withOpacity(0.12),
+          Text(
+            value,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: valueColor,
+              fontWeight: FontWeight.w900,
+            ),
           ),
-          _detailRow("Loại dịch vụ", _ride!.typeText, theme),
-          _detailRow("Nguồn đơn", _rideSourceText, theme),
-          _detailRow("Số lượng", _ride!.quantity.toString(), theme),
-          _detailRow("Thanh toán", _ride!.paymentMethod, theme),
-          _detailRow("Thời gian tạo", _formatDate(_ride!.createdAt), theme),
-          _detailRow("Thời gian đón", _formatDate(_ride!.pickupTime), theme),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCustomerSection(ThemeData theme) {
+    final phone = _ride!.customerPhone.trim();
+
+    return DriverSectionCard(
+      title: "Khách hàng",
+      subtitle: "Thông tin liên hệ để hỗ trợ đón khách nhanh hơn.",
+      icon: Icons.person_rounded,
+      trailing: IconButton(
+        tooltip: "Gọi khách",
+        onPressed: () => _callCustomer(phone),
+        icon: const Icon(Icons.phone_in_talk_rounded, color: Colors.green),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: theme.colorScheme.secondary.withValues(
+              alpha: 0.14,
+            ),
+            child: Text(
+              _ride!.customerName.isNotEmpty ? _ride!.customerName[0] : '?',
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: theme.colorScheme.secondary,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _ride!.customerName,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  phone.isEmpty ? "Chưa có số điện thoại" : phone,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: phone.isEmpty
+                        ? const Color(0xFFFFA3A3)
+                        : AppColors.textSubtle,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _callCustomer(String phone) async {
+    if (phone.isEmpty) {
+      _showSnackBar("Không có số điện thoại", Colors.red);
+      return;
+    }
+
+    final uri = Uri.parse('tel:$phone');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      _showSnackBar("Không thể mở ứng dụng gọi điện", Colors.red);
+    }
+  }
+
+  Widget _buildRouteSection(ThemeData theme) {
+    return DriverSectionCard(
+      title: "Lộ trình chuyến xe",
+      subtitle:
+          "Điểm đón và điểm trả được trình bày rõ theo thứ tự hành trình.",
+      icon: Icons.alt_route_rounded,
+      child: Column(
+        children: [
+          _buildRouteStop(
+            theme,
+            icon: Icons.trip_origin_rounded,
+            color: const Color(0xFF6ED39B),
+            label: "Điểm đón",
+            title: "${_ride!.fromProvince} - ${_ride!.fromDistrict}",
+            address: _ride!.fromAddress,
+          ),
+          Container(
+            width: 2,
+            height: 28,
+            margin: const EdgeInsets.only(left: 11, top: 6, bottom: 6),
+            color: theme.colorScheme.secondary.withValues(alpha: 0.25),
+          ),
+          _buildRouteStop(
+            theme,
+            icon: Icons.location_on_rounded,
+            color: const Color(0xFFFF7B7B),
+            label: "Điểm trả",
+            title: "${_ride!.toProvince} - ${_ride!.toDistrict}",
+            address: _ride!.toAddress,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRouteStop(
+    ThemeData theme, {
+    required IconData icon,
+    required Color color,
+    required String label,
+    required String title,
+    required String address,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.14),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 16, color: color),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.04),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.07),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  title,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  address.isEmpty ? "Chưa có địa chỉ chi tiết" : address,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textSubtle,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDetailSection(ThemeData theme) {
+    return DriverSectionCard(
+      title: "Thông tin bổ sung",
+      subtitle: "Các dữ liệu vận hành quan trọng của chuyến xe.",
+      icon: Icons.info_outline_rounded,
+      child: Column(
+        children: [
+          _detailRow(theme, "Loại dịch vụ", _ride!.typeText),
+          _detailRow(theme, "Nguồn đơn", _rideSourceText),
+          _detailRow(theme, "Số lượng", _ride!.quantity.toString()),
           _detailRow(
+            theme,
+            "Thanh toán",
+            _ride!.paymentMethod.isEmpty
+                ? "Chưa xác định"
+                : _ride!.paymentMethod,
+          ),
+          _detailRow(theme, "Thời gian tạo", _formatDate(_ride!.createdAt)),
+          _detailRow(theme, "Thời gian đón", _formatDate(_ride!.pickupTime)),
+          _detailRow(
+            theme,
             "Số điện thoại khách",
-            _ride!.customerPhone.trim().isNotEmpty
-                ? _ride!.customerPhone.trim()
-                : "Không có số điện thoại",
-            theme,
+            _ride!.customerPhone.trim().isEmpty
+                ? "Chưa có dữ liệu"
+                : _ride!.customerPhone.trim(),
           ),
           _detailRow(
-            "Ghi chú",
-            _ride!.note ?? "Không có ghi chú",
             theme,
+            "Ghi chú",
+            (_ride!.note ?? '').trim().isEmpty
+                ? "Không có ghi chú"
+                : _ride!.note!,
             isLast: true,
           ),
         ],
@@ -537,13 +661,18 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
   }
 
   Widget _detailRow(
-      String label,
-      String value,
-      ThemeData theme, {
-        bool isLast = false,
-      }) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
+    ThemeData theme,
+    String label,
+    String value, {
+    bool isLast = false,
+  }) {
+    return Container(
+      margin: EdgeInsets.only(bottom: isLast ? 0 : 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -551,19 +680,23 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
             flex: 4,
             child: Text(
               label,
-              style: TextStyle(
-                color: theme.colorScheme.onSurface.withOpacity(0.75),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: AppColors.textSubtle,
                 fontWeight: FontWeight.w600,
               ),
             ),
           ),
+          const SizedBox(width: 10),
           Expanded(
             flex: 6,
             child: Text(
               value,
               textAlign: TextAlign.right,
-              softWrap: true,
-              style: TextStyle(color: theme.colorScheme.onSurface),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                height: 1.4,
+              ),
             ),
           ),
         ],
@@ -582,37 +715,50 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
 
   Widget _buildBottomActions(int status) {
     final theme = Theme.of(context);
+    final isStart = status == 2;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: ElevatedButton(
-              onPressed: () =>
-              status == 2 ? _handleStartRide() : _handleCompleteRide(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: status == 2 ? Colors.blue : Colors.green,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+        decoration: BoxDecoration(
+          color: AppColors.primaryGreen,
+          border: Border(
+            top: BorderSide(
+              color: theme.colorScheme.secondary.withValues(alpha: 0.16),
+            ),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.18),
+              blurRadius: 14,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: SizedBox(
+          height: 54,
+          child: ElevatedButton.icon(
+            onPressed: isStart ? _handleStartRide : _handleCompleteRide,
+            icon: Icon(
+              isStart ? Icons.play_circle_fill_rounded : Icons.task_alt_rounded,
+            ),
+            label: Text(isStart ? "Bắt đầu di chuyển" : "Xác nhận hoàn thành"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isStart
+                  ? const Color(0xFF73B7FF)
+                  : const Color(0xFF6ED39B),
+              foregroundColor: Colors.black87,
+              textStyle: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
               ),
-              child: Text(
-                status == 2 ? "BẮT ĐẦU DI CHUYỂN" : "XÁC NHẬN HOÀN THÀNH",
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }

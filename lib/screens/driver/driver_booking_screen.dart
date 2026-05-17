@@ -2,8 +2,10 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../app_theme.dart';
 import '../../models/broker_ride_models.dart';
 import '../../providers/broker/order_form_provider.dart';
+import '../../widgets/driver_ui.dart';
 import 'driver_booking_confirm.dart';
 
 class DriverBookingScreen extends StatefulWidget {
@@ -56,6 +58,8 @@ class _DriverBookingView extends StatelessWidget {
     required IconData icon,
     bool Function(int?)? canSelectDisabledId,
   }) {
+    final theme = Theme.of(context);
+
     return showModalBottomSheet<int?>(
       context: context,
       isScrollControlled: true,
@@ -63,9 +67,12 @@ class _DriverBookingView extends StatelessWidget {
       builder: (ctx) {
         return Container(
           height: MediaQuery.of(context).size.height * 0.70,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+          decoration: BoxDecoration(
+            color: AppColors.darkGreenBg,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border.all(
+              color: theme.colorScheme.secondary.withValues(alpha: 0.16),
+            ),
           ),
           child: Column(
             children: [
@@ -74,7 +81,7 @@ class _DriverBookingView extends StatelessWidget {
                 height: 4,
                 width: 40,
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: Colors.white24,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -88,6 +95,7 @@ class _DriverBookingView extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
                     ),
@@ -95,9 +103,7 @@ class _DriverBookingView extends StatelessWidget {
                       onPressed: () => Navigator.pop(ctx, null),
                       child: Text(
                         "Đóng",
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.secondary,
-                        ),
+                        style: TextStyle(color: theme.colorScheme.secondary),
                       ),
                     ),
                   ],
@@ -108,53 +114,53 @@ class _DriverBookingView extends StatelessWidget {
                 child: items.isEmpty
                     ? const Center(child: CircularProgressIndicator())
                     : ListView.separated(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  itemCount: items.length,
-                  separatorBuilder: (context, index) =>
-                  const Divider(height: 1, indent: 20, endIndent: 20),
-                  itemBuilder: (context, index) {
-                    final it = items[index];
-                    final id = it['id'] is int
-                        ? it['id'] as int
-                        : int.tryParse(it['id'].toString());
-                    final name = it['name']?.toString() ?? '';
-                    final bool isDisabled =
-                    (id != null &&
-                        disabledId != null &&
-                        id.toString() == disabledId.toString() &&
-                        !(canSelectDisabledId?.call(id) ?? false));
-                    final bool isSelected =
-                    (id != null &&
-                        selectedId != null &&
-                        id.toString() == selectedId.toString());
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        itemCount: items.length,
+                        separatorBuilder: (context, index) =>
+                            const Divider(height: 1, indent: 20, endIndent: 20),
+                        itemBuilder: (context, index) {
+                          final it = items[index];
+                          final id = it['id'] is int
+                              ? it['id'] as int
+                              : int.tryParse(it['id'].toString());
+                          final name = it['name']?.toString() ?? '';
+                          final bool isDisabled =
+                              (id != null &&
+                              disabledId != null &&
+                              id.toString() == disabledId.toString() &&
+                              !(canSelectDisabledId?.call(id) ?? false));
+                          final bool isSelected =
+                              (id != null &&
+                              selectedId != null &&
+                              id.toString() == selectedId.toString());
 
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 4,
+                          return ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 4,
+                            ),
+                            leading: Icon(
+                              icon,
+                              color: isDisabled
+                                  ? Colors.grey[600]
+                                  : theme.colorScheme.secondary,
+                            ),
+                            title: Text(
+                              name,
+                              style: TextStyle(
+                                color: isDisabled ? Colors.grey : Colors.white,
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
+                                    : FontWeight.w600,
+                                fontSize: 16,
+                              ),
+                            ),
+                            onTap: (id == null || isDisabled)
+                                ? null
+                                : () => Navigator.pop(ctx, id),
+                          );
+                        },
                       ),
-                      leading: Icon(
-                        icon,
-                        color: isDisabled
-                            ? Colors.grey[300]
-                            : Theme.of(context).colorScheme.secondary,
-                      ),
-                      title: Text(
-                        name,
-                        style: TextStyle(
-                          color: isDisabled ? Colors.grey : Colors.black,
-                          fontWeight: isSelected
-                              ? FontWeight.w700
-                              : FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                      ),
-                      onTap: (id == null || isDisabled)
-                          ? null
-                          : () => Navigator.pop(ctx, id),
-                    );
-                  },
-                ),
               ),
             ],
           ),
@@ -164,9 +170,9 @@ class _DriverBookingView extends StatelessWidget {
   }
 
   Future<void> _pickTimeDialog(
-      BuildContext context,
-      OrderFormProvider provider,
-      ) async {
+    BuildContext context,
+    OrderFormProvider provider,
+  ) async {
     final theme = Theme.of(context);
     int selectedHour = provider.pickupTime?.hour ?? TimeOfDay.now().hour;
     int selectedMinute = provider.pickupTime?.minute ?? TimeOfDay.now().minute;
@@ -186,8 +192,11 @@ class _DriverBookingView extends StatelessWidget {
               return Container(
                 height: 320,
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
+                  color: AppColors.darkGreenBg,
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: theme.colorScheme.secondary.withValues(alpha: 0.16),
+                  ),
                 ),
                 child: Column(
                   children: [
@@ -265,13 +274,13 @@ class _DriverBookingView extends StatelessWidget {
                                   setDialogState(() => selectedHour = index),
                               children: List.generate(
                                 24,
-                                    (index) => Center(
+                                (index) => Center(
                                   child: Text(
                                     index.toString().padLeft(2, '0'),
                                     style: const TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.w600,
-                                      color: Colors.black87,
+                                      color: Colors.white,
                                     ),
                                   ),
                                 ),
@@ -310,13 +319,13 @@ class _DriverBookingView extends StatelessWidget {
                                   setDialogState(() => selectedMinute = index),
                               children: List.generate(
                                 60,
-                                    (index) => Center(
+                                (index) => Center(
                                   child: Text(
                                     index.toString().padLeft(2, '0'),
                                     style: const TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.w600,
-                                      color: Colors.black87,
+                                      color: Colors.white,
                                     ),
                                   ),
                                 ),
@@ -340,44 +349,45 @@ class _DriverBookingView extends StatelessWidget {
     required BuildContext context,
     required String title,
     required IconData icon,
+    String? subtitle,
     required List<Widget> children,
   }) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: Theme.of(context).colorScheme.secondary),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const Divider(height: 20),
-            ...children,
-          ],
-        ),
-      ),
+    return DriverSectionCard(
+      title: title,
+      subtitle: subtitle,
+      icon: icon,
+      child: Column(children: children),
+    );
+  }
+
+  InputDecoration _fieldDecoration(
+    BuildContext context, {
+    required String label,
+    String? hint,
+    IconData? icon,
+    Widget? suffixIcon,
+    String? helperText,
+    bool alignLabelWithHint = false,
+    bool dense = false,
+  }) {
+    return driverInputDecoration(
+      Theme.of(context),
+      label: label,
+      hint: hint,
+      icon: icon,
+      suffixIcon: suffixIcon,
+      helperText: helperText,
+      alignLabelWithHint: alignLabelWithHint,
+      dense: dense,
     );
   }
 
   void _goNext(BuildContext context, OrderFormProvider provider) {
     final err = provider.validate();
     if (err != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(err), backgroundColor: Colors.red),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(err), backgroundColor: Colors.red));
       return;
     }
 
@@ -445,31 +455,51 @@ class _DriverBookingView extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
+                  DriverSectionCard(
+                    title: "Tạo chuyến cộng đồng",
+                    subtitle:
+                        "Biểu mẫu được gom lại theo từng nhóm để nhập nhanh hơn nhưng vẫn giữ nguyên quy trình hiện tại.",
+                    icon: Icons.auto_awesome_rounded,
+                    child: Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        DriverPill(
+                          label:
+                              provider.selectedType == BrokerRideType.passenger
+                              ? "Chuyến ghép"
+                              : "Bao xe",
+                          icon: Icons.directions_car_filled_rounded,
+                        ),
+                        DriverPill(
+                          label: provider.pickupDate == null
+                              ? "Chưa chọn ngày"
+                              : provider.formatDate(provider.pickupDate),
+                          icon: Icons.event_rounded,
+                        ),
+                        DriverPill(
+                          label: provider.pickupTime == null
+                              ? "Chưa chọn giờ"
+                              : provider.formatTime(provider.pickupTime),
+                          icon: Icons.schedule_rounded,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
                   _buildSectionCard(
                     context: context,
                     title: "Thông tin khách & ghi chú",
                     icon: Icons.person_pin,
+                    subtitle: "Thông tin liên hệ của khách và ghi chú bổ sung.",
                     children: [
                       TextField(
                         controller: provider.customerNameController,
                         style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          labelText: "Tên khách hàng",
-                          labelStyle: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          border: const OutlineInputBorder(),
-                          prefixIcon: Icon(
-                            Icons.person,
-                            color: theme.colorScheme.secondary,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: theme.colorScheme.secondary,
-                              width: 2,
-                            ),
-                          ),
+                        decoration: _fieldDecoration(
+                          context,
+                          label: "Tên khách hàng",
+                          icon: Icons.person,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -477,23 +507,10 @@ class _DriverBookingView extends StatelessWidget {
                         controller: provider.phoneController,
                         keyboardType: TextInputType.phone,
                         style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          labelText: "SĐT khách",
-                          labelStyle: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          border: const OutlineInputBorder(),
-                          prefixIcon: Icon(
-                            Icons.phone,
-                            color: theme.colorScheme.secondary,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: theme.colorScheme.secondary,
-                              width: 2,
-                            ),
-                          ),
+                        decoration: _fieldDecoration(
+                          context,
+                          label: "SĐT khách",
+                          icon: Icons.phone,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -501,20 +518,10 @@ class _DriverBookingView extends StatelessWidget {
                         controller: provider.noteController,
                         maxLines: 3,
                         style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          labelText: "Ghi chú (note)",
-                          labelStyle: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          border: const OutlineInputBorder(),
+                        decoration: _fieldDecoration(
+                          context,
+                          label: "Ghi chú",
                           alignLabelWithHint: true,
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: theme.colorScheme.secondary,
-                              width: 2,
-                            ),
-                          ),
                         ),
                       ),
                     ],
@@ -524,36 +531,25 @@ class _DriverBookingView extends StatelessWidget {
                     context: context,
                     title: "Loại chuyến",
                     icon: Icons.directions_car,
+                    subtitle:
+                        "Chọn loại chuyến và số lượng người nếu là chuyến ghép.",
                     children: [
                       DropdownButtonFormField<int>(
                         initialValue: provider.selectedType,
                         dropdownColor: theme.colorScheme.primary,
                         style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          labelText: "Loại chuyến",
-                          labelStyle: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          border: const OutlineInputBorder(),
-                          prefixIcon: Icon(
-                            Icons.category_outlined,
-                            color: theme.colorScheme.secondary,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: theme.colorScheme.secondary,
-                              width: 2,
-                            ),
-                          ),
+                        decoration: _fieldDecoration(
+                          context,
+                          label: "Loại chuyến",
+                          icon: Icons.category_outlined,
                         ),
                         items: BrokerRideType.options
                             .map(
                               (option) => DropdownMenuItem<int>(
-                            value: option.value,
-                            child: Text(option.label),
-                          ),
-                        )
+                                value: option.value,
+                                child: Text(option.label),
+                              ),
+                            )
                             .toList(),
                         onChanged: provider.updateRideType,
                       ),
@@ -563,25 +559,11 @@ class _DriverBookingView extends StatelessWidget {
                           controller: provider.quantityController,
                           keyboardType: TextInputType.number,
                           style: const TextStyle(color: Colors.white),
-                          decoration: InputDecoration(
-                            labelText: "Số lượng người",
-                            labelStyle: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            border: const OutlineInputBorder(),
-                            prefixIcon: Icon(
-                              Icons.people,
-                              color: theme.colorScheme.secondary,
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: theme.colorScheme.secondary,
-                                width: 2,
-                              ),
-                            ),
+                          decoration: _fieldDecoration(
+                            context,
+                            label: "Số lượng người",
+                            icon: Icons.people,
                             helperText: "Nhập số nguyên ≥ 1",
-                            helperStyle: const TextStyle(color: Colors.white70),
                           ),
                         ),
                     ],
@@ -591,25 +573,31 @@ class _DriverBookingView extends StatelessWidget {
                     context: context,
                     title: "Điểm đón",
                     icon: Icons.my_location,
+                    subtitle:
+                        "Chọn địa điểm đón theo tỉnh, huyện và địa chỉ chi tiết.",
                     children: [
                       GestureDetector(
-                        onTap: provider.loadingProvinces || provider.provinces.isEmpty
+                        onTap:
+                            provider.loadingProvinces ||
+                                provider.provinces.isEmpty
                             ? null
                             : () async {
-                          final chosen = await _showPicker(
-                            context: context,
-                            title: "Chọn tỉnh/TP đón",
-                            items: provider.provinces,
-                            selectedId: provider.fromProvinceId,
-                            disabledId: provider.toProvinceId,
-                            icon: Icons.location_city,
-                            canSelectDisabledId:
-                            provider.canSelectSameProvince,
-                          );
-                          if (!context.mounted || chosen == null) return;
-                          provider.setFromProvince(chosen);
-                          await provider.loadDistrictsForFromProvince(chosen);
-                        },
+                                final chosen = await _showPicker(
+                                  context: context,
+                                  title: "Chọn tỉnh/TP đón",
+                                  items: provider.provinces,
+                                  selectedId: provider.fromProvinceId,
+                                  disabledId: provider.toProvinceId,
+                                  icon: Icons.location_city,
+                                  canSelectDisabledId:
+                                      provider.canSelectSameProvince,
+                                );
+                                if (!context.mounted || chosen == null) return;
+                                provider.setFromProvince(chosen);
+                                await provider.loadDistrictsForFromProvince(
+                                  chosen,
+                                );
+                              },
                         child: AbsorbPointer(
                           child: TextFormField(
                             controller: TextEditingController(
@@ -655,25 +643,26 @@ class _DriverBookingView extends StatelessWidget {
                       ),
                       const SizedBox(height: 10),
                       GestureDetector(
-                        onTap: (provider.loadingFromDistricts ||
-                            provider.fromDistricts.isEmpty)
+                        onTap:
+                            (provider.loadingFromDistricts ||
+                                provider.fromDistricts.isEmpty)
                             ? null
                             : () async {
-                          final chosen = await _showPicker(
-                            context: context,
-                            title: "Chọn quận/huyện đón",
-                            items: provider.availableFromDistricts,
-                            selectedId: provider.fromDistrictId,
-                            disabledId: null,
-                            icon: Icons.map,
-                          );
-                          if (!context.mounted || chosen == null) return;
-                          provider.setFromDistrict(chosen);
-                          provider.syncAddressWithDistrict(
-                            isFrom: true,
-                            districtId: chosen,
-                          );
-                        },
+                                final chosen = await _showPicker(
+                                  context: context,
+                                  title: "Chọn quận/huyện đón",
+                                  items: provider.availableFromDistricts,
+                                  selectedId: provider.fromDistrictId,
+                                  disabledId: null,
+                                  icon: Icons.map,
+                                );
+                                if (!context.mounted || chosen == null) return;
+                                provider.setFromDistrict(chosen);
+                                provider.syncAddressWithDistrict(
+                                  isFrom: true,
+                                  districtId: chosen,
+                                );
+                              },
                         child: AbsorbPointer(
                           child: TextFormField(
                             controller: TextEditingController(
@@ -749,6 +738,7 @@ class _DriverBookingView extends StatelessWidget {
                     context: context,
                     title: "Ngày & giờ đón",
                     icon: Icons.calendar_today,
+                    subtitle: "Ấn vào từng ô để chọn ngày giờ đón khách.",
                     children: [
                       GestureDetector(
                         onTap: () async {
@@ -770,7 +760,7 @@ class _DriverBookingView extends StatelessWidget {
                                   textButtonTheme: TextButtonThemeData(
                                     style: TextButton.styleFrom(
                                       foregroundColor:
-                                      theme.colorScheme.secondary,
+                                          theme.colorScheme.secondary,
                                       textStyle: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 16,
@@ -873,25 +863,30 @@ class _DriverBookingView extends StatelessWidget {
                     context: context,
                     title: "Điểm đến",
                     icon: Icons.location_on,
+                    subtitle: "Điền đủ tỉnh, huyện và địa chỉ đến.",
                     children: [
                       GestureDetector(
-                        onTap: provider.loadingProvinces || provider.provinces.isEmpty
+                        onTap:
+                            provider.loadingProvinces ||
+                                provider.provinces.isEmpty
                             ? null
                             : () async {
-                          final chosen = await _showPicker(
-                            context: context,
-                            title: "Chọn tỉnh/TP đến",
-                            items: provider.provinces,
-                            selectedId: provider.toProvinceId,
-                            disabledId: provider.fromProvinceId,
-                            icon: Icons.location_city,
-                            canSelectDisabledId:
-                            provider.canSelectSameProvince,
-                          );
-                          if (!context.mounted || chosen == null) return;
-                          provider.setToProvince(chosen);
-                          await provider.loadDistrictsForToProvince(chosen);
-                        },
+                                final chosen = await _showPicker(
+                                  context: context,
+                                  title: "Chọn tỉnh/TP đến",
+                                  items: provider.provinces,
+                                  selectedId: provider.toProvinceId,
+                                  disabledId: provider.fromProvinceId,
+                                  icon: Icons.location_city,
+                                  canSelectDisabledId:
+                                      provider.canSelectSameProvince,
+                                );
+                                if (!context.mounted || chosen == null) return;
+                                provider.setToProvince(chosen);
+                                await provider.loadDistrictsForToProvince(
+                                  chosen,
+                                );
+                              },
                         child: AbsorbPointer(
                           child: TextFormField(
                             controller: TextEditingController(
@@ -937,25 +932,26 @@ class _DriverBookingView extends StatelessWidget {
                       ),
                       const SizedBox(height: 10),
                       GestureDetector(
-                        onTap: (provider.loadingToDistricts ||
-                            provider.toDistricts.isEmpty)
+                        onTap:
+                            (provider.loadingToDistricts ||
+                                provider.toDistricts.isEmpty)
                             ? null
                             : () async {
-                          final chosen = await _showPicker(
-                            context: context,
-                            title: "Chọn quận/huyện đến",
-                            items: provider.availableToDistricts,
-                            selectedId: provider.toDistrictId,
-                            disabledId: null,
-                            icon: Icons.map,
-                          );
-                          if (!context.mounted || chosen == null) return;
-                          provider.setToDistrict(chosen);
-                          provider.syncAddressWithDistrict(
-                            isFrom: false,
-                            districtId: chosen,
-                          );
-                        },
+                                final chosen = await _showPicker(
+                                  context: context,
+                                  title: "Chọn quận/huyện đến",
+                                  items: provider.availableToDistricts,
+                                  selectedId: provider.toDistrictId,
+                                  disabledId: null,
+                                  icon: Icons.map,
+                                );
+                                if (!context.mounted || chosen == null) return;
+                                provider.setToDistrict(chosen);
+                                provider.syncAddressWithDistrict(
+                                  isFrom: false,
+                                  districtId: chosen,
+                                );
+                              },
                         child: AbsorbPointer(
                           child: TextFormField(
                             controller: TextEditingController(
@@ -1031,6 +1027,8 @@ class _DriverBookingView extends StatelessWidget {
                     context: context,
                     title: "Giá",
                     icon: Icons.payments,
+                    subtitle:
+                        "Kiểm tra lại giá chào và khoản tiền tài xế nhận.",
                     children: [
                       TextField(
                         controller: provider.offerPriceController,
@@ -1104,26 +1102,58 @@ class _DriverBookingView extends StatelessWidget {
               ),
               child: SafeArea(
                 top: false,
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => _goNext(context, provider),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      backgroundColor: theme.colorScheme.secondary,
-                      foregroundColor: Colors.black87,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            provider.pickupDate == null ||
+                                    provider.pickupTime == null
+                                ? "Chưa chọn thời gian đón"
+                                : "Đón lúc ${provider.formatTime(provider.pickupTime)} ${provider.formatDate(provider.pickupDate)}",
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          provider.offerPriceController.text.trim().isEmpty
+                              ? "--"
+                              : "${provider.offerPriceController.text.trim()} đ",
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: theme.colorScheme.secondary,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
                     ),
-                    child: const Text(
-                      "TIẾP THEO",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => _goNext(context, provider),
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 52),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          backgroundColor: theme.colorScheme.secondary,
+                          foregroundColor: Colors.black87,
+                        ),
+                        child: const Text(
+                          "TIẾP THEO",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ),

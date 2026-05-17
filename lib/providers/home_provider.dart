@@ -28,21 +28,40 @@ class HomeProvider extends ChangeNotifier {
   bool get shouldShowKycPopup => _shouldShowKycPopup;
   bool get shouldShowRegisterRoutePopup => _shouldShowRegisterRoutePopup;
 
-  bool get hasRegisteredRoute =>
-      _onboardingStatus?.hasRegisteredRoute ?? false;
+  bool get hasRegisteredRoute => _onboardingStatus?.hasRegisteredRoute ?? false;
 
   int get kycStatus => _onboardingStatus?.kycStatus ?? 0;
   String get nextStep => _onboardingStatus?.nextStep ?? '';
+  String get kycStatusTextSafe =>
+      _onboardingStatus?.kycStatusText.trim().isNotEmpty == true
+      ? _onboardingStatus!.kycStatusText
+      : 'Chưa hoàn tất';
+
+  String get nextStepLabel {
+    switch (nextStep.trim().toLowerCase()) {
+      case 'select_route':
+      case 'register_route':
+        return 'Đăng ký tuyến hoạt động';
+      case 'submit_kyc':
+        return 'Hoàn tất hồ sơ KYC';
+      case 'resubmit_kyc':
+        return 'Bổ sung và gửi lại KYC';
+      case 'waiting_kyc_approval':
+        return 'Chờ hệ thống duyệt hồ sơ';
+      default:
+        return 'Kiểm tra thông tin tài khoản';
+    }
+  }
 
   bool get kycPendingReview =>
       nextStep == 'waiting_kyc_approval' || kycStatus == 1;
 
   bool get isReadyForPopupCheck =>
       !_isLoadingProfile &&
-          !_isLoadingOnboardingStatus &&
-          _hasCheckedKycPopup &&
-          _profile != null &&
-          _onboardingStatus != null;
+      !_isLoadingOnboardingStatus &&
+      _hasCheckedKycPopup &&
+      _profile != null &&
+      _onboardingStatus != null;
 
   Future<void> initialize() async {
     await Future.wait([
@@ -104,9 +123,7 @@ class HomeProvider extends ChangeNotifier {
         debugPrint(
           "[HOME_PROVIDER] onboarding.selectedProvinceCount = ${data.selectedProvinceCount}",
         );
-        debugPrint(
-          "[HOME_PROVIDER] onboarding.kycStatus = ${data.kycStatus}",
-        );
+        debugPrint("[HOME_PROVIDER] onboarding.kycStatus = ${data.kycStatus}");
         debugPrint(
           "[HOME_PROVIDER] onboarding.kycStatusText = ${data.kycStatusText}",
         );
@@ -116,9 +133,7 @@ class HomeProvider extends ChangeNotifier {
         debugPrint(
           "[HOME_PROVIDER] onboarding.canReceiveRide = ${data.canReceiveRide}",
         );
-        debugPrint(
-          "[HOME_PROVIDER] onboarding.nextStep = ${data.nextStep}",
-        );
+        debugPrint("[HOME_PROVIDER] onboarding.nextStep = ${data.nextStep}");
       }
     } catch (e) {
       debugPrint("[HOME_PROVIDER] fetchOnboardingStatus error: $e");
@@ -135,16 +150,13 @@ class HomeProvider extends ChangeNotifier {
     _shouldShowRegisterRoutePopup =
         step == 'select_route' || step == 'register_route';
 
-    _shouldShowKycPopup =
-        step == 'submit_kyc' || step == 'resubmit_kyc';
+    _shouldShowKycPopup = step == 'submit_kyc' || step == 'resubmit_kyc';
 
     debugPrint("[HOME_PROVIDER] nextStep = $step");
     debugPrint(
       "[HOME_PROVIDER] shouldShowRegisterRoutePopup = $_shouldShowRegisterRoutePopup",
     );
-    debugPrint(
-      "[HOME_PROVIDER] shouldShowKycPopup = $_shouldShowKycPopup",
-    );
+    debugPrint("[HOME_PROVIDER] shouldShowKycPopup = $_shouldShowKycPopup");
   }
 
   Future<void> refreshProfile() async {
@@ -171,10 +183,10 @@ class HomeProvider extends ChangeNotifier {
       final loginKycStatusText = prefs.getString("loginKycStatusText");
       final loginKycRejectReason = prefs.getString("loginKycRejectReason");
       final loginNextStep = prefs.getString("loginNextStep");
-      final loginHasRegisteredRoute =
-      prefs.getBool("loginHasRegisteredRoute");
-      final loginSelectedProvinceCount =
-      prefs.getInt("loginSelectedProvinceCount");
+      final loginHasRegisteredRoute = prefs.getBool("loginHasRegisteredRoute");
+      final loginSelectedProvinceCount = prefs.getInt(
+        "loginSelectedProvinceCount",
+      );
       final loginCanReceiveRide = prefs.getBool("loginCanReceiveRide");
       final kycPendingReview = prefs.getBool("kycPendingReview");
 
@@ -186,7 +198,9 @@ class HomeProvider extends ChangeNotifier {
       );
       debugPrint("[HOME_PROVIDER] loginKycStatus = $loginKycStatus");
       debugPrint("[HOME_PROVIDER] loginKycStatusText = $loginKycStatusText");
-      debugPrint("[HOME_PROVIDER] loginKycRejectReason = $loginKycRejectReason");
+      debugPrint(
+        "[HOME_PROVIDER] loginKycRejectReason = $loginKycRejectReason",
+      );
       debugPrint("[HOME_PROVIDER] loginNextStep = $loginNextStep");
       debugPrint(
         "[HOME_PROVIDER] loginHasRegisteredRoute = $loginHasRegisteredRoute",

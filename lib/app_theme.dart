@@ -32,6 +32,12 @@ class AppTheme {
 
       scaffoldBackgroundColor: AppColors.darkGreenBg,
 
+      dividerTheme: DividerThemeData(
+        color: Colors.white.withValues(alpha: 0.08),
+        thickness: 1,
+        space: 1,
+      ),
+
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.primaryGreen,
         elevation: 0,
@@ -54,10 +60,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30),
           ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
 
@@ -70,21 +73,66 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30),
           ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
         ),
       ),
 
       /// Card Theme: Cho các box nội dung
       cardTheme: CardThemeData(
-        color: AppColors.surfaceGreen.withOpacity(0.4),
+        color: AppColors.surfaceGreen.withValues(alpha: 0.4),
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: Colors.white.withOpacity(0.1)),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
         ),
+      ),
+
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppColors.surfaceGreen.withValues(alpha: 0.65),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 18,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.accentGold, width: 1.6),
+        ),
+        labelStyle: const TextStyle(color: AppColors.textSubtle),
+        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.42)),
+      ),
+
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: AppColors.surfaceGreen,
+        contentTextStyle: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: AppColors.primaryGreen,
+        selectedItemColor: AppColors.accentGold,
+        unselectedItemColor: Colors.white.withValues(alpha: 0.5),
+        selectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: 11,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w500,
+          fontSize: 11,
+        ),
+        type: BottomNavigationBarType.fixed,
       ),
 
       textTheme: const TextTheme(
