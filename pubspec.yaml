@@ -50,6 +50,12 @@ dependencies:
   flutter_tts: ^4.0.2
   permission_handler: ^11.0.0
 
+dependency_overrides:
+  google_mlkit_commons:
+    path: vendor/google_mlkit_commons
+  google_mlkit_face_detection:
+    path: vendor/google_mlkit_face_detection
+
 
 
 dev_dependencies:
@@ -90,4 +96,3 @@ flutter_launcher_icons:
   ios: true
   image_path: "lib/assets/icons/dong_duong_driver_logo.png"
   min_sdk_android: 21
-

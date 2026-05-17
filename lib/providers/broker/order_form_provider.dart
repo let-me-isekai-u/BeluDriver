@@ -9,6 +9,7 @@ class OrderFormProvider extends ChangeNotifier {
   static const int hanoiProvinceId = 1;
   static const int noiBaiDistrictId = 974;
   static const String noiBaiAirportAddress = "Cảng hàng không quốc tế Nội Bài";
+  static final NumberFormat _moneyFormatter = NumberFormat('#,###');
 
   final phoneController = TextEditingController();
   final customerNameController = TextEditingController();
@@ -18,6 +19,9 @@ class OrderFormProvider extends ChangeNotifier {
   final toAddressController = TextEditingController();
   final offerPriceController = TextEditingController();
   final creatorEarnController = TextEditingController();
+
+  bool _isFormattingOfferPrice = false;
+  bool _isFormattingCreatorEarn = false;
 
   int selectedType = BrokerRideType.passenger;
   String lastPassengerQuantity = "1";
@@ -37,6 +41,11 @@ class OrderFormProvider extends ChangeNotifier {
   List<dynamic> provinces = [];
   List<dynamic> fromDistricts = [];
   List<dynamic> toDistricts = [];
+
+  OrderFormProvider() {
+    offerPriceController.addListener(_handleOfferPriceChanged);
+    creatorEarnController.addListener(_handleCreatorEarnChanged);
+  }
 
   List<dynamic> get availableFromDistricts => filterDistrictsForSelection(
     districts: fromDistricts,
@@ -66,7 +75,7 @@ class OrderFormProvider extends ChangeNotifier {
   }
 
   int? tryParseInt(String raw) => int.tryParse(raw.trim());
-  num? tryParseNum(String raw) => num.tryParse(raw.trim());
+  num? tryParseNum(String raw) => num.tryParse(_normalizeMoneyInput(raw));
 
   String formatDate(DateTime? date) =>
       date == null ? "" : DateFormat('dd/MM/yyyy').format(date);
@@ -74,6 +83,54 @@ class OrderFormProvider extends ChangeNotifier {
   String formatTime(TimeOfDay? t) => t == null
       ? ""
       : "${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}";
+
+  String _normalizeMoneyInput(String raw) {
+    return raw.replaceAll(',', '').trim();
+  }
+
+  String _formatMoneyInput(String raw) {
+    final digitsOnly = raw.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digitsOnly.isEmpty) return '';
+    return _moneyFormatter.format(int.parse(digitsOnly));
+  }
+
+  void _formatMoneyController({
+    required TextEditingController controller,
+    required bool isFormatting,
+    required ValueSetter<bool> setFormattingFlag,
+  }) {
+    if (isFormatting) return;
+
+    final formatted = _formatMoneyInput(controller.text);
+    if (formatted == controller.text) {
+      notifyListeners();
+      return;
+    }
+
+    setFormattingFlag(true);
+    controller.value = TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+    setFormattingFlag(false);
+    notifyListeners();
+  }
+
+  void _handleOfferPriceChanged() {
+    _formatMoneyController(
+      controller: offerPriceController,
+      isFormatting: _isFormattingOfferPrice,
+      setFormattingFlag: (value) => _isFormattingOfferPrice = value,
+    );
+  }
+
+  void _handleCreatorEarnChanged() {
+    _formatMoneyController(
+      controller: creatorEarnController,
+      isFormatting: _isFormattingCreatorEarn,
+      setFormattingFlag: (value) => _isFormattingCreatorEarn = value,
+    );
+  }
 
   String? buildPickupIso() {
     if (pickupDate == null || pickupTime == null) return null;
@@ -332,8 +389,8 @@ class OrderFormProvider extends ChangeNotifier {
       customerPhone: phoneController.text.trim(),
       quantity: normalizedQuantity,
       pickupTime: buildPickupIso()!,
-      offerPrice: num.parse(offerPriceController.text.trim()),
-      creatorEarn: num.parse(creatorEarnController.text.trim()),
+      offerPrice: num.parse(_normalizeMoneyInput(offerPriceController.text)),
+      creatorEarn: num.parse(_normalizeMoneyInput(creatorEarnController.text)),
       note: noteController.text.trim(),
       groupId: groupId,
     );
@@ -341,6 +398,8 @@ class OrderFormProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    offerPriceController.removeListener(_handleOfferPriceChanged);
+    creatorEarnController.removeListener(_handleCreatorEarnChanged);
     phoneController.dispose();
     customerNameController.dispose();
     noteController.dispose();
