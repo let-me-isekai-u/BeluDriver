@@ -1,77 +1,25 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 
 import '../../app_theme.dart';
-import '../../services/api_service.dart';
+import '../../providers/driver/wallet_history_provider.dart';
 import '../../widgets/driver_ui.dart';
 
-class WalletHistoryScreen extends StatefulWidget {
+class WalletHistoryScreen extends StatelessWidget {
   const WalletHistoryScreen({super.key});
 
   @override
-  State<WalletHistoryScreen> createState() => _WalletHistoryScreenState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => WalletHistoryProvider()..fetchData(),
+      child: const _WalletHistoryView(),
+    );
+  }
 }
 
-class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
-  List<dynamic> _transactions = [];
-  bool _isLoading = true;
-  String? _errorMessage;
-  String _currentBalance = "0";
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchData();
-  }
-
-  Future<void> _fetchData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('accessToken') ?? '';
-
-      if (token.isEmpty) {
-        setState(() {
-          _errorMessage = "Phiên đăng nhập đã hết hạn.";
-          _isLoading = false;
-        });
-        return;
-      }
-
-      final profileRes = await ApiService.getDriverProfile(accessToken: token);
-      if (profileRes.statusCode == 200) {
-        final profileData = jsonDecode(profileRes.body);
-        final dynamic wallet = profileData['wallet'];
-        if (wallet is num) {
-          _currentBalance = wallet.toStringAsFixed(0);
-        } else {
-          _currentBalance = (double.tryParse(wallet?.toString() ?? '') ?? 0)
-              .toStringAsFixed(0);
-        }
-      }
-
-      final historyRes = await ApiService.getWalletHistory(accessToken: token);
-      if (historyRes.statusCode == 200) {
-        final Map<String, dynamic> historyData = jsonDecode(historyRes.body);
-        if (historyData['success'] == true) {
-          _transactions = historyData['data'] ?? [];
-        }
-      } else {
-        _errorMessage = "Lỗi tải lịch sử giao dịch (${historyRes.statusCode})";
-      }
-    } catch (e) {
-      _errorMessage = "Đã xảy ra lỗi: $e";
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
+class _WalletHistoryView extends StatelessWidget {
+  const _WalletHistoryView();
 
   String _formatMoney(num value) {
     return NumberFormat.currency(
@@ -94,6 +42,7 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final provider = context.watch<WalletHistoryProvider>();
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -110,7 +59,7 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
         actions: [
           IconButton(
             tooltip: "Làm mới",
-            onPressed: _fetchData,
+            onPressed: provider.fetchData,
             icon: Icon(
               Icons.refresh_rounded,
               color: theme.colorScheme.secondary,
@@ -133,18 +82,18 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
             ),
           ),
           RefreshIndicator(
-            onRefresh: _fetchData,
+            onRefresh: provider.fetchData,
             child: ListView(
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
               children: [
-                _buildBalanceHero(theme),
+                _buildBalanceHero(theme, provider.currentBalance),
                 const SizedBox(height: 16),
-                _buildSummaryRow(theme),
+                _buildSummaryRow(theme, provider.transactions),
                 const SizedBox(height: 16),
-                if (_isLoading)
+                if (provider.isLoading)
                   Padding(
                     padding: const EdgeInsets.only(top: 72),
                     child: Center(
@@ -153,9 +102,9 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
                       ),
                     ),
                   )
-                else if (_errorMessage != null)
-                  _buildErrorWidget(theme)
-                else if (_transactions.isEmpty)
+                else if (provider.errorMessage != null)
+                  _buildErrorWidget(theme, provider)
+                else if (provider.transactions.isEmpty)
                   const DriverSectionCard(
                     title: "Chưa có giao dịch",
                     subtitle: "Các biến động số dư sẽ hiển thị tại đây.",
@@ -174,11 +123,13 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
                         "Theo dõi các khoản cộng và trừ để kiểm soát ví tài xế.",
                     icon: Icons.swap_vert_rounded,
                     child: Column(
-                      children: _transactions
+                      children: provider.transactions
                           .map(
                             (item) => Padding(
                               padding: EdgeInsets.only(
-                                bottom: item == _transactions.last ? 0 : 12,
+                                bottom: item == provider.transactions.last
+                                    ? 0
+                                    : 12,
                               ),
                               child: _buildTransactionCard(theme, item),
                             ),
@@ -194,8 +145,8 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
     );
   }
 
-  Widget _buildBalanceHero(ThemeData theme) {
-    final balance = num.tryParse(_currentBalance) ?? 0;
+  Widget _buildBalanceHero(ThemeData theme, String currentBalance) {
+    final balance = num.tryParse(currentBalance) ?? 0;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -245,14 +196,14 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
     );
   }
 
-  Widget _buildSummaryRow(ThemeData theme) {
-    final incoming = _transactions.fold<num>(
+  Widget _buildSummaryRow(ThemeData theme, List<dynamic> transactions) {
+    final incoming = transactions.fold<num>(
       0,
       (sum, item) =>
           sum +
           (((item['amount'] ?? 0) as num) > 0 ? item['amount'] as num : 0),
     );
-    final outgoing = _transactions.fold<num>(
+    final outgoing = transactions.fold<num>(
       0,
       (sum, item) =>
           sum +
@@ -266,7 +217,7 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
         Expanded(
           child: DriverStatTile(
             label: "Tổng cộng",
-            value: _transactions.length.toString(),
+            value: transactions.length.toString(),
             icon: Icons.receipt_rounded,
           ),
         ),
@@ -367,7 +318,10 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
     );
   }
 
-  Widget _buildErrorWidget(ThemeData theme) {
+  Widget _buildErrorWidget(
+    ThemeData theme,
+    WalletHistoryProvider provider,
+  ) {
     return DriverSectionCard(
       title: "Không thể tải dữ liệu",
       subtitle: "Bạn có thể thử lại sau ít phút.",
@@ -375,7 +329,7 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
       child: Column(
         children: [
           Text(
-            _errorMessage ?? "Đã có lỗi xảy ra",
+            provider.errorMessage ?? "Đã có lỗi xảy ra",
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: const Color(0xFFFFA3A3),
@@ -386,7 +340,7 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: _fetchData,
+              onPressed: provider.fetchData,
               icon: const Icon(Icons.refresh_rounded),
               label: const Text("Tải lại dữ liệu"),
             ),

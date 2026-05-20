@@ -15,6 +15,8 @@ import '../../widgets/driver_ui.dart';
 import '../chat_to_order/chat_group_list_screen.dart';
 import '../kyc/kyc_deposit_requirement_popup.dart';
 import '../kyc/kyc_popup.dart';
+import '../popup_list/withdraw_request_failed_popup.dart';
+import '../popup_list/withdraw_request_success_popup.dart';
 import 'activity_history.dart';
 import 'driver_booking_screen.dart';
 import 'driver_profile.dart';
@@ -1294,7 +1296,12 @@ class _HomeDashboard extends StatelessWidget {
         ),
       ),
     ).then((value) {
-      if (value == true) onRefreshProfile();
+      if (value == true) {
+        onRefreshProfile().then((_) async {
+          if (!context.mounted) return;
+          await WithdrawRequestSuccessPopup.show(context);
+        });
+      }
     });
   }
 }
@@ -1438,6 +1445,15 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('accessToken') ?? '';
 
+      if (token.isEmpty) {
+        if (!mounted) return;
+        await WithdrawRequestFailedPopup.show(
+          context,
+          message: "Không tìm thấy phiên đăng nhập. Vui lòng đăng nhập lại.",
+        );
+        return;
+      }
+
       final res = await ApiService.createWithdrawal(
         accessToken: token,
         amount: amount,
@@ -1449,7 +1465,18 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
 
       if (!mounted) return;
 
-      if (res.statusCode == 200) Navigator.pop(context, true);
+      if (res.statusCode == 200) {
+        Navigator.pop(context, true);
+        return;
+      }
+
+      String message = "Không thể gửi yêu cầu rút tiền.";
+      try {
+        final body = jsonDecode(res.body);
+        message = body['message']?.toString() ?? message;
+      } catch (_) {}
+
+      await WithdrawRequestFailedPopup.show(context, message: message);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

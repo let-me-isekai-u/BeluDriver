@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/broker_ride_models.dart';
 import '../../services/api_service.dart';
+import '../popup_list/action_success_popup.dart';
 
 class DriverBookingConfirmScreen extends StatefulWidget {
   final CreateBrokerRideRequest request;
@@ -251,22 +252,26 @@ class _DriverBookingConfirmScreenState
         final body = jsonDecode(res.body);
         final bool ok = body is Map && body['success'] == true;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              ok
-                  ? (req.groupId != null
-                        ? 'Tạo và đẩy đơn vào nhóm chat thành công'
-                        : 'Tạo/đẩy đơn thành công')
-                  : 'Tạo/đẩy đơn thất bại',
-            ),
-            backgroundColor: ok ? Colors.green : Colors.red,
-          ),
-        );
-
         if (ok) {
+          await ActionSuccessPopup.show(
+            context,
+            title: req.groupId != null
+                ? 'Đẩy đơn thành công'
+                : 'Tạo đơn thành công',
+            message: req.groupId != null
+                ? 'Đơn của bạn đã được tạo và đẩy vào nhóm chat thành công.'
+                : 'Đơn của bạn đã được tạo thành công.',
+          );
+          if (!mounted) return;
           widget.onGoToPushedOrdersTab?.call();
           Navigator.pop(context, true);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Tạo/đẩy đơn thất bại'),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

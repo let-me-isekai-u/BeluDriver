@@ -1,38 +1,40 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 
 import '../../app_theme.dart';
 import '../../models/driver/broker_rides_model.dart';
 import '../../models/driver/ride_model.dart';
-import '../../services/api_service.dart';
+import '../../providers/driver/activity_history_provider.dart';
 import '../../widgets/driver_ui.dart';
+import '../popup_list/action_success_popup.dart';
 import 'ride_detail_screen.dart';
 
-class ActivityScreen extends StatefulWidget {
+class ActivityScreen extends StatelessWidget {
   final int initialTabIndex;
 
   const ActivityScreen({super.key, this.initialTabIndex = 0});
 
   @override
-  State<ActivityScreen> createState() => _ActivityScreenState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => ActivityHistoryProvider(),
+      child: _ActivityView(initialTabIndex: initialTabIndex),
+    );
+  }
 }
 
-class _ActivityScreenState extends State<ActivityScreen>
+class _ActivityView extends StatefulWidget {
+  const _ActivityView({required this.initialTabIndex});
+
+  final int initialTabIndex;
+
+  @override
+  State<_ActivityView> createState() => _ActivityViewState();
+}
+
+class _ActivityViewState extends State<_ActivityView>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
-  List<RideModel> ongoingRides = [];
-  List<RideModel> historyRides = [];
-  List<BrokerRideItem> brokerRides = [];
-
-  bool _isLoadingBroker = false;
-  bool _isBrokerLoaded = false;
-  bool _isLoadingOngoing = false;
-  bool _isOngoingLoaded = false;
-  bool _isLoadingHistory = false;
-  bool _isHistoryLoaded = false;
 
   @override
   void initState() {
@@ -44,7 +46,10 @@ class _ActivityScreenState extends State<ActivityScreen>
       initialIndex: safeInitial,
     );
 
-    _preloadTabData(safeInitial);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<ActivityHistoryProvider>().preloadTabData(safeInitial);
+    });
 
     _tabController.addListener(_handleTabChange);
   }
@@ -56,241 +61,29 @@ class _ActivityScreenState extends State<ActivityScreen>
     super.dispose();
   }
 
-  void _preloadTabData(int initialTabIndex) {
-    switch (initialTabIndex) {
-      case 1:
-        _fetchHistoryRides();
-        _fetchOngoingRides();
-        _fetchBrokerRides();
-        break;
-      case 2:
-        _fetchBrokerRides();
-        _fetchOngoingRides();
-        _fetchHistoryRides();
-        break;
-      default:
-        _fetchOngoingRides();
-        _fetchHistoryRides();
-        _fetchBrokerRides();
-    }
-  }
-
   void _handleTabChange() {
     if (_tabController.indexIsChanging) return;
+    final provider = context.read<ActivityHistoryProvider>();
 
     if (_tabController.index == 0 &&
-        !_isOngoingLoaded &&
-        !_isLoadingOngoing) {
-      _fetchOngoingRides();
+        !provider.isOngoingLoaded &&
+        !provider.isLoadingOngoing) {
+      provider.fetchOngoingRides();
     }
-    if (_tabController.index == 1 && !_isHistoryLoaded && !_isLoadingHistory) {
-      _fetchHistoryRides();
+    if (_tabController.index == 1 &&
+        !provider.isHistoryLoaded &&
+        !provider.isLoadingHistory) {
+      provider.fetchHistoryRides();
     }
-    if (_tabController.index == 2 && !_isBrokerLoaded && !_isLoadingBroker) {
-      _fetchBrokerRides();
-    }
-  }
-
-  Future<String> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('accessToken') ?? '';
-  }
-
-  Future<void> _fetchOngoingRides() async {
-    if (!mounted) return;
-    setState(() => _isLoadingOngoing = true);
-
-    try {
-      final token = await _getToken();
-      if (token.isEmpty) {
-        if (!mounted) return;
-        setState(() {
-          ongoingRides = [];
-          _isOngoingLoaded = true;
-        });
-        return;
-      }
-
-      debugPrint(
-        "🔵 [ACTIVITY][TAB 1] START fetch ongoing rides (status 2 + 3)",
-      );
-      debugPrint(
-        "🔵 [ACTIVITY][TAB 1] CALL API /api/driverapi/ride-confirmed -> lấy đơn đã nhận (status = 2)",
-      );
-      debugPrint(
-        "🔵 [ACTIVITY][TAB 1] CALL API /api/driverapi/ride-process -> lấy đơn đang chạy (status = 3)",
-      );
-      final responses = await Future.wait([
-        ApiService.getAcceptedRides(accessToken: token),
-        ApiService.getProcessingRides(accessToken: token),
-      ]);
-
-      final acceptedRes = responses[0];
-      final processingRes = responses[1];
-
-      debugPrint(
-        "🔵 [ACTIVITY][TAB 1][ACCEPTED] STATUS: ${acceptedRes.statusCode}",
-      );
-      debugPrint("🔵 [ACTIVITY][TAB 1][ACCEPTED] BODY: ${acceptedRes.body}");
-      debugPrint(
-        "🔵 [ACTIVITY][TAB 1][PROCESSING] STATUS: ${processingRes.statusCode}",
-      );
-      debugPrint(
-        "🔵 [ACTIVITY][TAB 1][PROCESSING] BODY: ${processingRes.body}",
-      );
-
-      final List<RideModel> mergedRides = [];
-
-      if (acceptedRes.statusCode == 200) {
-        final body = jsonDecode(acceptedRes.body);
-        if (body['success'] == true) {
-          final acceptedData = (body['data'] as List? ?? const []);
-          debugPrint(
-            "🔵 [ACTIVITY][TAB 1][ACCEPTED] COUNT FROM API: ${acceptedData.length}",
-          );
-          mergedRides.addAll(
-            acceptedData
-                .map((e) => RideModel.fromJson(e))
-                .where((ride) => ride.status == 2),
-          );
-        }
-      }
-
-      if (processingRes.statusCode == 200) {
-        final body = jsonDecode(processingRes.body);
-        if (body['success'] == true) {
-          final processingData = (body['data'] as List? ?? const []);
-          debugPrint(
-            "🔵 [ACTIVITY][TAB 1][PROCESSING] COUNT FROM API: ${processingData.length}",
-          );
-          mergedRides.addAll(
-            processingData
-                .map((e) => RideModel.fromJson(e))
-                .where((ride) => ride.status == 3),
-          );
-        }
-      }
-
-      if (!mounted) return;
-      setState(() {
-        ongoingRides = _dedupeAndSortOngoingRides(mergedRides);
-        _isOngoingLoaded = true;
-      });
-      debugPrint(
-        "🔵 [ACTIVITY][TAB 1] DONE merged ongoing rides: ${ongoingRides.length} items",
-      );
-    } catch (e) {
-      debugPrint("🔥 Fetch ongoing error: $e");
-    } finally {
-      if (mounted) setState(() => _isLoadingOngoing = false);
-    }
-  }
-
-  String _summaryCountText({
-    required bool isLoaded,
-    required bool isLoading,
-    required int count,
-  }) {
-    if (isLoaded) return count.toString();
-    if (isLoading) return '...';
-    return '--';
-  }
-
-  List<RideModel> _dedupeAndSortOngoingRides(List<RideModel> rides) {
-    final Map<String, RideModel> uniqueRides = {};
-
-    for (final ride in rides) {
-      if (ride.status != 2 && ride.status != 3) continue;
-      final key = '${ride.id}_${ride.rideSource}';
-      uniqueRides[key] = ride;
-    }
-
-    final result = uniqueRides.values.toList()
-      ..sort((a, b) {
-        try {
-          return DateTime.parse(
-            b.createdAt,
-          ).compareTo(DateTime.parse(a.createdAt));
-        } catch (_) {
-          return 0;
-        }
-      });
-
-    return result;
-  }
-
-  Future<void> _fetchHistoryRides() async {
-    if (!mounted) return;
-    setState(() => _isLoadingHistory = true);
-
-    try {
-      final token = await _getToken();
-
-      debugPrint("🟠 [ACTIVITY][TAB 2] CALL getRideHistory");
-      final res = await ApiService.getRideHistory(accessToken: token);
-      debugPrint("🟠 [ACTIVITY][TAB 2] STATUS: ${res.statusCode}");
-      debugPrint("🟠 [ACTIVITY][TAB 2] BODY: ${res.body}");
-
-      if (res.statusCode == 200) {
-        final body = jsonDecode(res.body);
-        if (body['success'] == true) {
-          if (!mounted) return;
-          setState(() {
-            historyRides = (body['data'] as List)
-                .map((e) => RideModel.fromJson(e))
-                .toList();
-            _isHistoryLoaded = true;
-          });
-        }
-      }
-    } catch (e) {
-      debugPrint("🔥 Fetch history error: $e");
-    } finally {
-      if (mounted) setState(() => _isLoadingHistory = false);
-    }
-  }
-
-  Future<void> _fetchBrokerRides() async {
-    if (!mounted) return;
-    setState(() => _isLoadingBroker = true);
-
-    try {
-      final token = await _getToken();
-      if (token.isEmpty) return;
-
-      debugPrint("🟣 [ACTIVITY][TAB 3] CALL getBrokerRides");
-      final res = await ApiService.getBrokerRides(accessToken: token);
-      debugPrint("🟣 [ACTIVITY][TAB 3] STATUS: ${res.statusCode}");
-      debugPrint("🟣 [ACTIVITY][TAB 3] BODY: ${res.body}");
-
-      if (res.statusCode == 200) {
-        final parsed = BrokerRidesResponse.fromRawJson(res.body);
-
-        if (!mounted) return;
-        if (parsed.success) {
-          setState(() {
-            brokerRides = parsed.data;
-            _isBrokerLoaded = true;
-          });
-        }
-      } else if (res.statusCode == 404) {
-        if (!mounted) return;
-        setState(() {
-          brokerRides = [];
-          _isBrokerLoaded = true;
-        });
-      }
-    } catch (e) {
-      debugPrint("🔥 Fetch broker rides error: $e");
-    } finally {
-      if (mounted) setState(() => _isLoadingBroker = false);
+    if (_tabController.index == 2 &&
+        !provider.isBrokerLoaded &&
+        !provider.isLoadingBroker) {
+      provider.fetchBrokerRides();
     }
   }
 
   Future<void> _handleCancelBrokerRide(BrokerRideItem ride) async {
     final theme = Theme.of(context);
-    final token = await _getToken();
-    if (token.isEmpty) return;
     if (!mounted) return;
 
     final ok = await showDialog<bool>(
@@ -328,6 +121,9 @@ class _ActivityScreenState extends State<ActivityScreen>
 
     if (ok != true) return;
     if (!mounted) return;
+    final provider = context.read<ActivityHistoryProvider>();
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
 
     showDialog(
       context: context,
@@ -336,34 +132,28 @@ class _ActivityScreenState extends State<ActivityScreen>
     );
 
     try {
-      final res = await ApiService.cancelBrokerRide(
-        accessToken: token,
-        rideId: ride.rideId,
-      );
+      final success = await provider.cancelBrokerRide(ride);
+      navigator.pop();
 
-      if (!mounted) return;
-      Navigator.pop(context);
-
-      if (res.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Đã huỷ đơn ${ride.code}."),
-            backgroundColor: Colors.green,
-          ),
+      if (success) {
+        if (!mounted) return;
+        await ActionSuccessPopup.show(
+          context,
+          title: 'Huỷ đơn thành công',
+          message: 'Đơn ${ride.code} đã được huỷ thành công.',
         );
-        await _fetchBrokerRides();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
-            content: Text("Huỷ đơn thất bại (${res.statusCode})."),
+            content: const Text("Huỷ đơn thất bại."),
             backgroundColor: theme.colorScheme.error,
           ),
         );
       }
     } catch (e) {
       if (!mounted) return;
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
+      navigator.pop();
+      messenger.showSnackBar(
         SnackBar(
           content: Text("Có lỗi xảy ra: $e"),
           backgroundColor: theme.colorScheme.error,
@@ -374,9 +164,8 @@ class _ActivityScreenState extends State<ActivityScreen>
 
   Future<void> _handleStartRide(RideModel ride) async {
     final theme = Theme.of(context);
-    final token = await _getToken();
-    if (token.isEmpty) return;
     if (!mounted) return;
+    final provider = context.read<ActivityHistoryProvider>();
 
     showDialog(
       context: context,
@@ -384,16 +173,11 @@ class _ActivityScreenState extends State<ActivityScreen>
       builder: (_) => const Center(child: CircularProgressIndicator()),
     );
 
-    final res = await ApiService.startRide(
-      accessToken: token,
-      rideId: ride.id,
-      rideSource: ride.rideSource,
-    );
+    final ok = await provider.startRide(ride);
 
     if (mounted) Navigator.pop(context);
     if (!mounted) return;
 
-    final ok = res.statusCode >= 200 && res.statusCode < 300;
     if (ok) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -412,7 +196,7 @@ class _ActivityScreenState extends State<ActivityScreen>
 
       if (!mounted) return;
       if (_tabController.index == 0) {
-        await _fetchOngoingRides();
+        await provider.fetchOngoingRides();
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -426,9 +210,8 @@ class _ActivityScreenState extends State<ActivityScreen>
 
   Future<void> _handleCompleteRide(RideModel ride) async {
     final theme = Theme.of(context);
-    final token = await _getToken();
-    if (token.isEmpty) return;
     if (!mounted) return;
+    final provider = context.read<ActivityHistoryProvider>();
 
     showDialog(
       context: context,
@@ -436,26 +219,17 @@ class _ActivityScreenState extends State<ActivityScreen>
       builder: (_) => const Center(child: CircularProgressIndicator()),
     );
 
-    final res = await ApiService.completeRide(
-      accessToken: token,
-      rideId: ride.id,
-      rideSource: ride.rideSource,
-    );
+    final ok = await provider.completeRide(ride);
 
     if (mounted) Navigator.pop(context);
     if (!mounted) return;
 
-    final ok = res.statusCode >= 200 && res.statusCode < 300;
     if (ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Chuyến xe ${ride.code} đã hoàn thành!"),
-          backgroundColor: Colors.green,
-        ),
+      await ActionSuccessPopup.show(
+        context,
+        title: 'Hoàn thành chuyến thành công',
+        message: 'Chuyến xe ${ride.code} đã được hoàn thành thành công.',
       );
-
-      await _fetchOngoingRides();
-      await _fetchHistoryRides();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -474,11 +248,13 @@ class _ActivityScreenState extends State<ActivityScreen>
             RideDetailScreen(rideId: ride.id, rideSource: ride.rideSource),
       ),
     ).then((_) {
+      if (!mounted) return;
+      final provider = context.read<ActivityHistoryProvider>();
       if (_tabController.index == 0) {
-        _fetchOngoingRides();
+        provider.fetchOngoingRides();
       }
-      if (_isHistoryLoaded) {
-        _fetchHistoryRides();
+      if (provider.isHistoryLoaded) {
+        provider.fetchHistoryRides();
       }
     });
   }
@@ -490,14 +266,16 @@ class _ActivityScreenState extends State<ActivityScreen>
         builder: (_) => RideDetailScreen(rideId: ride.rideId, rideSource: 2),
       ),
     ).then((_) async {
+      if (!mounted) return;
+      final provider = context.read<ActivityHistoryProvider>();
       if (_tabController.index == 2) {
-        await _fetchBrokerRides();
+        await provider.fetchBrokerRides();
       }
       if (_tabController.index == 0) {
-        await _fetchOngoingRides();
+        await provider.fetchOngoingRides();
       }
-      if (_isHistoryLoaded) {
-        await _fetchHistoryRides();
+      if (provider.isHistoryLoaded) {
+        await provider.fetchHistoryRides();
       }
     });
   }
@@ -525,6 +303,7 @@ class _ActivityScreenState extends State<ActivityScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final provider = context.watch<ActivityHistoryProvider>();
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -564,9 +343,9 @@ class _ActivityScreenState extends State<ActivityScreen>
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    _buildOngoingTab(theme),
-                    _buildHistoryTab(theme),
-                    _buildBrokerTab(theme),
+                    _buildOngoingTab(theme, provider),
+                    _buildHistoryTab(theme, provider),
+                    _buildBrokerTab(theme, provider),
                   ],
                 ),
               ),
@@ -577,7 +356,10 @@ class _ActivityScreenState extends State<ActivityScreen>
     );
   }
 
-  Widget _buildSummaryHeader(ThemeData theme) {
+  Widget _buildSummaryHeader(
+    ThemeData theme,
+    ActivityHistoryProvider provider,
+  ) {
     return AnimatedBuilder(
       animation: _tabController,
       builder: (context, _) {
@@ -626,10 +408,10 @@ class _ActivityScreenState extends State<ActivityScreen>
                   Expanded(
                     child: DriverStatTile(
                       label: "Đang chạy",
-                      value: _summaryCountText(
-                        isLoaded: _isOngoingLoaded,
-                        isLoading: _isLoadingOngoing,
-                        count: ongoingRides.length,
+                      value: provider.summaryCountText(
+                        isLoaded: provider.isOngoingLoaded,
+                        isLoading: provider.isLoadingOngoing,
+                        count: provider.ongoingRides.length,
                       ),
                       icon: Icons.timelapse_rounded,
                     ),
@@ -638,10 +420,10 @@ class _ActivityScreenState extends State<ActivityScreen>
                   Expanded(
                     child: DriverStatTile(
                       label: "Lịch sử",
-                      value: _summaryCountText(
-                        isLoaded: _isHistoryLoaded,
-                        isLoading: _isLoadingHistory,
-                        count: historyRides.length,
+                      value: provider.summaryCountText(
+                        isLoaded: provider.isHistoryLoaded,
+                        isLoading: provider.isLoadingHistory,
+                        count: provider.historyRides.length,
                       ),
                       icon: Icons.history_rounded,
                     ),
@@ -650,10 +432,10 @@ class _ActivityScreenState extends State<ActivityScreen>
                   Expanded(
                     child: DriverStatTile(
                       label: "Đã đẩy",
-                      value: _summaryCountText(
-                        isLoaded: _isBrokerLoaded,
-                        isLoading: _isLoadingBroker,
-                        count: brokerRides.length,
+                      value: provider.summaryCountText(
+                        isLoaded: provider.isBrokerLoaded,
+                        isLoading: provider.isLoadingBroker,
+                        count: provider.brokerRides.length,
                       ),
                       icon: Icons.share_location_rounded,
                     ),
@@ -700,57 +482,68 @@ class _ActivityScreenState extends State<ActivityScreen>
     );
   }
 
-  Widget _buildOngoingTab(ThemeData theme) {
-    if (_isLoadingOngoing) {
+  Widget _buildOngoingTab(
+    ThemeData theme,
+    ActivityHistoryProvider provider,
+  ) {
+    if (provider.isLoadingOngoing) {
       return Center(
         child: CircularProgressIndicator(color: theme.colorScheme.secondary),
       );
     }
     return RefreshIndicator(
-      onRefresh: _fetchOngoingRides,
+      onRefresh: provider.fetchOngoingRides,
       child: _buildRideList(
-        rides: ongoingRides,
+        rides: provider.ongoingRides,
         emptyTitle: "Chưa có chuyến đang diễn ra",
         emptyMessage:
             "Khi nhận đơn thành công, chuyến xe sẽ xuất hiện tại đây để bạn bắt đầu và hoàn tất hành trình.",
+        provider: provider,
       ),
     );
   }
 
-  Widget _buildHistoryTab(ThemeData theme) {
-    if (_isLoadingHistory) {
+  Widget _buildHistoryTab(
+    ThemeData theme,
+    ActivityHistoryProvider provider,
+  ) {
+    if (provider.isLoadingHistory) {
       return Center(
         child: CircularProgressIndicator(color: theme.colorScheme.secondary),
       );
     }
     return RefreshIndicator(
-      onRefresh: _fetchHistoryRides,
+      onRefresh: provider.fetchHistoryRides,
       child: _buildRideList(
-        rides: historyRides,
+        rides: provider.historyRides,
         emptyTitle: "Chưa có lịch sử chuyến",
         emptyMessage:
             "Sau khi hoàn thành chuyến, thông tin hành trình và doanh thu sẽ được lưu ở đây.",
+        provider: provider,
       ),
     );
   }
 
-  Widget _buildBrokerTab(ThemeData theme) {
-    if (_isLoadingBroker) {
+  Widget _buildBrokerTab(
+    ThemeData theme,
+    ActivityHistoryProvider provider,
+  ) {
+    if (provider.isLoadingBroker) {
       return Center(
         child: CircularProgressIndicator(color: theme.colorScheme.secondary),
       );
     }
 
-    if (brokerRides.isEmpty) {
+    if (provider.brokerRides.isEmpty) {
       return RefreshIndicator(
-        onRefresh: _fetchBrokerRides,
+        onRefresh: provider.fetchBrokerRides,
         child: ListView(
           physics: const ClampingScrollPhysics(
             parent: AlwaysScrollableScrollPhysics(),
           ),
           padding: _listPadding(context),
           children: [
-            _buildSummaryHeader(theme),
+            _buildSummaryHeader(theme, provider),
             const SizedBox(height: 16),
             const DriverSectionCard(
               title: "Đơn đã đẩy",
@@ -769,17 +562,17 @@ class _ActivityScreenState extends State<ActivityScreen>
     }
 
     return RefreshIndicator(
-      onRefresh: _fetchBrokerRides,
+      onRefresh: provider.fetchBrokerRides,
       child: ListView.builder(
         physics: const ClampingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
         ),
         padding: _listPadding(context),
-        itemCount: brokerRides.length + 2,
+        itemCount: provider.brokerRides.length + 2,
         itemBuilder: (context, index) {
-          if (index == 0) return _buildSummaryHeader(theme);
+          if (index == 0) return _buildSummaryHeader(theme, provider);
           if (index == 1) return const SizedBox(height: 16);
-          return _buildBrokerRideCard(brokerRides[index - 2], theme);
+          return _buildBrokerRideCard(provider.brokerRides[index - 2], theme);
         },
       ),
     );
@@ -789,6 +582,7 @@ class _ActivityScreenState extends State<ActivityScreen>
     required List<RideModel> rides,
     required String emptyTitle,
     required String emptyMessage,
+    required ActivityHistoryProvider provider,
   }) {
     final theme = Theme.of(context);
 
@@ -799,7 +593,7 @@ class _ActivityScreenState extends State<ActivityScreen>
         ),
         padding: _listPadding(context),
         children: [
-          _buildSummaryHeader(theme),
+          _buildSummaryHeader(theme, provider),
           const SizedBox(height: 16),
           DriverSectionCard(
             title: emptyTitle,
@@ -822,7 +616,7 @@ class _ActivityScreenState extends State<ActivityScreen>
       padding: _listPadding(context),
       itemCount: rides.length + 2,
       itemBuilder: (context, index) {
-        if (index == 0) return _buildSummaryHeader(theme);
+        if (index == 0) return _buildSummaryHeader(theme, provider);
         if (index == 1) return const SizedBox(height: 16);
         return _buildRideCard(rides[index - 2], theme);
       },
@@ -1161,7 +955,7 @@ class _ActivityScreenState extends State<ActivityScreen>
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: _isLoadingBroker
+                      onPressed: context.watch<ActivityHistoryProvider>().isLoadingBroker
                           ? null
                           : () => _handleCancelBrokerRide(ride),
                       icon: const Icon(Icons.cancel_outlined),

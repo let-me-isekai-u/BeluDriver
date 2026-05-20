@@ -1,32 +1,41 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 
 import '../../app_theme.dart';
 import '../../models/driver/driver_profile_model.dart';
-import '../../services/api_service.dart';
+import '../../providers/driver/update_profile_provider.dart';
 import '../../widgets/driver_ui.dart';
 
-class DriverUpdateProfileScreen extends StatefulWidget {
+class DriverUpdateProfileScreen extends StatelessWidget {
   final DriverProfileModel profile;
 
   const DriverUpdateProfileScreen({super.key, required this.profile});
 
   @override
-  State<DriverUpdateProfileScreen> createState() =>
-      _DriverUpdateProfileScreenState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => UpdateProfileProvider(),
+      child: _DriverUpdateProfileView(profile: profile),
+    );
+  }
 }
 
-class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
+class _DriverUpdateProfileView extends StatefulWidget {
+  const _DriverUpdateProfileView({required this.profile});
+
+  final DriverProfileModel profile;
+
+  @override
+  State<_DriverUpdateProfileView> createState() =>
+      _DriverUpdateProfileViewState();
+}
+
+class _DriverUpdateProfileViewState extends State<_DriverUpdateProfileView> {
   late TextEditingController _fullNameController;
   late TextEditingController _emailController;
   late TextEditingController _licenseNumberController;
-
-  XFile? _avatar;
-  bool _loading = false;
 
   @override
   void initState() {
@@ -46,56 +55,31 @@ class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
     super.dispose();
   }
 
-  Future<void> _pickAvatar() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() => _avatar = picked);
-    }
-  }
-
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   Future<void> _handleUpdate() async {
-    setState(() => _loading = true);
-
-    final prefs = await SharedPreferences.getInstance();
-    final accessToken = prefs.getString('accessToken');
-
-    if (accessToken == null || accessToken.isEmpty) {
-      setState(() => _loading = false);
-      _showSnack('Phiên đăng nhập đã hết hạn');
-      return;
-    }
-
-    final res = await ApiService.updateProfile(
-      accessToken: accessToken,
+    final provider = context.read<UpdateProfileProvider>();
+    final error = await provider.updateProfile(
       fullName: _fullNameController.text.trim(),
       email: _emailController.text.trim(),
       licenseNumber: _licenseNumberController.text.trim(),
-      avatarFilePath: _avatar?.path,
     );
 
-    setState(() => _loading = false);
+    if (!mounted) return;
 
-    if (res.statusCode == 200) {
+    if (error == null) {
       _showSnack('Cập nhật thông tin thành công');
-      if (mounted) Navigator.pop(context, true);
+      Navigator.pop(context, true);
     } else {
-      try {
-        final json = jsonDecode(res.body);
-        _showSnack(json['message'] ?? 'Cập nhật thất bại');
-      } catch (_) {
-        _showSnack('Cập nhật thất bại (${res.statusCode})');
-      }
+      _showSnack(error);
     }
   }
 
-  ImageProvider? _avatarProvider() {
-    if (_avatar != null) {
-      return FileImage(File(_avatar!.path));
+  ImageProvider? _avatarProvider(UpdateProfileProvider provider) {
+    if (provider.avatar != null) {
+      return FileImage(File(provider.avatar!.path));
     }
     if (widget.profile.avatarUrl.isNotEmpty) {
       return NetworkImage(widget.profile.avatarUrl);
@@ -106,6 +90,7 @@ class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final provider = context.watch<UpdateProfileProvider>();
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -139,7 +124,7 @@ class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildHero(theme),
+                _buildHero(theme, provider),
                 const SizedBox(height: 16),
                 DriverSectionCard(
                   title: "Thông tin hiển thị",
@@ -175,8 +160,8 @@ class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
                 SizedBox(
                   height: 54,
                   child: ElevatedButton.icon(
-                    onPressed: _loading ? null : _handleUpdate,
-                    icon: _loading
+                    onPressed: provider.isLoading ? null : _handleUpdate,
+                    icon: provider.isLoading
                         ? const SizedBox(
                             width: 18,
                             height: 18,
@@ -186,7 +171,11 @@ class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
                             ),
                           )
                         : const Icon(Icons.save_rounded),
-                    label: Text(_loading ? 'Đang cập nhật...' : 'Lưu thay đổi'),
+                    label: Text(
+                      provider.isLoading
+                          ? 'Đang cập nhật...'
+                          : 'Lưu thay đổi',
+                    ),
                     style: ElevatedButton.styleFrom(
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(18),
@@ -197,7 +186,7 @@ class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
               ],
             ),
           ),
-          if (_loading)
+          if (provider.isLoading)
             Container(
               color: Colors.black26,
               child: Center(
@@ -211,7 +200,7 @@ class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
     );
   }
 
-  Widget _buildHero(ThemeData theme) {
+  Widget _buildHero(ThemeData theme, UpdateProfileProvider provider) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -237,8 +226,8 @@ class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
                 backgroundColor: theme.colorScheme.secondary.withValues(
                   alpha: 0.14,
                 ),
-                backgroundImage: _avatarProvider(),
-                child: _avatarProvider() == null
+                backgroundImage: _avatarProvider(provider),
+                child: _avatarProvider(provider) == null
                     ? Icon(
                         Icons.person_rounded,
                         size: 46,
@@ -252,7 +241,7 @@ class _DriverUpdateProfileScreenState extends State<DriverUpdateProfileScreen> {
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: _loading ? null : _pickAvatar,
+                    onTap: provider.isLoading ? null : provider.pickAvatar,
                     borderRadius: BorderRadius.circular(999),
                     child: Container(
                       width: 34,

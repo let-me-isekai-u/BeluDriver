@@ -1,36 +1,26 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 
 import '../../app_theme.dart';
 import '../../models/driver/withdrawal_history_model.dart';
-import '../../services/api_service.dart';
+import '../../providers/driver/withdrawal_history_provider.dart';
 import '../../widgets/driver_ui.dart';
 
-class WithdrawalHistoryScreen extends StatefulWidget {
+class WithdrawalHistoryScreen extends StatelessWidget {
   const WithdrawalHistoryScreen({super.key});
 
   @override
-  State<WithdrawalHistoryScreen> createState() =>
-      _WithdrawalHistoryScreenState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => WithdrawalHistoryProvider()..loadHistory(),
+      child: const _WithdrawalHistoryView(),
+    );
+  }
 }
 
-class _WithdrawalHistoryScreenState extends State<WithdrawalHistoryScreen> {
-  late Future<List<WithdrawalHistoryModel>> _historyFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _historyFuture = _loadHistory();
-  }
-
-  Future<void> _handleRefresh() async {
-    setState(() {
-      _historyFuture = _loadHistory();
-    });
-  }
+class _WithdrawalHistoryView extends StatelessWidget {
+  const _WithdrawalHistoryView();
 
   Color _getStatusColor(String status) {
     final s = status.toLowerCase();
@@ -64,31 +54,10 @@ class _WithdrawalHistoryScreenState extends State<WithdrawalHistoryScreen> {
     ).format(amount);
   }
 
-  Future<List<WithdrawalHistoryModel>> _loadHistory() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('accessToken') ?? '';
-
-      final res = await ApiService.getWithdrawalHistory(accessToken: token);
-
-      if (res.statusCode == 200) {
-        final body = jsonDecode(res.body);
-        if (body['success'] == true && body['data'] != null) {
-          return (body['data'] as List)
-              .map((e) => WithdrawalHistoryModel.fromJson(e))
-              .toList();
-        }
-      }
-      return [];
-    } catch (e) {
-      debugPrint("Error loadHistory: $e");
-      throw Exception("Không thể tải lịch sử rút tiền. Vui lòng thử lại!");
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final provider = context.watch<WithdrawalHistoryProvider>();
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -104,11 +73,10 @@ class _WithdrawalHistoryScreenState extends State<WithdrawalHistoryScreen> {
         iconTheme: IconThemeData(color: theme.colorScheme.secondary),
       ),
       body: RefreshIndicator(
-        onRefresh: _handleRefresh,
-        child: FutureBuilder<List<WithdrawalHistoryModel>>(
-          future: _historyFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
+        onRefresh: provider.loadHistory,
+        child: Builder(
+          builder: (context) {
+            if (provider.isLoading) {
               return ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: [
@@ -122,7 +90,7 @@ class _WithdrawalHistoryScreenState extends State<WithdrawalHistoryScreen> {
               );
             }
 
-            if (snapshot.hasError) {
+            if (provider.errorMessage != null && provider.history.isEmpty) {
               return ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16),
@@ -133,7 +101,7 @@ class _WithdrawalHistoryScreenState extends State<WithdrawalHistoryScreen> {
                     subtitle: "Kéo xuống để thử lại hoặc quay lại sau.",
                     icon: Icons.error_outline_rounded,
                     child: Text(
-                      "Lỗi: ${snapshot.error}",
+                      "Lỗi: ${provider.errorMessage}",
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: const Color(0xFFFFA3A3),
@@ -145,7 +113,7 @@ class _WithdrawalHistoryScreenState extends State<WithdrawalHistoryScreen> {
               );
             }
 
-            final list = snapshot.data ?? [];
+            final list = provider.history;
 
             if (list.isEmpty) {
               return ListView(
@@ -259,22 +227,22 @@ class _WithdrawalHistoryScreenState extends State<WithdrawalHistoryScreen> {
               height: 1.45,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           Row(
             children: [
               Expanded(
                 child: DriverStatTile(
-                  label: "Yêu cầu",
+                  label: "Tổng yêu cầu",
                   value: totalCount.toString(),
-                  icon: Icons.request_page_rounded,
+                  icon: Icons.receipt_long_rounded,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: DriverStatTile(
-                  label: "Hoàn tất",
+                  label: "Hoàn thành",
                   value: completedCount.toString(),
-                  icon: Icons.task_alt_rounded,
+                  icon: Icons.check_circle_outline_rounded,
                   accentColor: const Color(0xFF6ED39B),
                 ),
               ),
@@ -283,7 +251,8 @@ class _WithdrawalHistoryScreenState extends State<WithdrawalHistoryScreen> {
                 child: DriverStatTile(
                   label: "Tổng tiền",
                   value: _formatCurrency(totalAmount),
-                  icon: Icons.savings_rounded,
+                  icon: Icons.account_balance_wallet_outlined,
+                  accentColor: const Color(0xFFFFD166),
                 ),
               ),
             ],
@@ -294,45 +263,27 @@ class _WithdrawalHistoryScreenState extends State<WithdrawalHistoryScreen> {
   }
 
   Widget _buildItemCard(ThemeData theme, WithdrawalHistoryModel item) {
-    final statusColor = _getStatusColor(item.status);
-    final currentStatus = item.status.toLowerCase();
-    final isReject =
-        currentStatus.contains("từ chối") ||
-        currentStatus.contains("cancel") ||
-        currentStatus.contains("reject");
-    final hasReason = (item.reasonCancel?.isNotEmpty ?? false);
+    final accent = _getStatusColor(item.status);
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: statusColor.withValues(alpha: 0.18)),
+        border: Border.all(color: accent.withValues(alpha: 0.18)),
       ),
       child: Column(
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(
-                  Icons.account_balance_wallet_outlined,
-                  color: statusColor,
-                ),
-              ),
-              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       _formatCurrency(item.amount),
-                      style: theme.textTheme.titleSmall?.copyWith(
+                      style: theme.textTheme.titleMedium?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
                       ),
@@ -348,59 +299,64 @@ class _WithdrawalHistoryScreenState extends State<WithdrawalHistoryScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Text(
-                  item.status,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: statusColor,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
+              DriverPill(label: item.status, color: accent),
             ],
           ),
-          if (isReject && hasReason) ...[
-            const SizedBox(height: 14),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.info_outline_rounded,
-                    size: 18,
-                    color: statusColor,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      "Lý do từ chối: ${item.reasonCancel}",
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: statusColor,
-                        fontWeight: FontWeight.w700,
-                        height: 1.45,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+          const SizedBox(height: 14),
+          _buildInfoRow(theme, "Mã yêu cầu", "#${item.id}"),
+          const SizedBox(height: 8),
+          _buildInfoRow(
+            theme,
+            "Thời gian tạo",
+            _formatDateTime(item.createDate),
+          ),
+          if ((item.reasonCancel ?? '').isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _buildInfoRow(
+              theme,
+              "Lý do từ chối",
+              item.reasonCancel!,
+              valueColor: const Color(0xFFFFA3A3),
             ),
           ],
         ],
       ),
+    );
+  }
+
+  Widget _buildInfoRow(
+    ThemeData theme,
+    String label,
+    String value, {
+    Color? valueColor,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 4,
+          child: Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: AppColors.textSubtle,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          flex: 6,
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: valueColor ?? Colors.white,
+              fontWeight: FontWeight.w700,
+              height: 1.4,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

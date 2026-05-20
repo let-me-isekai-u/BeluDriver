@@ -1,16 +1,14 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../app_theme.dart';
 import '../../models/driver/ride_detail_model.dart';
-import '../../services/api_service.dart';
+import '../../providers/driver/ride_detail_provider.dart';
 import '../../widgets/driver_ui.dart';
 
-class RideDetailScreen extends StatefulWidget {
+class RideDetailScreen extends StatelessWidget {
   final int rideId;
   final int rideSource;
 
@@ -21,21 +19,27 @@ class RideDetailScreen extends StatefulWidget {
   });
 
   @override
-  State<RideDetailScreen> createState() => _RideDetailScreenState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) =>
+          RideDetailProvider(rideId: rideId, rideSource: rideSource)
+            ..fetchRideDetail(),
+      child: _RideDetailView(rideId: rideId, rideSource: rideSource),
+    );
+  }
 }
 
-class _RideDetailScreenState extends State<RideDetailScreen> {
-  RideDetailModel? _ride;
-  bool _isLoading = true;
+class _RideDetailView extends StatelessWidget {
+  const _RideDetailView({
+    required this.rideId,
+    required this.rideSource,
+  });
 
-  @override
-  void initState() {
-    super.initState();
-    _fetchRideDetail();
-  }
+  final int rideId;
+  final int rideSource;
 
   String get _rideSourceText {
-    switch (widget.rideSource) {
+    switch (rideSource) {
       case 1:
         return "Đơn BeluCar";
       case 2:
@@ -46,7 +50,7 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
   }
 
   Color get _rideSourceColor {
-    switch (widget.rideSource) {
+    switch (rideSource) {
       case 1:
         return const Color(0xFF73B7FF);
       case 2:
@@ -54,93 +58,6 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
       default:
         return Colors.grey;
     }
-  }
-
-  Future<void> _fetchRideDetail() async {
-    setState(() => _isLoading = true);
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('accessToken') ?? '';
-
-      final res = await ApiService.getRideDetail(
-        accessToken: token,
-        rideId: widget.rideId,
-        rideSource: widget.rideSource,
-      );
-
-      debugPrint("=== GET RIDE DETAIL ===");
-      debugPrint("rideId: ${widget.rideId}");
-      debugPrint("rideSource: ${widget.rideSource}");
-      debugPrint("statusCode: ${res.statusCode}");
-      debugPrint("body: ${res.body}");
-
-      if (res.statusCode == 200) {
-        final body = jsonDecode(res.body);
-        if (body['success'] == true && body['data'] != null) {
-          final ride = RideDetailModel.fromJson(body['data']);
-
-          debugPrint("=== PARSED RIDE DETAIL ===");
-          debugPrint("customerName: ${ride.customerName}");
-          debugPrint("customerPhone: ${ride.customerPhone}");
-          debugPrint("price: ${ride.price}");
-          debugPrint("netIncome: ${ride.netIncome}");
-
-          if (!mounted) return;
-          setState(() => _ride = ride);
-        } else {
-          if (!mounted) return;
-          setState(() => _ride = null);
-        }
-      }
-    } catch (e) {
-      debugPrint("🔥 Lỗi fetch detail: $e");
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _handleStartRide() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('accessToken') ?? '';
-    if (token.isEmpty) return;
-
-    final res = await ApiService.startRide(
-      accessToken: token,
-      rideId: widget.rideId,
-      rideSource: widget.rideSource,
-    );
-
-    if (res.statusCode == 200) {
-      _showSnackBar("Đã bắt đầu chuyến đi", Colors.green);
-      _fetchRideDetail();
-    } else {
-      _showSnackBar("Không thể bắt đầu chuyến đi", Colors.red);
-    }
-  }
-
-  Future<void> _handleCompleteRide() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('accessToken') ?? '';
-    if (token.isEmpty) return;
-
-    final res = await ApiService.completeRide(
-      accessToken: token,
-      rideId: widget.rideId,
-      rideSource: widget.rideSource,
-    );
-
-    if (res.statusCode == 200) {
-      _showSnackBar("Đã hoàn thành chuyến đi", Colors.green);
-      _fetchRideDetail();
-    } else {
-      _showSnackBar("Không thể hoàn thành chuyến đi", Colors.red);
-    }
-  }
-
-  void _showSnackBar(String message, Color color) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message), backgroundColor: color));
   }
 
   Map<String, dynamic> _getStatusInfo(int status) {
@@ -169,8 +86,10 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final provider = context.watch<RideDetailProvider>();
+    final ride = provider.ride;
 
-    if (_isLoading) {
+    if (provider.isLoading) {
       return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: _buildAppBar(theme, title: "Chi tiết chuyến"),
@@ -180,7 +99,7 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
       );
     }
 
-    if (_ride == null) {
+    if (ride == null) {
       return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: _buildAppBar(theme, title: "Chi tiết chuyến"),
@@ -192,14 +111,14 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
       );
     }
 
-    final statusInfo = _getStatusInfo(_ride!.status);
+    final statusInfo = _getStatusInfo(ride.status);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: _buildAppBar(theme, title: "Mã đơn ${_ride!.code}"),
-      bottomNavigationBar: _ride!.status >= 4
+      appBar: _buildAppBar(theme, title: "Mã đơn ${ride.code}"),
+      bottomNavigationBar: ride.status >= 4
           ? null
-          : _buildBottomActions(_ride!.status),
+          : _buildBottomActions(context, ride.status),
       body: Stack(
         children: [
           Positioned(
@@ -215,24 +134,24 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
             ),
           ),
           RefreshIndicator(
-            onRefresh: _fetchRideDetail,
+            onRefresh: provider.fetchRideDetail,
             child: ListView(
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
               children: [
-                _buildHeroSection(theme, statusInfo),
+                _buildHeroSection(theme, statusInfo, ride),
                 const SizedBox(height: 16),
-                _buildOverviewStats(theme),
+                _buildOverviewStats(theme, ride),
                 const SizedBox(height: 16),
-                _buildFareSection(theme),
+                _buildFareSection(theme, ride),
                 const SizedBox(height: 16),
-                _buildCustomerSection(theme),
+                _buildCustomerSection(context, theme, ride),
                 const SizedBox(height: 16),
-                _buildRouteSection(theme),
+                _buildRouteSection(theme, ride),
                 const SizedBox(height: 16),
-                _buildDetailSection(theme),
+                _buildDetailSection(theme, ride),
                 const SizedBox(height: 24),
               ],
             ),
@@ -257,7 +176,11 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
     );
   }
 
-  Widget _buildHeroSection(ThemeData theme, Map<String, dynamic> statusInfo) {
+  Widget _buildHeroSection(
+    ThemeData theme,
+    Map<String, dynamic> statusInfo,
+    RideDetailModel ride,
+  ) {
     final statusColor = statusInfo['color'] as Color;
 
     return Container(
@@ -297,7 +220,7 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
                     ),
                     const SizedBox(height: 14),
                     Text(
-                      _ride!.code,
+                      ride.code,
                       style: theme.textTheme.headlineSmall?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
@@ -352,12 +275,12 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
             children: [
               DriverPill(label: _rideSourceText, color: _rideSourceColor),
               DriverPill(
-                label: _ride!.paymentMethod.isEmpty
+                label: ride.paymentMethod.isEmpty
                     ? "Chưa rõ thanh toán"
-                    : _ride!.paymentMethod,
+                    : ride.paymentMethod,
                 icon: Icons.payments_outlined,
               ),
-              DriverPill(label: _ride!.typeText, icon: Icons.category_rounded),
+              DriverPill(label: ride.typeText, icon: Icons.category_rounded),
             ],
           ),
         ],
@@ -365,13 +288,13 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
     );
   }
 
-  Widget _buildOverviewStats(ThemeData theme) {
+  Widget _buildOverviewStats(ThemeData theme, RideDetailModel ride) {
     return Row(
       children: [
         Expanded(
           child: DriverStatTile(
             label: "Giá chuyến",
-            value: _formatMoney(_ride!.price),
+            value: _formatMoney(ride.price),
             icon: Icons.receipt_long_rounded,
           ),
         ),
@@ -379,7 +302,7 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
         Expanded(
           child: DriverStatTile(
             label: "Thu nhập ròng",
-            value: _formatMoney(_ride!.netIncome),
+            value: _formatMoney(ride.netIncome),
             icon: Icons.savings_rounded,
             accentColor: const Color(0xFF6ED39B),
           ),
@@ -388,7 +311,7 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
     );
   }
 
-  Widget _buildFareSection(ThemeData theme) {
+  Widget _buildFareSection(ThemeData theme, RideDetailModel ride) {
     return DriverSectionCard(
       title: "Chi tiết cước phí",
       subtitle: "Tổng tiền khách trả và phần thu nhập thực nhận của tài xế.",
@@ -398,14 +321,14 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
           _buildAmountRow(
             theme,
             label: "Giá chuyến",
-            value: _formatMoney(_ride!.price),
+            value: _formatMoney(ride.price),
             valueColor: theme.colorScheme.secondary,
           ),
           const SizedBox(height: 14),
           _buildAmountRow(
             theme,
             label: "Thu nhập ròng",
-            value: _formatMoney(_ride!.netIncome),
+            value: _formatMoney(ride.netIncome),
             valueColor: const Color(0xFF6ED39B),
           ),
         ],
@@ -451,8 +374,12 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
     );
   }
 
-  Widget _buildCustomerSection(ThemeData theme) {
-    final phone = _ride!.customerPhone.trim();
+  Widget _buildCustomerSection(
+    BuildContext context,
+    ThemeData theme,
+    RideDetailModel ride,
+  ) {
+    final phone = ride.customerPhone.trim();
 
     return DriverSectionCard(
       title: "Khách hàng",
@@ -460,7 +387,7 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
       icon: Icons.person_rounded,
       trailing: IconButton(
         tooltip: "Gọi khách",
-        onPressed: () => _callCustomer(phone),
+        onPressed: () => _callCustomer(context, phone),
         icon: const Icon(Icons.phone_in_talk_rounded, color: Colors.green),
       ),
       child: Row(
@@ -471,7 +398,7 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
               alpha: 0.14,
             ),
             child: Text(
-              _ride!.customerName.isNotEmpty ? _ride!.customerName[0] : '?',
+              ride.customerName.isNotEmpty ? ride.customerName[0] : '?',
               style: theme.textTheme.titleLarge?.copyWith(
                 color: theme.colorScheme.secondary,
                 fontWeight: FontWeight.w900,
@@ -484,7 +411,7 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _ride!.customerName,
+                  ride.customerName,
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
@@ -507,9 +434,9 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
     );
   }
 
-  Future<void> _callCustomer(String phone) async {
+  Future<void> _callCustomer(BuildContext context, String phone) async {
     if (phone.isEmpty) {
-      _showSnackBar("Không có số điện thoại", Colors.red);
+      _showSnackBar(context, "Không có số điện thoại", Colors.red);
       return;
     }
 
@@ -517,11 +444,12 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
-      _showSnackBar("Không thể mở ứng dụng gọi điện", Colors.red);
+      if (!context.mounted) return;
+      _showSnackBar(context, "Không thể mở ứng dụng gọi điện", Colors.red);
     }
   }
 
-  Widget _buildRouteSection(ThemeData theme) {
+  Widget _buildRouteSection(ThemeData theme, RideDetailModel ride) {
     return DriverSectionCard(
       title: "Lộ trình chuyến xe",
       subtitle:
@@ -534,8 +462,8 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
             icon: Icons.trip_origin_rounded,
             color: const Color(0xFF6ED39B),
             label: "Điểm đón",
-            title: "${_ride!.fromProvince} - ${_ride!.fromDistrict}",
-            address: _ride!.fromAddress,
+            title: "${ride.fromProvince} - ${ride.fromDistrict}",
+            address: ride.fromAddress,
           ),
           Container(
             width: 2,
@@ -548,8 +476,8 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
             icon: Icons.location_on_rounded,
             color: const Color(0xFFFF7B7B),
             label: "Điểm trả",
-            title: "${_ride!.toProvince} - ${_ride!.toDistrict}",
-            address: _ride!.toAddress,
+            title: "${ride.toProvince} - ${ride.toDistrict}",
+            address: ride.toAddress,
           ),
         ],
       ),
@@ -621,38 +549,38 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
     );
   }
 
-  Widget _buildDetailSection(ThemeData theme) {
+  Widget _buildDetailSection(ThemeData theme, RideDetailModel ride) {
     return DriverSectionCard(
       title: "Thông tin bổ sung",
       subtitle: "Các dữ liệu vận hành quan trọng của chuyến xe.",
       icon: Icons.info_outline_rounded,
       child: Column(
         children: [
-          _detailRow(theme, "Loại dịch vụ", _ride!.typeText),
+          _detailRow(theme, "Loại dịch vụ", ride.typeText),
           _detailRow(theme, "Nguồn đơn", _rideSourceText),
-          _detailRow(theme, "Số lượng", _ride!.quantity.toString()),
+          _detailRow(theme, "Số lượng", ride.quantity.toString()),
           _detailRow(
             theme,
             "Thanh toán",
-            _ride!.paymentMethod.isEmpty
+            ride.paymentMethod.isEmpty
                 ? "Chưa xác định"
-                : _ride!.paymentMethod,
+                : ride.paymentMethod,
           ),
-          _detailRow(theme, "Thời gian tạo", _formatDate(_ride!.createdAt)),
-          _detailRow(theme, "Thời gian đón", _formatDate(_ride!.pickupTime)),
+          _detailRow(theme, "Thời gian tạo", _formatDate(ride.createdAt)),
+          _detailRow(theme, "Thời gian đón", _formatDate(ride.pickupTime)),
           _detailRow(
             theme,
             "Số điện thoại khách",
-            _ride!.customerPhone.trim().isEmpty
+            ride.customerPhone.trim().isEmpty
                 ? "Chưa có dữ liệu"
-                : _ride!.customerPhone.trim(),
+                : ride.customerPhone.trim(),
           ),
           _detailRow(
             theme,
             "Ghi chú",
-            (_ride!.note ?? '').trim().isEmpty
+            (ride.note ?? '').trim().isEmpty
                 ? "Không có ghi chú"
-                : _ride!.note!,
+                : ride.note!,
             isLast: true,
           ),
         ],
@@ -713,7 +641,7 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
     }
   }
 
-  Widget _buildBottomActions(int status) {
+  Widget _buildBottomActions(BuildContext context, int status) {
     final theme = Theme.of(context);
     final isStart = status == 2;
 
@@ -739,7 +667,24 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
         child: SizedBox(
           height: 54,
           child: ElevatedButton.icon(
-            onPressed: isStart ? _handleStartRide : _handleCompleteRide,
+            onPressed: () async {
+              final provider = context.read<RideDetailProvider>();
+              final ok = isStart
+                  ? await provider.startRide()
+                  : await provider.completeRide();
+              if (!context.mounted) return;
+              _showSnackBar(
+                context,
+                ok
+                    ? (isStart
+                          ? "Đã bắt đầu chuyến đi"
+                          : "Đã hoàn thành chuyến đi")
+                    : (isStart
+                          ? "Không thể bắt đầu chuyến đi"
+                          : "Không thể hoàn thành chuyến đi"),
+                ok ? Colors.green : Colors.red,
+              );
+            },
             icon: Icon(
               isStart ? Icons.play_circle_fill_rounded : Icons.task_alt_rounded,
             ),
@@ -761,5 +706,11 @@ class _RideDetailScreenState extends State<RideDetailScreen> {
         ),
       ),
     );
+  }
+
+  void _showSnackBar(BuildContext context, String message, Color color) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message), backgroundColor: color));
   }
 }

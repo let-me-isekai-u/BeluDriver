@@ -1,111 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 
+import '../../providers/chat_group_list_provider.dart';
 import '../../services/api_chat_service.dart';
 import 'chat_screen.dart';
 
-class DriverChatGroupListScreen extends StatefulWidget {
+class DriverChatGroupListScreen extends StatelessWidget {
   const DriverChatGroupListScreen({super.key});
 
   @override
-  State<DriverChatGroupListScreen> createState() =>
-      _DriverChatGroupListScreenState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => ChatGroupListProvider()..loadGroups(),
+      child: const _DriverChatGroupListView(),
+    );
+  }
 }
 
-class _DriverChatGroupListScreenState extends State<DriverChatGroupListScreen> {
+class _DriverChatGroupListView extends StatelessWidget {
+  const _DriverChatGroupListView();
+
   static const Color beluDarkGreen = Color(0xFF0A422D);
   static const Color beluMediumGreen = Color(0xFF145E44);
   static const Color beluAccentGold = Color(0xFFFFD700);
   static const Color bgCanvas = Color(0xFFF0F4F2);
 
-  late final ApiChatService _chatService = ApiChatService(
-    tokenProvider: _readAccessToken,
-  );
-
-  List<DriverChatGroupDto> _groups = const [];
-  bool _isLoading = true;
-  bool _isRefreshing = false;
-  String? _error;
-  String _accessToken = '';
-
-  Future<String?> _readAccessToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('accessToken');
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadGroups();
-  }
-
-  @override
-  void dispose() {
-    _chatService.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadGroups({bool refresh = false}) async {
-    if (refresh) {
-      setState(() {
-        _isRefreshing = true;
-        _error = null;
-      });
-    } else {
-      setState(() {
-        _isLoading = true;
-        _error = null;
-      });
-    }
-
-    final token = await _readAccessToken() ?? '';
-
-    if (token.isEmpty) {
-      if (!mounted) return;
-      setState(() {
-        _accessToken = '';
-        _groups = const [];
-        _error = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
-        _isLoading = false;
-        _isRefreshing = false;
-      });
-      return;
-    }
-
-    try {
-      final groups = await _chatService.getDriverGroups();
-      if (!mounted) return;
-
-      final sortedGroups = [...groups]
-        ..sort((a, b) {
-          if (a.isActive != b.isActive) {
-            return a.isActive ? -1 : 1;
-          }
-
-          final aTime = a.lastMessageAt?.millisecondsSinceEpoch ?? 0;
-          final bTime = b.lastMessageAt?.millisecondsSinceEpoch ?? 0;
-          return bTime.compareTo(aTime);
-        });
-
-      setState(() {
-        _accessToken = token;
-        _groups = sortedGroups;
-        _isLoading = false;
-        _isRefreshing = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _accessToken = token;
-        _error = 'Không thể tải danh sách nhóm chat.';
-        _isLoading = false;
-        _isRefreshing = false;
-      });
-    }
-  }
-
-  Future<void> _openGroup(DriverChatGroupDto group) async {
+  Future<void> _openGroup(BuildContext context, DriverChatGroupDto group) async {
     if (!group.isActive) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -123,8 +44,8 @@ class _DriverChatGroupListScreenState extends State<DriverChatGroupListScreen> {
       ),
     );
 
-    if (!mounted) return;
-    await _loadGroups(refresh: true);
+    if (!context.mounted) return;
+    await context.read<ChatGroupListProvider>().loadGroups(refresh: true);
   }
 
   String _formatLastMessageTime(DateTime? time) {
@@ -146,6 +67,8 @@ class _DriverChatGroupListScreenState extends State<DriverChatGroupListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<ChatGroupListProvider>();
+
     return Scaffold(
       backgroundColor: bgCanvas,
       appBar: AppBar(
@@ -165,12 +88,12 @@ class _DriverChatGroupListScreenState extends State<DriverChatGroupListScreen> {
           style: TextStyle(color: beluAccentGold, fontWeight: FontWeight.bold),
         ),
       ),
-      body: _buildBody(),
+      body: _buildBody(context, provider),
     );
   }
 
-  Widget _buildBody() {
-    if (_isLoading) {
+  Widget _buildBody(BuildContext context, ChatGroupListProvider provider) {
+    if (provider.isLoading) {
       return const Center(
         child: CircularProgressIndicator(
           color: beluMediumGreen,
@@ -179,42 +102,42 @@ class _DriverChatGroupListScreenState extends State<DriverChatGroupListScreen> {
       );
     }
 
-    if (_accessToken.isEmpty) {
+    if (provider.accessToken.isEmpty) {
       return _InfoState(
         icon: Icons.lock_outline_rounded,
         title: 'Chưa đăng nhập',
-        subtitle: _error ?? 'Phiên đăng nhập đã hết hạn.',
-        onRetry: () => _loadGroups(),
+        subtitle: provider.error ?? 'Phiên đăng nhập đã hết hạn.',
+        onRetry: provider.loadGroups,
       );
     }
 
-    if (_error != null && _groups.isEmpty) {
+    if (provider.error != null && provider.groups.isEmpty) {
       return _InfoState(
         icon: Icons.wifi_off_rounded,
         title: 'Không tải được nhóm chat',
-        subtitle: _error!,
-        onRetry: () => _loadGroups(),
+        subtitle: provider.error!,
+        onRetry: provider.loadGroups,
       );
     }
 
-    if (_groups.isEmpty) {
+    if (provider.groups.isEmpty) {
       return RefreshIndicator(
         color: beluMediumGreen,
-        onRefresh: () => _loadGroups(refresh: true),
+        onRefresh: () => provider.loadGroups(refresh: true),
         child: ListView(children: const [SizedBox(height: 120), _EmptyState()]),
       );
     }
 
     return RefreshIndicator(
       color: beluMediumGreen,
-      onRefresh: () => _loadGroups(refresh: true),
+      onRefresh: () => provider.loadGroups(refresh: true),
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
-        itemCount: _groups.length + (_isRefreshing ? 1 : 0),
+        itemCount: provider.groups.length + (provider.isRefreshing ? 1 : 0),
         separatorBuilder: (context, index) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          if (_isRefreshing && index == 0) {
+          if (provider.isRefreshing && index == 0) {
             return Container(
               padding: const EdgeInsets.symmetric(vertical: 8),
               alignment: Alignment.center,
@@ -229,11 +152,12 @@ class _DriverChatGroupListScreenState extends State<DriverChatGroupListScreen> {
             );
           }
 
-          final group = _groups[_isRefreshing ? index - 1 : index];
+          final group =
+              provider.groups[provider.isRefreshing ? index - 1 : index];
           return _GroupCard(
             group: group,
             timeLabel: _formatLastMessageTime(group.lastMessageAt),
-            onTap: () => _openGroup(group),
+            onTap: () => _openGroup(context, group),
           );
         },
       ),

@@ -1,0 +1,14 @@
+export '../../models/KYC/kyc_model.dart';
+export '../../providers/kyc/face_detection_provider.dart';
+export '../../providers/kyc/kyc_provider.dart';
+export '../../screens/face_detection/front_face_capture_screen.dart';
+export '../../screens/face_detection/left_face_capture_screen.dart';
+export '../../screens/face_detection/right_face_capture_screen.dart';
+export '../../screens/face_detection/single_face_capture_screen.dart';
+export '../../screens/kyc/kyc_popup.dart';
+export '../../screens/kyc/kyc_step_citizen_card.dart';
+export '../../screens/kyc/kyc_step_driver_license.dart';
+export '../../screens/kyc/kyc_step_face_verification.dart';
+export '../../screens/kyc/kyc_step_portrait.dart';
+export '../../screens/kyc/kyc_step_vehicle_photo.dart';
+export '../../screens/kyc/kyc_step_vehicle_registration.dart';
