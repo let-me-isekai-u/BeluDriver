@@ -30,6 +30,7 @@ class _ActivityScreenState extends State<ActivityScreen>
   bool _isLoadingBroker = false;
   bool _isBrokerLoaded = false;
   bool _isLoadingOngoing = false;
+  bool _isOngoingLoaded = false;
   bool _isLoadingHistory = false;
   bool _isHistoryLoaded = false;
 
@@ -43,13 +44,7 @@ class _ActivityScreenState extends State<ActivityScreen>
       initialIndex: safeInitial,
     );
 
-    if (safeInitial == 0) {
-      _fetchOngoingRides();
-    } else if (safeInitial == 1) {
-      _fetchHistoryRides();
-    } else {
-      _fetchBrokerRides();
-    }
+    _preloadTabData(safeInitial);
 
     _tabController.addListener(_handleTabChange);
   }
@@ -61,11 +56,30 @@ class _ActivityScreenState extends State<ActivityScreen>
     super.dispose();
   }
 
+  void _preloadTabData(int initialTabIndex) {
+    switch (initialTabIndex) {
+      case 1:
+        _fetchHistoryRides();
+        _fetchOngoingRides();
+        _fetchBrokerRides();
+        break;
+      case 2:
+        _fetchBrokerRides();
+        _fetchOngoingRides();
+        _fetchHistoryRides();
+        break;
+      default:
+        _fetchOngoingRides();
+        _fetchHistoryRides();
+        _fetchBrokerRides();
+    }
+  }
+
   void _handleTabChange() {
     if (_tabController.indexIsChanging) return;
 
     if (_tabController.index == 0 &&
-        ongoingRides.isEmpty &&
+        !_isOngoingLoaded &&
         !_isLoadingOngoing) {
       _fetchOngoingRides();
     }
@@ -90,7 +104,10 @@ class _ActivityScreenState extends State<ActivityScreen>
       final token = await _getToken();
       if (token.isEmpty) {
         if (!mounted) return;
-        setState(() => ongoingRides = []);
+        setState(() {
+          ongoingRides = [];
+          _isOngoingLoaded = true;
+        });
         return;
       }
 
@@ -157,6 +174,7 @@ class _ActivityScreenState extends State<ActivityScreen>
       if (!mounted) return;
       setState(() {
         ongoingRides = _dedupeAndSortOngoingRides(mergedRides);
+        _isOngoingLoaded = true;
       });
       debugPrint(
         "🔵 [ACTIVITY][TAB 1] DONE merged ongoing rides: ${ongoingRides.length} items",
@@ -166,6 +184,16 @@ class _ActivityScreenState extends State<ActivityScreen>
     } finally {
       if (mounted) setState(() => _isLoadingOngoing = false);
     }
+  }
+
+  String _summaryCountText({
+    required bool isLoaded,
+    required bool isLoading,
+    required int count,
+  }) {
+    if (isLoaded) return count.toString();
+    if (isLoading) return '...';
+    return '--';
   }
 
   List<RideModel> _dedupeAndSortOngoingRides(List<RideModel> rides) {
@@ -598,7 +626,11 @@ class _ActivityScreenState extends State<ActivityScreen>
                   Expanded(
                     child: DriverStatTile(
                       label: "Đang chạy",
-                      value: ongoingRides.length.toString(),
+                      value: _summaryCountText(
+                        isLoaded: _isOngoingLoaded,
+                        isLoading: _isLoadingOngoing,
+                        count: ongoingRides.length,
+                      ),
                       icon: Icons.timelapse_rounded,
                     ),
                   ),
@@ -606,7 +638,11 @@ class _ActivityScreenState extends State<ActivityScreen>
                   Expanded(
                     child: DriverStatTile(
                       label: "Lịch sử",
-                      value: historyRides.length.toString(),
+                      value: _summaryCountText(
+                        isLoaded: _isHistoryLoaded,
+                        isLoading: _isLoadingHistory,
+                        count: historyRides.length,
+                      ),
                       icon: Icons.history_rounded,
                     ),
                   ),
@@ -614,7 +650,11 @@ class _ActivityScreenState extends State<ActivityScreen>
                   Expanded(
                     child: DriverStatTile(
                       label: "Đã đẩy",
-                      value: brokerRides.length.toString(),
+                      value: _summaryCountText(
+                        isLoaded: _isBrokerLoaded,
+                        isLoading: _isLoadingBroker,
+                        count: brokerRides.length,
+                      ),
                       icon: Icons.share_location_rounded,
                     ),
                   ),

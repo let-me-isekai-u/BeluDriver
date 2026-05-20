@@ -19,7 +19,6 @@ import 'activity_history.dart';
 import 'driver_booking_screen.dart';
 import 'driver_profile.dart';
 import 'recieve_order_screen.dart';
-import 'withdrawal_history_screen.dart';
 
 import '../../providers/kyc/kyc_provider.dart';
 import '../../providers/routes/register_route_provider.dart';
@@ -511,6 +510,22 @@ class _HomeDashboard extends StatelessWidget {
                     onTap: () => onNavigate(1),
                   ),
                 ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: _buildPrimaryActionCard(
+                    context: context,
+                    title: "Nhóm chat",
+                    subtitle: "Trao đổi nhanh với các nhóm đơn và tài xế.",
+                    icon: Icons.forum_rounded,
+                    accent: const Color(0xFF2AA876),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const DriverChatGroupListScreen(),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 18),
@@ -528,25 +543,6 @@ class _HomeDashboard extends StatelessWidget {
                 children: [
                   _buildSecondaryActionCard(
                     context,
-                    "Lịch sử chuyến",
-                    Icons.assignment_rounded,
-                    Colors.blue,
-                    () => onNavigate(3),
-                  ),
-                  _buildSecondaryActionCard(
-                    context,
-                    "Nhóm chat",
-                    Icons.forum_rounded,
-                    const Color(0xFF2AA876),
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const DriverChatGroupListScreen(),
-                      ),
-                    ),
-                  ),
-                  _buildSecondaryActionCard(
-                    context,
                     "Nạp tiền ví",
                     Icons.account_balance_wallet_rounded,
                     Colors.green,
@@ -558,18 +554,6 @@ class _HomeDashboard extends StatelessWidget {
                     Icons.payments_outlined,
                     Colors.redAccent,
                     () => _showWithdrawDialog(context),
-                  ),
-                  _buildSecondaryActionCard(
-                    context,
-                    "Lịch sử rút",
-                    Icons.history_rounded,
-                    Colors.purple,
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const WithdrawalHistoryScreen(),
-                      ),
-                    ),
                   ),
                 ],
               ),
@@ -894,104 +878,241 @@ class _HomeDashboard extends StatelessWidget {
   void _showDepositDialog(BuildContext parentContext, ThemeData theme) {
     final TextEditingController amountController = TextEditingController();
     final depositProvider = parentContext.read<DepositProvider>();
+    final scaffoldMessenger = ScaffoldMessenger.of(parentContext);
 
     bool isSubmitting = false;
 
     showDialog(
       context: parentContext,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text("Nạp tiền vào ví"),
-          content: TextField(
-            controller: amountController,
-            keyboardType: TextInputType.number,
-          ),
-          actions: [
-            TextButton(
-              onPressed: isSubmitting
-                  ? null
-                  : () => Navigator.pop(dialogContext),
-              style: TextButton.styleFrom(foregroundColor: Colors.white),
-              child: const Text("Hủy"),
+        builder: (context, setState) {
+          return AlertDialog(
+            backgroundColor: AppColors.surfaceGreen,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
             ),
-            ElevatedButton(
-              onPressed: isSubmitting
-                  ? null
-                  : () async {
-                      final amount = int.tryParse(
-                        amountController.text.replaceAll(',', '').trim(),
-                      );
-
-                      if (amount == null || amount <= 0) {
-                        ScaffoldMessenger.of(parentContext).showSnackBar(
-                          const SnackBar(
-                            content: Text("Vui lòng nhập số tiền hợp lệ"),
+            titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            actionsPadding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+            title: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.secondary.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    Icons.account_balance_wallet_rounded,
+                    color: theme.colorScheme.secondary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    "Nạp tiền vào ví",
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Nhập số tiền bạn muốn nạp. Sau đó hệ thống sẽ tạo mã QR để bạn chuyển khoản nhanh hơn.",
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textSubtle,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: theme.colorScheme.secondary.withValues(
+                        alpha: 0.12,
+                      ),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Số tiền cần nạp",
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSubtle,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: amountController,
+                        keyboardType: TextInputType.number,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: "Ví dụ: 100000",
+                          hintStyle: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.32),
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
                           ),
-                        );
-                        return;
-                      }
-
-                      final prefs = await SharedPreferences.getInstance();
-                      final token = prefs.getString('accessToken') ?? '';
-
-                      if (token.isEmpty) {
-                        ScaffoldMessenger.of(parentContext).showSnackBar(
-                          const SnackBar(
-                            content: Text("Không tìm thấy access token"),
+                          prefixIcon: Icon(
+                            Icons.payments_outlined,
+                            color: theme.colorScheme.secondary,
                           ),
-                        );
-                        return;
-                      }
-
-                      setState(() => isSubmitting = true);
-
-                      final ok = await depositProvider.createDepositRequest(
-                        accessToken: token,
-                        amount: amount,
-                      );
-
-                      if (!parentContext.mounted) return;
-
-                      setState(() => isSubmitting = false);
-
-                      if (!ok) {
-                        ScaffoldMessenger.of(parentContext).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              depositProvider.errorMessage ??
-                                  "Không thể tạo yêu cầu nạp tiền",
+                          suffixText: "đ",
+                          suffixStyle: TextStyle(
+                            color: theme.colorScheme.secondary,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 18,
+                          ),
+                          filled: true,
+                          fillColor: Colors.black.withValues(alpha: 0.12),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 18,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(
+                              color: theme.colorScheme.secondary,
                             ),
                           ),
-                        );
-                        return;
-                      }
-
-                      final content = depositProvider.depositContent;
-                      if (content == null || content.isEmpty) {
-                        ScaffoldMessenger.of(parentContext).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              "Không nhận được nội dung chuyển khoản",
-                            ),
-                          ),
-                        );
-                        return;
-                      }
-
-                      Navigator.pop(dialogContext);
-
-                      _showQRDialog(parentContext, theme, amount, content);
-                    },
-              child: isSubmitting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text("TẠO YÊU CẦU"),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+            actions: [
+              SizedBox(
+                height: 46,
+                child: ElevatedButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () => Navigator.pop(dialogContext),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black87,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text("Huỷ"),
+                ),
+              ),
+              SizedBox(
+                height: 46,
+                child: ElevatedButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          final amount = int.tryParse(
+                            amountController.text.replaceAll(',', '').trim(),
+                          );
+
+                          if (amount == null || amount <= 0) {
+                            scaffoldMessenger.showSnackBar(
+                              const SnackBar(
+                                content: Text("Vui lòng nhập số tiền hợp lệ"),
+                              ),
+                            );
+                            return;
+                          }
+
+                          final prefs = await SharedPreferences.getInstance();
+                          final token = prefs.getString('accessToken') ?? '';
+
+                          if (token.isEmpty) {
+                            scaffoldMessenger.showSnackBar(
+                              const SnackBar(
+                                content: Text("Không tìm thấy access token"),
+                              ),
+                            );
+                            return;
+                          }
+
+                          setState(() => isSubmitting = true);
+
+                          final ok = await depositProvider.createDepositRequest(
+                            accessToken: token,
+                            amount: amount,
+                          );
+
+                          if (!parentContext.mounted) return;
+
+                          setState(() => isSubmitting = false);
+
+                          if (!ok) {
+                            scaffoldMessenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  depositProvider.errorMessage ??
+                                      "Không thể tạo yêu cầu nạp tiền",
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+
+                          final content = depositProvider.depositContent;
+                          if (content == null || content.isEmpty) {
+                            scaffoldMessenger.showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  "Không nhận được nội dung chuyển khoản",
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+
+                          Navigator.pop(dialogContext);
+
+                          _showQRDialog(parentContext, theme, amount, content);
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.secondary,
+                    foregroundColor: Colors.black87,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text("Tạo yêu cầu"),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -1006,17 +1127,38 @@ class _HomeDashboard extends StatelessWidget {
       context: parentContext,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        title: const Text("Lưu ý quan trọng"),
-        content: const Text(
-          "Hệ thống đã tạo yêu cầu nạp tiền. Vui lòng chuyển khoản đúng số tiền và đúng nội dung để worker tự đối soát.",
+        backgroundColor: AppColors.surfaceGreen,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(
+          "Lưu ý trước khi chuyển khoản",
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        content: Text(
+          "Hệ thống đã tạo sẵn thông tin nạp tiền cho bạn. Khi chuyển khoản, hãy nhập đúng số tiền và đúng nội dung hiển thị để tiền được cộng vào ví nhanh và chính xác.",
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: AppColors.textSubtle,
+            height: 1.5,
+          ),
         ),
         actions: [
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text("Hủy"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black87,
+              elevation: 0,
+            ),
+            child: const Text("Huỷ"),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.colorScheme.secondary,
+              foregroundColor: Colors.black87,
+            ),
             child: const Text("Tôi đã hiểu"),
           ),
         ],
@@ -1024,6 +1166,7 @@ class _HomeDashboard extends StatelessWidget {
     );
 
     if (confirmed != true) return;
+    if (!parentContext.mounted) return;
 
     final qrUrl =
         "https://img.vietqr.io/image/MB-246878888-compact2.png?amount=$amount&addInfo=$content&accountName=CTY%20CP%20CN%20VA%20DV%20TT%20THE%20BELUGAS";
@@ -1079,9 +1222,10 @@ class _HomeDashboard extends StatelessWidget {
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 10),
-                    const Text(
-                      "Sau khi chuyển khoản thành công, hệ thống sẽ tự đối soát và cộng ví.",
+                    Text(
+                      "Sau khi bạn chuyển khoản thành công, hệ thống sẽ kiểm tra thông tin và cộng tiền vào ví của bạn.",
                       textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(height: 1.45),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -1110,11 +1254,40 @@ class _HomeDashboard extends StatelessWidget {
 
   void _showWithdrawDialog(BuildContext context) {
     if (profile == null) return;
+    final theme = Theme.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("Rút tiền"),
+        backgroundColor: AppColors.surfaceGreen,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+        contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        title: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF8A8A).withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.payments_outlined,
+                color: Color(0xFFFF8A8A),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                "Rút tiền",
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
         content: WithdrawDialogContent(
           currentWallet: profile!.wallet.toDouble(),
           driverId: profile!.id,
@@ -1274,6 +1447,8 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
         accountName: _accountNameController.text.toUpperCase(),
       );
 
+      if (!mounted) return;
+
       if (res.statusCode == 200) Navigator.pop(context, true);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -1282,34 +1457,164 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return SingleChildScrollView(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: theme.colorScheme.secondary.withValues(alpha: 0.12),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Số dư khả dụng",
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSubtle,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "${NumberFormat('#,###').format(widget.currentWallet.round())} đ",
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
           TextField(
             controller: _amountController,
-            decoration: const InputDecoration(labelText: "Số tiền muốn rút"),
+            keyboardType: TextInputType.number,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+            decoration: InputDecoration(
+              labelText: "Số tiền muốn rút",
+              labelStyle: const TextStyle(color: Colors.white70),
+              prefixIcon: const Icon(Icons.payments_outlined),
+              suffixText: "đ",
+              suffixStyle: TextStyle(
+                color: theme.colorScheme.secondary,
+                fontWeight: FontWeight.w800,
+              ),
+              filled: true,
+              fillColor: Colors.black.withValues(alpha: 0.12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: theme.colorScheme.secondary),
+              ),
+            ),
           ),
           const SizedBox(height: 12),
           InkWell(
             onTap: () => _showBankPicker(context),
             child: InputDecorator(
-              decoration: const InputDecoration(labelText: "Chọn ngân hàng"),
-              child: Text(_selectedBankShortName ?? "Chạm để chọn"),
+              decoration: InputDecoration(
+                labelText: "Ngân hàng",
+                labelStyle: const TextStyle(color: Colors.white70),
+                prefixIcon: const Icon(Icons.account_balance_rounded),
+                filled: true,
+                fillColor: Colors.black.withValues(alpha: 0.12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              child: Text(
+                _selectedBankShortName ?? "Chạm để chọn",
+                style: TextStyle(
+                  color: _selectedBankShortName == null
+                      ? Colors.white70
+                      : Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _accountNumberController,
-            decoration: const InputDecoration(labelText: "Số tài khoản"),
+            keyboardType: TextInputType.number,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+            decoration: InputDecoration(
+              labelText: "Số tài khoản",
+              labelStyle: const TextStyle(color: Colors.white70),
+              prefixIcon: const Icon(Icons.credit_card_rounded),
+              filled: true,
+              fillColor: Colors.black.withValues(alpha: 0.12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: theme.colorScheme.secondary),
+              ),
+            ),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _accountNameController,
-            decoration: const InputDecoration(labelText: "Tên chủ tài khoản"),
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+            decoration: InputDecoration(
+              labelText: "Tên chủ tài khoản",
+              labelStyle: const TextStyle(color: Colors.white70),
+              prefixIcon: const Icon(Icons.person_outline_rounded),
+              filled: true,
+              fillColor: Colors.black.withValues(alpha: 0.12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: theme.colorScheme.secondary),
+              ),
+            ),
           ),
           const SizedBox(height: 20),
           SizedBox(
@@ -1318,8 +1623,22 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
               onPressed: _isSubmitting ? null : _confirmWithdraw,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
-              child: const Text("GỬI YÊU CẦU RÚT TIỀN"),
+              child: _isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text("Gửi yêu cầu rút tiền"),
             ),
           ),
         ],

@@ -1,11 +1,18 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app_theme.dart';
 import '../../models/driver/driver_profile_model.dart';
 import '../../models/driver_onboarding_status_dto.dart';
+import '../../providers/driver/deposit_provider.dart';
 import '../../providers/driver/profile_provider.dart';
 import '../../providers/routes/register_route_provider.dart';
+import '../../services/api_service.dart';
 import '../../widgets/driver_ui.dart';
 import '../change_password_screen.dart';
 import '../register_route/register_route_popup.dart';
@@ -18,8 +25,11 @@ class DriverProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ProfileProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ProfileProvider()),
+        ChangeNotifierProvider(create: (_) => DepositProvider()),
+      ],
       child: const _DriverProfileView(),
     );
   }
@@ -33,6 +43,7 @@ class _DriverProfileView extends StatefulWidget {
 }
 
 class _DriverProfileViewState extends State<_DriverProfileView> {
+  bool _isFinanceExpanded = false;
   bool _isOnboardingExpanded = true;
   bool _isSelectedProvincesExpanded = false;
   bool _isRoutesExpanded = false;
@@ -156,6 +167,10 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
     }
   }
 
+  String _formatWallet(double amount) {
+    return '${NumberFormat('#,###', 'vi_VN').format(amount.round())} đ';
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -250,6 +265,13 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                           _buildHero(theme, profile, onboarding),
                           const SizedBox(height: 16),
                           _buildWalletCard(theme, profile),
+                          const SizedBox(height: 16),
+                          _buildFinanceSection(
+                            context,
+                            theme,
+                            provider,
+                            profile,
+                          ),
                           const SizedBox(height: 16),
                           _buildOnboardingSection(theme, onboarding),
                           const SizedBox(height: 16),
@@ -395,7 +417,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
           Expanded(
             child: DriverStatTile(
               label: "Số dư ví",
-              value: '${profile.wallet.toStringAsFixed(0)} đ',
+              value: _formatWallet(profile.wallet),
               icon: Icons.savings_rounded,
             ),
           ),
@@ -418,6 +440,498 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
         ],
       ),
     );
+  }
+
+  Widget _buildFinanceSection(
+    BuildContext context,
+    ThemeData theme,
+    ProfileProvider provider,
+    DriverProfileModel profile,
+  ) {
+    return _buildExpandableSection(
+      theme: theme,
+      title: "Tài chính",
+      subtitle: "Lịch sử ví, nạp tiền và gửi yêu cầu rút tiền.",
+      icon: Icons.account_balance_wallet_outlined,
+      expanded: _isFinanceExpanded,
+      onTap: () {
+        setState(() {
+          _isFinanceExpanded = !_isFinanceExpanded;
+        });
+      },
+      child: Column(
+        children: [
+          _buildActionTile(
+            theme,
+            icon: Icons.history_rounded,
+            title: "Lịch sử tài chính",
+            subtitle: "Xem toàn bộ giao dịch ví",
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const WalletHistoryScreen(),
+                ),
+              );
+            },
+          ),
+          _buildActionTile(
+            theme,
+            icon: Icons.account_balance_wallet_rounded,
+            title: "Nạp tiền",
+            subtitle: "Tạo yêu cầu nạp tiền vào ví",
+            onTap: () => _showDepositDialog(context, theme, provider),
+          ),
+          _buildActionTile(
+            theme,
+            icon: Icons.payments_outlined,
+            title: "Yêu cầu rút tiền",
+            subtitle: "Gửi yêu cầu rút tiền từ ví tài xế",
+            onTap: () => _showWithdrawDialog(context, provider, profile),
+            isLast: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDepositDialog(
+    BuildContext parentContext,
+    ThemeData theme,
+    ProfileProvider provider,
+  ) {
+    final TextEditingController amountController = TextEditingController();
+    final depositProvider = parentContext.read<DepositProvider>();
+    final scaffoldMessenger = ScaffoldMessenger.of(parentContext);
+
+    bool isSubmitting = false;
+
+    showDialog(
+      context: parentContext,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            backgroundColor: AppColors.surfaceGreen,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            actionsPadding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+            title: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.secondary.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    Icons.account_balance_wallet_rounded,
+                    color: theme.colorScheme.secondary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    "Nạp tiền vào ví",
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Nhập số tiền bạn muốn nạp. Sau đó hệ thống sẽ tạo mã QR để bạn chuyển khoản nhanh hơn.",
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textSubtle,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: theme.colorScheme.secondary.withValues(
+                        alpha: 0.12,
+                      ),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Số tiền cần nạp",
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSubtle,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: amountController,
+                        keyboardType: TextInputType.number,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: "Ví dụ: 100000",
+                          hintStyle: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.32),
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.payments_outlined,
+                            color: theme.colorScheme.secondary,
+                          ),
+                          suffixText: "đ",
+                          suffixStyle: TextStyle(
+                            color: theme.colorScheme.secondary,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 18,
+                          ),
+                          filled: true,
+                          fillColor: Colors.black.withValues(alpha: 0.12),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 18,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(
+                              color: theme.colorScheme.secondary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              SizedBox(
+                height: 46,
+                child: ElevatedButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () => Navigator.pop(dialogContext),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black87,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text("Huỷ"),
+                ),
+              ),
+              SizedBox(
+                height: 46,
+                child: ElevatedButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          final amount = int.tryParse(
+                            amountController.text.replaceAll(',', '').trim(),
+                          );
+
+                          if (amount == null || amount <= 0) {
+                            scaffoldMessenger.showSnackBar(
+                              const SnackBar(
+                                content: Text("Vui lòng nhập số tiền hợp lệ"),
+                              ),
+                            );
+                            return;
+                          }
+
+                          final prefs = await SharedPreferences.getInstance();
+                          final token = prefs.getString('accessToken') ?? '';
+
+                          if (token.isEmpty) {
+                            scaffoldMessenger.showSnackBar(
+                              const SnackBar(
+                                content: Text("Không tìm thấy access token"),
+                              ),
+                            );
+                            return;
+                          }
+
+                          setState(() => isSubmitting = true);
+
+                          final ok = await depositProvider.createDepositRequest(
+                            accessToken: token,
+                            amount: amount,
+                          );
+
+                          if (!parentContext.mounted) return;
+
+                          setState(() => isSubmitting = false);
+
+                          if (!ok) {
+                            scaffoldMessenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  depositProvider.errorMessage ??
+                                      "Không thể tạo yêu cầu nạp tiền",
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+
+                          final content = depositProvider.depositContent;
+                          if (content == null || content.isEmpty) {
+                            scaffoldMessenger.showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  "Không nhận được nội dung chuyển khoản",
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+
+                          Navigator.pop(dialogContext);
+
+                          _showQRDialog(
+                            parentContext,
+                            theme,
+                            amount,
+                            content,
+                            provider,
+                          );
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.secondary,
+                    foregroundColor: Colors.black87,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text("Tạo yêu cầu"),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showQRDialog(
+    BuildContext parentContext,
+    ThemeData theme,
+    int amount,
+    String content,
+    ProfileProvider provider,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: parentContext,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceGreen,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(
+          "Lưu ý trước khi chuyển khoản",
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        content: Text(
+          "Hệ thống đã tạo sẵn thông tin nạp tiền cho bạn. Khi chuyển khoản, hãy nhập đúng số tiền và đúng nội dung hiển thị để tiền được cộng vào ví nhanh và chính xác.",
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: AppColors.textSubtle,
+            height: 1.5,
+          ),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black87,
+              elevation: 0,
+            ),
+            child: const Text("Huỷ"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.colorScheme.secondary,
+              foregroundColor: Colors.black87,
+            ),
+            child: const Text("Tôi đã hiểu"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+    if (!mounted || !parentContext.mounted) return;
+
+    final qrUrl =
+        "https://img.vietqr.io/image/MB-246878888-compact2.png?amount=$amount&addInfo=$content&accountName=CTY%20CP%20CN%20VA%20DV%20TT%20THE%20BELUGAS";
+
+    int countdown = 300;
+    Timer? countdownTimer;
+
+    showDialog(
+      context: parentContext,
+      barrierDismissible: false,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (dialogContext, setState) {
+            countdownTimer ??= Timer.periodic(const Duration(seconds: 1), (t) {
+              if (countdown <= 0) {
+                t.cancel();
+                Navigator.pop(dialogCtx);
+              } else {
+                setState(() => countdown--);
+              }
+            });
+
+            final minutes = countdown ~/ 60;
+            final seconds = (countdown % 60).toString().padLeft(2, '0');
+
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      "Quét mã QR để nạp tiền",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Image.network(qrUrl, height: 280),
+                    const SizedBox(height: 12),
+                    Text(
+                      "Số tiền: ${NumberFormat('#,###').format(amount)} đ",
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 6),
+                    SelectableText(
+                      "Nội dung: $content",
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      "Sau khi bạn chuyển khoản thành công, hệ thống sẽ kiểm tra thông tin và cộng tiền vào ví của bạn.",
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(height: 1.45),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Còn lại: $minutes:$seconds",
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        countdownTimer?.cancel();
+                        Navigator.pop(dialogCtx);
+                      },
+                      child: const Text("Đóng"),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    ).then((value) async {
+      countdownTimer?.cancel();
+      await provider.loadProfile();
+    });
+  }
+
+  void _showWithdrawDialog(
+    BuildContext context,
+    ProfileProvider provider,
+    DriverProfileModel profile,
+  ) {
+    final theme = Theme.of(context);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surfaceGreen,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+        contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        title: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF8A8A).withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.payments_outlined,
+                color: Color(0xFFFF8A8A),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                "Rút tiền",
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: ProfileWithdrawDialogContent(
+          currentWallet: profile.wallet.toDouble(),
+          driverId: profile.id,
+        ),
+      ),
+    ).then((value) {
+      if (value == true) {
+        provider.loadProfile();
+      }
+    });
   }
 
   Widget _buildOnboardingSection(
@@ -641,18 +1155,6 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
-              );
-            },
-          ),
-          _buildActionTile(
-            theme,
-            icon: Icons.attach_money_rounded,
-            title: "Lịch sử tài chính",
-            subtitle: "Xem toàn bộ giao dịch ví",
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const WalletHistoryScreen()),
               );
             },
           ),
@@ -1105,6 +1607,358 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
               foregroundColor: Colors.black87,
             ),
             child: const Text("Xoá vĩnh viễn"),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ProfileWithdrawDialogContent extends StatefulWidget {
+  final double currentWallet;
+  final int driverId;
+
+  const ProfileWithdrawDialogContent({
+    super.key,
+    required this.currentWallet,
+    required this.driverId,
+  });
+
+  @override
+  State<ProfileWithdrawDialogContent> createState() =>
+      _ProfileWithdrawDialogContentState();
+}
+
+class _ProfileWithdrawDialogContentState
+    extends State<ProfileWithdrawDialogContent> {
+  final _amountController = TextEditingController();
+  final _accountNumberController = TextEditingController();
+  final _accountNameController = TextEditingController();
+
+  String? _selectedBankCode;
+  String? _selectedBankName;
+  String? _selectedBankShortName;
+
+  List<dynamic> _banks = [];
+  List<dynamic> _filteredBanks = [];
+
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchBanks();
+  }
+
+  Future<void> _fetchBanks() async {
+    try {
+      final res = await ApiService.getBanks();
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body);
+        if (body["code"] == "00") {
+          setState(() {
+            _banks = body["data"];
+            _filteredBanks = body["data"];
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
+  void _showBankPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.7,
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  const Text(
+                    "Chọn ngân hàng",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: "Tìm ngân hàng...",
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onChanged: (value) {
+                      setModalState(() {
+                        _filteredBanks = _banks.where((bank) {
+                          final q = value.toLowerCase();
+                          return bank['name'].toString().toLowerCase().contains(
+                                q,
+                              ) ||
+                              bank['shortName']
+                                  .toString()
+                                  .toLowerCase()
+                                  .contains(q);
+                        }).toList();
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: _filteredBanks.length,
+                      itemBuilder: (context, index) {
+                        final bank = _filteredBanks[index];
+                        return ListTile(
+                          leading: Image.network(bank['logo'], width: 35),
+                          title: Text(bank['shortName']),
+                          onTap: () {
+                            setState(() {
+                              _selectedBankCode = bank['code'];
+                              _selectedBankName = bank['name'];
+                              _selectedBankShortName = bank['shortName'];
+                            });
+                            Navigator.pop(ctx);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmWithdraw() async {
+    final amountText = _amountController.text.replaceAll(',', '');
+    final amount = int.tryParse(amountText) ?? 0;
+
+    if (amount <= 0 || amount > widget.currentWallet) return;
+    if (_selectedBankCode == null) return;
+
+    _submitWithdraw(amount);
+  }
+
+  Future<void> _submitWithdraw(int amount) async {
+    setState(() => _isSubmitting = true);
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('accessToken') ?? '';
+
+      final res = await ApiService.createWithdrawal(
+        accessToken: token,
+        amount: amount,
+        bankCode: _selectedBankCode!,
+        bankName: _selectedBankName!,
+        accountNumber: _accountNumberController.text,
+        accountName: _accountNameController.text.toUpperCase(),
+      );
+
+      if (!mounted) return;
+
+      if (res.statusCode == 200) {
+        Navigator.pop(context, true);
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: theme.colorScheme.secondary.withValues(alpha: 0.12),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Số dư khả dụng",
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSubtle,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "${NumberFormat('#,###').format(widget.currentWallet.round())} đ",
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _amountController,
+            keyboardType: TextInputType.number,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+            decoration: InputDecoration(
+              labelText: "Số tiền muốn rút",
+              labelStyle: const TextStyle(color: Colors.white70),
+              prefixIcon: const Icon(Icons.payments_outlined),
+              suffixText: "đ",
+              suffixStyle: TextStyle(
+                color: theme.colorScheme.secondary,
+                fontWeight: FontWeight.w800,
+              ),
+              filled: true,
+              fillColor: Colors.black.withValues(alpha: 0.12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: theme.colorScheme.secondary),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          InkWell(
+            onTap: () => _showBankPicker(context),
+            child: InputDecorator(
+              decoration: InputDecoration(
+                labelText: "Ngân hàng",
+                labelStyle: const TextStyle(color: Colors.white70),
+                prefixIcon: const Icon(Icons.account_balance_rounded),
+                filled: true,
+                fillColor: Colors.black.withValues(alpha: 0.12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              child: Text(
+                _selectedBankShortName ?? "Chạm để chọn",
+                style: TextStyle(
+                  color: _selectedBankShortName == null
+                      ? Colors.white70
+                      : Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _accountNumberController,
+            keyboardType: TextInputType.number,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+            decoration: InputDecoration(
+              labelText: "Số tài khoản",
+              labelStyle: const TextStyle(color: Colors.white70),
+              prefixIcon: const Icon(Icons.credit_card_rounded),
+              filled: true,
+              fillColor: Colors.black.withValues(alpha: 0.12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: theme.colorScheme.secondary),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _accountNameController,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+            decoration: InputDecoration(
+              labelText: "Tên chủ tài khoản",
+              labelStyle: const TextStyle(color: Colors.white70),
+              prefixIcon: const Icon(Icons.person_outline_rounded),
+              filled: true,
+              fillColor: Colors.black.withValues(alpha: 0.12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: theme.colorScheme.secondary),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _isSubmitting ? null : _confirmWithdraw,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: _isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text("Gửi yêu cầu rút tiền"),
+            ),
           ),
         ],
       ),
