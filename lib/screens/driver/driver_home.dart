@@ -535,13 +535,15 @@ class _HomeDashboard extends StatelessWidget {
               title: "Tiện ích vận hành",
               subtitle: "Các công cụ phụ trợ cho lịch sử, chat và ví.",
               icon: Icons.dashboard_customize_outlined,
-              child: GridView.count(
+              child: GridView(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                mainAxisSpacing: 14,
-                crossAxisSpacing: 14,
-                mainAxisExtent: 144,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 14,
+                  crossAxisSpacing: 14,
+                  mainAxisExtent: 144,
+                ),
                 children: [
                   _buildSecondaryActionCard(
                     context,
