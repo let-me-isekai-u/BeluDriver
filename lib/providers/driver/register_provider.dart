@@ -1,14 +1,20 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
+import '../../services/v2/api_service.dart';
 
 class RegisterProvider extends ChangeNotifier {
+  static const Map<int, String> regionOptions = {
+    1: 'Miền Bắc',
+    2: 'Miền Trung',
+  };
+
   final TextEditingController fullNameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController confirmPhoneController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmPasswordController = TextEditingController();
+  final TextEditingController confirmPasswordController =
+      TextEditingController();
   final TextEditingController licenseNumberController = TextEditingController();
 
   bool agreeTerms = false;
@@ -16,6 +22,7 @@ class RegisterProvider extends ChangeNotifier {
   bool loading = false;
   bool obscurePassword = true;
   bool obscureConfirmPassword = true;
+  int? selectedRegion;
 
   bool get canSubmit => agreeTerms && agreeCamera && !loading;
 
@@ -36,6 +43,11 @@ class RegisterProvider extends ChangeNotifier {
 
   void setAgreeCamera(bool value) {
     agreeCamera = value;
+    notifyListeners();
+  }
+
+  void setRegion(int? value) {
+    selectedRegion = value;
     notifyListeners();
   }
 
@@ -62,7 +74,8 @@ class RegisterProvider extends ChangeNotifier {
     if (!strongPassRegex.hasMatch(passwordController.text.trim())) {
       return "Mật khẩu quá yếu (phải gồm chữ hoa, chữ thường, số, ký tự đặc biệt)";
     }
-    if (passwordController.text.trim() != confirmPasswordController.text.trim()) {
+    if (passwordController.text.trim() !=
+        confirmPasswordController.text.trim()) {
       return "Mật khẩu nhập lại không trùng";
     }
     if (!agreeTerms) {
@@ -73,6 +86,9 @@ class RegisterProvider extends ChangeNotifier {
     }
     if (licenseNumberController.text.trim().isEmpty) {
       return "Biển số xe không được để trống";
+    }
+    if (selectedRegion == null) {
+      return "Vui lòng chọn miền hoạt động";
     }
     return null;
   }
@@ -96,6 +112,7 @@ class RegisterProvider extends ChangeNotifier {
       email: emailController.text.trim(),
       password: passwordController.text.trim(),
       licenseNumber: licenseNumberController.text.trim(),
+      region: selectedRegion!,
     );
 
     loading = false;

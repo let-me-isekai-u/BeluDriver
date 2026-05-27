@@ -177,6 +177,15 @@ class _RegisterView extends StatelessWidget {
                       const SizedBox(height: 16),
                       _buildInfoCard(
                         theme: theme,
+                        title: "Miền hoạt động",
+                        subtitle:
+                            "Lưu ý: Chỉ được chọn khu vực hoạt động duy nhất một lần.",
+                        icon: Icons.map_outlined,
+                        children: const [_RegionDropdownField()],
+                      ),
+                      const SizedBox(height: 16),
+                      _buildInfoCard(
+                        theme: theme,
                         title: "Thông tin liên hệ",
                         subtitle:
                             "Số điện thoại dùng để đăng nhập và nhận liên hệ.",
@@ -342,6 +351,83 @@ class _PasswordTextField extends StatelessWidget {
           onPressed: toggle,
         ),
       ),
+    );
+  }
+}
+
+class _RegionDropdownField extends StatelessWidget {
+  const _RegionDropdownField();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final provider = context.watch<RegisterProvider>();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: RegisterProvider.regionOptions.entries.map((entry) {
+            final isSelected = provider.selectedRegion == entry.key;
+
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  right: entry.key == 1 ? 6 : 0,
+                  left: entry.key == 2 ? 6 : 0,
+                ),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: () => provider.setRegion(entry.key),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 14,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceGreen.withValues(alpha: 0.52),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: isSelected
+                            ? theme.colorScheme.secondary
+                            : theme.colorScheme.onSurface.withValues(
+                                alpha: 0.12,
+                              ),
+                        width: isSelected ? 1.6 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isSelected
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_off,
+                          color: isSelected
+                              ? theme.colorScheme.secondary
+                              : theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.55,
+                                ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            entry.value,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: theme.colorScheme.onSurface,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 }

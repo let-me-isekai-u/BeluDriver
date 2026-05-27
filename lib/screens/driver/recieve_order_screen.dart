@@ -43,6 +43,32 @@ class _RecieveOrderView extends StatefulWidget {
 class _RecieveOrderViewState extends State<_RecieveOrderView> {
   bool _didInitProvider = false;
 
+  String _paymentMethodLabel(int paymentMethod) {
+    switch (paymentMethod) {
+      case 1:
+        return 'Chuyển khoản';
+      case 2:
+        return 'Ví';
+      case 3:
+        return 'Tiền mặt (COD)';
+      default:
+        return 'Chưa xác định';
+    }
+  }
+
+  IconData _paymentMethodIcon(int paymentMethod) {
+    switch (paymentMethod) {
+      case 1:
+        return Icons.account_balance_outlined;
+      case 2:
+        return Icons.account_balance_wallet_outlined;
+      case 3:
+        return Icons.payments_outlined;
+      default:
+        return Icons.help_outline_rounded;
+    }
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -207,132 +233,70 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
 
         return Scaffold(
           backgroundColor: theme.scaffoldBackgroundColor,
-          appBar: AppBar(
-            title: Text(
-              "Nhận đơn",
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: theme.colorScheme.secondary,
-              ),
-            ),
-            elevation: 0,
-            backgroundColor: theme.colorScheme.primary,
-            foregroundColor: Colors.white,
-          ),
-          body: Column(
-            children: [
-              _buildTopSummary(context, provider),
-              _buildSortFilter(context, provider),
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: () async {
-                    await provider.loadMyBrokerRideIds();
-                    await provider.refreshWaitingOrders();
-                  },
-                  child: SafeArea(
-                    bottom: true,
-                    child: PagedListView<int, WaitingRideListItem>(
-                      pagingController: provider.pagingController,
-                      padding: EdgeInsets.fromLTRB(12, 12, 12, bottomPadding),
-                      physics: const BouncingScrollPhysics(
-                        parent: AlwaysScrollableScrollPhysics(),
-                      ),
-                      builderDelegate:
-                          PagedChildBuilderDelegate<WaitingRideListItem>(
-                            animateTransitions: true,
-                            itemBuilder: (context, item, index) {
-                              if (item is WaitingRideDateHeaderItem) {
-                                return _buildCreatedAtHeader(
-                                  context,
-                                  provider,
-                                  item,
-                                );
-                              }
+          body: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                _buildSortFilter(context, provider),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      await provider.loadMyBrokerRideIds();
+                      await provider.refreshWaitingOrders();
+                    },
+                    child: SafeArea(
+                      bottom: true,
+                      child: PagedListView<int, WaitingRideListItem>(
+                        pagingController: provider.pagingController,
+                        padding: EdgeInsets.fromLTRB(12, 12, 12, bottomPadding),
+                        physics: const BouncingScrollPhysics(
+                          parent: AlwaysScrollableScrollPhysics(),
+                        ),
+                        builderDelegate:
+                            PagedChildBuilderDelegate<WaitingRideListItem>(
+                              animateTransitions: true,
+                              itemBuilder: (context, item, index) {
+                                if (item is WaitingRideDateHeaderItem) {
+                                  return _buildCreatedAtHeader(
+                                    context,
+                                    provider,
+                                    item,
+                                  );
+                                }
 
-                              if (item is WaitingRideCardItem) {
-                                return _buildRideCard(
-                                  context,
-                                  provider,
-                                  item.ride,
-                                );
-                              }
+                                if (item is WaitingRideCardItem) {
+                                  return _buildRideCard(
+                                    context,
+                                    provider,
+                                    item.ride,
+                                  );
+                                }
 
-                              return const SizedBox.shrink();
-                            },
-                            firstPageProgressIndicatorBuilder: (_) =>
-                                const Padding(
-                                  padding: EdgeInsets.only(top: 80),
-                                  child: Center(
-                                    child: CircularProgressIndicator(),
+                                return const SizedBox.shrink();
+                              },
+                              firstPageProgressIndicatorBuilder: (_) =>
+                                  const Padding(
+                                    padding: EdgeInsets.only(top: 80),
+                                    child: Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
                                   ),
-                                ),
-                            noItemsFoundIndicatorBuilder: (_) =>
-                                _buildEmptyPlaceholder(context),
-                          ),
+                              noItemsFoundIndicatorBuilder: (_) =>
+                                  _buildEmptyPlaceholder(context),
+                            ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _buildTopSummary(BuildContext context, RecieveOrderProvider provider) {
-    final theme = Theme.of(context);
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [theme.colorScheme.primary, AppColors.surfaceGreen],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Đơn chờ xử lý",
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: theme.colorScheme.secondary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    provider.isInitialLoading
-                        ? "Đang tải danh sách đơn..."
-                        : "${provider.waitingRideCount} đơn khả dụng để nhận",
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            const DriverPill(
-              label: "Vuốt xuống làm mới",
-              icon: Icons.swipe_down_alt_rounded,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildSortFilter(BuildContext context, RecieveOrderProvider provider) {
     final theme = Theme.of(context);
@@ -454,6 +418,8 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
     final String rideTypeOrQuantityText = provider.rideTypeOrQuantityText(ride);
     final bool shouldShowRideTypeOrQuantityText = provider
         .shouldShowRideTypeOrQuantity(ride);
+    final int paymentMethod = ride.paymentMethod;
+    final bool shouldShowPaymentMethod = paymentMethod > 0;
 
     final String fromText = provider.buildFullAddress(
       fromAddressRaw,
@@ -522,6 +488,11 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
                           DriverPill(
                             label: rideTypeOrQuantityText,
                             icon: Icons.event_seat_rounded,
+                          ),
+                        if (shouldShowPaymentMethod)
+                          DriverPill(
+                            label: _paymentMethodLabel(paymentMethod),
+                            icon: _paymentMethodIcon(paymentMethod),
                           ),
                       ],
                     ),

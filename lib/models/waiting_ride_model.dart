@@ -15,6 +15,7 @@ class WaitingRide {
   final int status;
   final int type;
   final int? quantity;
+  final int paymentMethod;
 
   bool get hasQuantity => type == 1 && quantity != null;
 
@@ -34,7 +35,8 @@ class WaitingRide {
     this.fromDistrict,
     this.toDistrict,
     required this.type,
-    this.quantity
+    this.quantity,
+    required this.paymentMethod,
   });
 
   factory WaitingRide.fromJson(Map<String, dynamic> json) {
@@ -55,6 +57,7 @@ class WaitingRide {
       toDistrict: json['toDistrict']?.toString(),
       type: _parseInt(json['type']),
       quantity: _parseNullableInt(json['quantity']),
+      paymentMethod: _parseInt(json['paymentMethod']),
     );
   }
 

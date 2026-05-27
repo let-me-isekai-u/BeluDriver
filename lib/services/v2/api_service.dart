@@ -105,8 +105,9 @@ class ApiService {
     required String email,
     required String password,
     required String licenseNumber,
+    required int region,
   }) async {
-    final url = Uri.parse("$_baseUrl/driver-register");
+    final url = Uri.parse("$_baseUrl/driver-register-ver2");
 
     try {
       final request = http.MultipartRequest("POST", url);
@@ -116,6 +117,7 @@ class ApiService {
       request.fields["email"] = email;
       request.fields["password"] = password;
       request.fields["licenseNumber"] = licenseNumber;
+      request.fields["region"] = region.toString();
 
       final resStream = await request.send();
       return await http.Response.fromStream(resStream);
