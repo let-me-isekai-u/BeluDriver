@@ -1,8 +1,11 @@
 import 'dart:convert';
-//Model api tạo đơn bắn cho tài xế
+
+import 'location_models.dart';
+
+// Model api tạo đơn bắn cho tài xế
 /// ===============================
 /// API #23 - Create Broker Ride
-/// POST /api/rideapi/create-broker
+/// POST /api/v2/ride/create-broker
 /// ===============================
 
 class BrokerRideTypeOption {
@@ -34,7 +37,7 @@ class BrokerRideType {
 
   static int normalizeQuantity({required int type, required int quantity}) {
     if (isCharter(type)) return 1;
-    return quantity;
+    return quantity < 1 ? 1 : quantity;
   }
 
   static String labelOf(int type) {
@@ -43,30 +46,39 @@ class BrokerRideType {
     }
     return 'Không xác định';
   }
+
+  static String quantityLabelOf(int type) {
+    return requiresPassengerQuantity(type) ? 'Số lượng hành khách' : 'Số lượng';
+  }
+
+  static String summaryOf(int type, int? quantity) {
+    if (type == passenger && quantity != null) {
+      return '$quantity người';
+    }
+    return labelOf(type);
+  }
 }
 
 class CreateBrokerRideRequest {
-  final int fromDistrictId;
-  final int toDistrictId;
-  final String fromAddress;
-  final String toAddress;
+  final RidePointPayload from;
+  final RidePointPayload to;
+  final String fromDisplayAddress;
+  final String toDisplayAddress;
   final int type;
   final String customerName;
   final String customerPhone;
   final int quantity;
-
   final String pickupTime;
-
   final num offerPrice;
   final num creatorEarn;
   final String note;
   final int? groupId;
 
   const CreateBrokerRideRequest({
-    required this.fromDistrictId,
-    required this.toDistrictId,
-    required this.fromAddress,
-    required this.toAddress,
+    required this.from,
+    required this.to,
+    required this.fromDisplayAddress,
+    required this.toDisplayAddress,
     required this.type,
     required this.customerName,
     required this.customerPhone,
@@ -82,10 +94,8 @@ class CreateBrokerRideRequest {
       BrokerRideType.normalizeQuantity(type: type, quantity: quantity);
 
   Map<String, dynamic> toJson() => {
-    "fromDistrictId": fromDistrictId,
-    "toDistrictId": toDistrictId,
-    "fromAddress": fromAddress,
-    "toAddress": toAddress,
+    "from": from.toJson(),
+    "to": to.toJson(),
     "type": type,
     "customerName": customerName,
     "customerPhone": customerPhone,
@@ -102,10 +112,8 @@ class CreateBrokerRideRequest {
   /// Optional: validate nhẹ phía client để tránh gọi API vô ích
   /// (Backend vẫn là nguồn xác thực chính)
   void validate() {
-    if (fromDistrictId <= 0) throw ArgumentError("fromDistrictId không hợp lệ");
-    if (toDistrictId <= 0) throw ArgumentError("toDistrictId không hợp lệ");
-    if (fromAddress.trim().isEmpty) throw ArgumentError("fromAddress rỗng");
-    if (toAddress.trim().isEmpty) throw ArgumentError("toAddress rỗng");
+    if (!from.isValid) throw ArgumentError("from không hợp lệ");
+    if (!to.isValid) throw ArgumentError("to không hợp lệ");
     if (!BrokerRideType.isValid(type)) throw ArgumentError("type không hợp lệ");
     if (customerName.trim().isEmpty) throw ArgumentError("customerName rỗng");
     if (customerPhone.trim().isEmpty) throw ArgumentError("customerPhone rỗng");
@@ -116,14 +124,20 @@ class CreateBrokerRideRequest {
 }
 
 class CreateBrokerRideResponse {
+  final String? message;
   final bool success;
   final CreateBrokerRideData? data;
 
-  const CreateBrokerRideResponse({required this.success, required this.data});
+  const CreateBrokerRideResponse({
+    required this.success,
+    required this.data,
+    this.message,
+  });
 
   factory CreateBrokerRideResponse.fromJson(Map<String, dynamic> json) {
     return CreateBrokerRideResponse(
       success: json["success"] == true,
+      message: json["message"]?.toString(),
       data: json["data"] == null
           ? null
           : CreateBrokerRideData.fromJson(json["data"] as Map<String, dynamic>),
@@ -139,22 +153,31 @@ class CreateBrokerRideResponse {
 class CreateBrokerRideData {
   final int id;
   final String code;
-  final DateTime pickupTime;
+  final DateTime? pickupTime;
   final num price;
+  final String paymentMethod;
+  final int status;
+  final String statusText;
 
   const CreateBrokerRideData({
     required this.id,
     required this.code,
     required this.pickupTime,
     required this.price,
+    required this.paymentMethod,
+    required this.status,
+    required this.statusText,
   });
 
   factory CreateBrokerRideData.fromJson(Map<String, dynamic> json) {
     return CreateBrokerRideData(
-      id: (json["id"] as num).toInt(),
+      id: ((json["id"] as num?) ?? 0).toInt(),
       code: (json["code"] ?? "").toString(),
-      pickupTime: DateTime.parse((json["pickupTime"] ?? "").toString()),
-      price: (json["price"] as num),
+      pickupTime: DateTime.tryParse((json["pickupTime"] ?? "").toString()),
+      price: (json["price"] as num?) ?? 0,
+      paymentMethod: (json["paymentMethod"] ?? "").toString(),
+      status: int.tryParse(json["status"]?.toString() ?? "0") ?? 0,
+      statusText: (json["statusText"] ?? "").toString(),
     );
   }
 }

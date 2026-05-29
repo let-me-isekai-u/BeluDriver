@@ -1,14 +1,13 @@
-//provider sử dụng cho chức năng bắn đơn của tài xế
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/broker_ride_models.dart';
+import '../../models/location_models.dart';
 import '../../services/api_service.dart';
 
 class OrderFormProvider extends ChangeNotifier {
-  static const int hanoiProvinceId = 1;
-  static const int noiBaiDistrictId = 974;
-  static const String noiBaiAirportAddress = "Cảng hàng không quốc tế Nội Bài";
   static final NumberFormat _moneyFormatter = NumberFormat('#,###');
 
   final phoneController = TextEditingController();
@@ -23,48 +22,42 @@ class OrderFormProvider extends ChangeNotifier {
   bool _isFormattingOfferPrice = false;
   bool _isFormattingCreatorEarn = false;
 
-  int selectedType = BrokerRideType.passenger;
+  Timer? _fromDebounce;
+  Timer? _toDebounce;
+  String _latestFromQuery = '';
+  String _latestToQuery = '';
   String lastPassengerQuantity = "1";
 
-  int? fromProvinceId;
-  int? fromDistrictId;
-  int? toProvinceId;
-  int? toDistrictId;
+  int selectedType = BrokerRideType.passenger;
+
+  RidePointPayload? selectedFromPoint;
+  RidePointPayload? selectedToPoint;
+  AddressSelectionSource? fromSelectionSource;
+  AddressSelectionSource? toSelectionSource;
+  String? fromSelectedAddress;
+  String? toSelectedAddress;
+  TrackAsiaAutocompleteSuggestion? selectedFromSuggestion;
+  TrackAsiaAutocompleteSuggestion? selectedToSuggestion;
 
   DateTime? pickupDate;
   TimeOfDay? pickupTime;
 
-  bool loadingProvinces = false;
-  bool loadingFromDistricts = false;
-  bool loadingToDistricts = false;
+  bool loadingFromSuggestions = false;
+  bool loadingToSuggestions = false;
 
-  List<dynamic> provinces = [];
-  List<dynamic> fromDistricts = [];
-  List<dynamic> toDistricts = [];
+  List<TrackAsiaAutocompleteSuggestion> fromSuggestions =
+      <TrackAsiaAutocompleteSuggestion>[];
+  List<TrackAsiaAutocompleteSuggestion> toSuggestions =
+      <TrackAsiaAutocompleteSuggestion>[];
 
   OrderFormProvider() {
     offerPriceController.addListener(_handleOfferPriceChanged);
     creatorEarnController.addListener(_handleCreatorEarnChanged);
   }
 
-  List<dynamic> get availableFromDistricts => filterDistrictsForSelection(
-    districts: fromDistricts,
-    currentProvinceId: fromProvinceId,
-    otherProvinceId: toProvinceId,
-    otherDistrictId: toDistrictId,
-  );
+  int? tryParseInt(String raw) => int.tryParse(raw.trim());
 
-  List<dynamic> get availableToDistricts => filterDistrictsForSelection(
-    districts: toDistricts,
-    currentProvinceId: toProvinceId,
-    otherProvinceId: fromProvinceId,
-    otherDistrictId: fromDistrictId,
-  );
-
-  bool get requiresPassengerQuantity =>
-      BrokerRideType.requiresPassengerQuantity(selectedType);
-
-  bool get isCharterRide => BrokerRideType.isCharter(selectedType);
+  num? tryParseNum(String raw) => num.tryParse(_normalizeMoneyInput(raw));
 
   int get normalizedQuantity {
     final rawQuantity = tryParseInt(quantityController.text) ?? 1;
@@ -74,8 +67,52 @@ class OrderFormProvider extends ChangeNotifier {
     );
   }
 
-  int? tryParseInt(String raw) => int.tryParse(raw.trim());
-  num? tryParseNum(String raw) => num.tryParse(_normalizeMoneyInput(raw));
+  bool get hasFromSelection => selectedFromPoint?.isValid == true;
+
+  bool get hasToSelection => selectedToPoint?.isValid == true;
+
+  bool get requiresPassengerQuantity =>
+      BrokerRideType.requiresPassengerQuantity(selectedType);
+
+  bool get isCharterRide => BrokerRideType.isCharter(selectedType);
+
+  String get quantityLabel => BrokerRideType.quantityLabelOf(selectedType);
+
+  String get fromSelectionTitle {
+    if (selectedFromSuggestion != null) {
+      return selectedFromSuggestion!.primaryText;
+    }
+    return fromSelectedAddress?.trim().isNotEmpty == true
+        ? fromSelectedAddress!.trim()
+        : fromAddressController.text.trim();
+  }
+
+  String get toSelectionTitle {
+    if (selectedToSuggestion != null) {
+      return selectedToSuggestion!.primaryText;
+    }
+    return toSelectedAddress?.trim().isNotEmpty == true
+        ? toSelectedAddress!.trim()
+        : toAddressController.text.trim();
+  }
+
+  String get fromSelectionSubtitle {
+    if (selectedFromSuggestion != null) {
+      return selectedFromSuggestion!.secondaryText;
+    }
+    return fromSelectionSource == AddressSelectionSource.map
+        ? 'Đã chọn trên bản đồ'
+        : '';
+  }
+
+  String get toSelectionSubtitle {
+    if (selectedToSuggestion != null) {
+      return selectedToSuggestion!.secondaryText;
+    }
+    return toSelectionSource == AddressSelectionSource.map
+        ? 'Đã chọn trên bản đồ'
+        : '';
+  }
 
   String formatDate(DateTime? date) =>
       date == null ? "" : DateFormat('dd/MM/yyyy').format(date);
@@ -83,6 +120,18 @@ class OrderFormProvider extends ChangeNotifier {
   String formatTime(TimeOfDay? t) => t == null
       ? ""
       : "${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}";
+
+  String? buildPickupIso() {
+    if (pickupDate == null || pickupTime == null) return null;
+    final dt = DateTime(
+      pickupDate!.year,
+      pickupDate!.month,
+      pickupDate!.day,
+      pickupTime!.hour,
+      pickupTime!.minute,
+    );
+    return DateFormat("yyyy-MM-dd'T'HH:mm:ss").format(dt);
+  }
 
   String _normalizeMoneyInput(String raw) {
     return raw.replaceAll(',', '').trim();
@@ -132,68 +181,207 @@ class OrderFormProvider extends ChangeNotifier {
     );
   }
 
-  String? buildPickupIso() {
-    if (pickupDate == null || pickupTime == null) return null;
-    final dt = DateTime(
-      pickupDate!.year,
-      pickupDate!.month,
-      pickupDate!.day,
-      pickupTime!.hour,
-      pickupTime!.minute,
+  void onAddressTextChanged({required bool isFrom, required String query}) {
+    final trimmed = query.trim();
+    final hasSelection = isFrom ? hasFromSelection : hasToSelection;
+
+    if (isFrom) {
+      _latestFromQuery = trimmed;
+      if (hasSelection) {
+        selectedFromPoint = null;
+        fromSelectionSource = null;
+        fromSelectedAddress = null;
+        selectedFromSuggestion = null;
+      }
+      fromSuggestions = <TrackAsiaAutocompleteSuggestion>[];
+      loadingFromSuggestions = trimmed.length >= 2;
+    } else {
+      _latestToQuery = trimmed;
+      if (hasSelection) {
+        selectedToPoint = null;
+        toSelectionSource = null;
+        toSelectedAddress = null;
+        selectedToSuggestion = null;
+      }
+      toSuggestions = <TrackAsiaAutocompleteSuggestion>[];
+      loadingToSuggestions = trimmed.length >= 2;
+    }
+
+    final debounce = isFrom ? _fromDebounce : _toDebounce;
+    debounce?.cancel();
+
+    if (trimmed.length < 2) {
+      if (isFrom) {
+        loadingFromSuggestions = false;
+      } else {
+        loadingToSuggestions = false;
+      }
+      notifyListeners();
+      return;
+    }
+
+    notifyListeners();
+
+    final timer = Timer(
+      const Duration(milliseconds: 350),
+      () => _fetchAutocomplete(isFrom: isFrom, query: trimmed),
     );
-    return DateFormat("yyyy-MM-dd'T'HH:mm:ss").format(dt);
+
+    if (isFrom) {
+      _fromDebounce = timer;
+    } else {
+      _toDebounce = timer;
+    }
   }
 
-  String getNameById(List<dynamic> items, int? id) {
-    if (id == null) return '';
-    final found = items.cast<dynamic>().firstWhere(
-      (e) => e != null && e['id'].toString() == id.toString(),
-      orElse: () => null,
+  void closeAutocompleteSuggestions() {
+    _fromDebounce?.cancel();
+    _toDebounce?.cancel();
+    fromSuggestions = <TrackAsiaAutocompleteSuggestion>[];
+    toSuggestions = <TrackAsiaAutocompleteSuggestion>[];
+    loadingFromSuggestions = false;
+    loadingToSuggestions = false;
+    notifyListeners();
+  }
+
+  Future<void> _fetchAutocomplete({
+    required bool isFrom,
+    required String query,
+  }) async {
+    try {
+      final response = await ApiService.autocompleteTrackAsia(input: query);
+      final latestQuery = isFrom ? _latestFromQuery : _latestToQuery;
+      if (latestQuery != query) return;
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final parsed = TrackAsiaAutocompleteResponse.fromRawJson(response.body);
+        final suggestions = parsed.success
+            ? parsed.data
+            : <TrackAsiaAutocompleteSuggestion>[];
+
+        if (isFrom) {
+          fromSuggestions = suggestions;
+          loadingFromSuggestions = false;
+        } else {
+          toSuggestions = suggestions;
+          loadingToSuggestions = false;
+        }
+      } else {
+        if (isFrom) {
+          fromSuggestions = <TrackAsiaAutocompleteSuggestion>[];
+          loadingFromSuggestions = false;
+        } else {
+          toSuggestions = <TrackAsiaAutocompleteSuggestion>[];
+          loadingToSuggestions = false;
+        }
+      }
+    } catch (_) {
+      if (isFrom) {
+        fromSuggestions = <TrackAsiaAutocompleteSuggestion>[];
+        loadingFromSuggestions = false;
+      } else {
+        toSuggestions = <TrackAsiaAutocompleteSuggestion>[];
+        loadingToSuggestions = false;
+      }
+    }
+
+    notifyListeners();
+  }
+
+  void selectFromSuggestion(TrackAsiaAutocompleteSuggestion suggestion) {
+    fromAddressController.value = TextEditingValue(
+      text: suggestion.displayText,
+      selection: TextSelection.collapsed(offset: suggestion.displayText.length),
     );
-    return found?['name']?.toString() ?? '';
+
+    selectedFromPoint = RidePointPayload.placeId(suggestion.placeId);
+    fromSelectionSource = AddressSelectionSource.search;
+    fromSelectedAddress = suggestion.displayText;
+    selectedFromSuggestion = suggestion;
+    fromSuggestions = <TrackAsiaAutocompleteSuggestion>[];
+    loadingFromSuggestions = false;
+    _latestFromQuery = suggestion.displayText.trim();
+    notifyListeners();
   }
 
-  Future<void> loadProvinces() async {
-    loadingProvinces = true;
+  void selectToSuggestion(TrackAsiaAutocompleteSuggestion suggestion) {
+    toAddressController.value = TextEditingValue(
+      text: suggestion.displayText,
+      selection: TextSelection.collapsed(offset: suggestion.displayText.length),
+    );
+
+    selectedToPoint = RidePointPayload.placeId(suggestion.placeId);
+    toSelectionSource = AddressSelectionSource.search;
+    toSelectedAddress = suggestion.displayText;
+    selectedToSuggestion = suggestion;
+    toSuggestions = <TrackAsiaAutocompleteSuggestion>[];
+    loadingToSuggestions = false;
+    _latestToQuery = suggestion.displayText.trim();
     notifyListeners();
-    try {
-      provinces = await ApiService.getProvinces();
-    } finally {
-      loadingProvinces = false;
-      notifyListeners();
-    }
   }
 
-  Future<void> loadDistrictsForFromProvince(int provinceId) async {
-    syncAddressWithDistrict(isFrom: true, districtId: null);
-    loadingFromDistricts = true;
-    fromDistricts = [];
-    fromDistrictId = null;
-    notifyListeners();
+  void selectFromMapLocation(AddressResolvedLocation location) {
+    final address = location.formattedAddress.trim();
+    fromAddressController.value = TextEditingValue(
+      text: address,
+      selection: TextSelection.collapsed(offset: address.length),
+    );
 
-    try {
-      fromDistricts = await ApiService.getDistricts(provinceId: provinceId);
-      _normalizeSelectedDistricts();
-    } finally {
-      loadingFromDistricts = false;
-      notifyListeners();
-    }
+    selectedFromPoint = RidePointPayload.coordinates(
+      lat: location.lat,
+      lng: location.lng,
+    );
+    fromSelectionSource = AddressSelectionSource.map;
+    fromSelectedAddress = address;
+    selectedFromSuggestion = null;
+    fromSuggestions = <TrackAsiaAutocompleteSuggestion>[];
+    loadingFromSuggestions = false;
+    _latestFromQuery = address;
+    notifyListeners();
   }
 
-  Future<void> loadDistrictsForToProvince(int provinceId) async {
-    syncAddressWithDistrict(isFrom: false, districtId: null);
-    loadingToDistricts = true;
-    toDistricts = [];
-    toDistrictId = null;
-    notifyListeners();
+  void selectToMapLocation(AddressResolvedLocation location) {
+    final address = location.formattedAddress.trim();
+    toAddressController.value = TextEditingValue(
+      text: address,
+      selection: TextSelection.collapsed(offset: address.length),
+    );
 
-    try {
-      toDistricts = await ApiService.getDistricts(provinceId: provinceId);
-      _normalizeSelectedDistricts();
-    } finally {
-      loadingToDistricts = false;
-      notifyListeners();
-    }
+    selectedToPoint = RidePointPayload.coordinates(
+      lat: location.lat,
+      lng: location.lng,
+    );
+    toSelectionSource = AddressSelectionSource.map;
+    toSelectedAddress = address;
+    selectedToSuggestion = null;
+    toSuggestions = <TrackAsiaAutocompleteSuggestion>[];
+    loadingToSuggestions = false;
+    _latestToQuery = address;
+    notifyListeners();
+  }
+
+  void clearFromSelection() {
+    fromAddressController.clear();
+    selectedFromPoint = null;
+    fromSelectionSource = null;
+    fromSelectedAddress = null;
+    selectedFromSuggestion = null;
+    fromSuggestions = <TrackAsiaAutocompleteSuggestion>[];
+    loadingFromSuggestions = false;
+    _latestFromQuery = '';
+    notifyListeners();
+  }
+
+  void clearToSelection() {
+    toAddressController.clear();
+    selectedToPoint = null;
+    toSelectionSource = null;
+    toSelectedAddress = null;
+    selectedToSuggestion = null;
+    toSuggestions = <TrackAsiaAutocompleteSuggestion>[];
+    loadingToSuggestions = false;
+    _latestToQuery = '';
+    notifyListeners();
   }
 
   void updateRideType(int? nextType) {
@@ -213,108 +401,6 @@ class OrderFormProvider extends ChangeNotifier {
       quantityController.text = lastPassengerQuantity;
     }
 
-    notifyListeners();
-  }
-
-  bool canSelectSameProvince(int? provinceId) {
-    return provinceId == hanoiProvinceId;
-  }
-
-  List<dynamic> filterDistrictsForSelection({
-    required List<dynamic> districts,
-    required int? currentProvinceId,
-    required int? otherProvinceId,
-    required int? otherDistrictId,
-  }) {
-    if (currentProvinceId != hanoiProvinceId ||
-        otherProvinceId != hanoiProvinceId) {
-      return districts;
-    }
-
-    if (otherDistrictId == null) {
-      return districts;
-    }
-
-    if (otherDistrictId == noiBaiDistrictId) {
-      return districts.where((district) {
-        final id = parseLocationId(district['id']);
-        return id != noiBaiDistrictId;
-      }).toList();
-    }
-
-    return districts.where((district) {
-      final id = parseLocationId(district['id']);
-      return id == noiBaiDistrictId;
-    }).toList();
-  }
-
-  bool _containsDistrictId(List<dynamic> districts, int? districtId) {
-    if (districtId == null) return true;
-    return districts.any((district) {
-      final id = parseLocationId(district['id']);
-      return id == districtId;
-    });
-  }
-
-  void _normalizeSelectedDistricts() {
-    if (!_containsDistrictId(availableFromDistricts, fromDistrictId)) {
-      fromDistrictId = null;
-      syncAddressWithDistrict(isFrom: true, districtId: null);
-    }
-
-    if (!_containsDistrictId(availableToDistricts, toDistrictId)) {
-      toDistrictId = null;
-      syncAddressWithDistrict(isFrom: false, districtId: null);
-    }
-  }
-
-  int? parseLocationId(dynamic rawId) {
-    if (rawId is int) return rawId;
-    return int.tryParse(rawId.toString());
-  }
-
-  void syncAddressWithDistrict({
-    required bool isFrom,
-    required int? districtId,
-  }) {
-    final controller = isFrom ? fromAddressController : toAddressController;
-
-    if (districtId == noiBaiDistrictId) {
-      controller.text = noiBaiAirportAddress;
-      controller.selection = TextSelection.collapsed(
-        offset: controller.text.length,
-      );
-      notifyListeners();
-      return;
-    }
-
-    if (controller.text.trim() == noiBaiAirportAddress) {
-      controller.clear();
-      notifyListeners();
-    }
-  }
-
-  void setFromProvince(int? value) {
-    fromProvinceId = value;
-    _normalizeSelectedDistricts();
-    notifyListeners();
-  }
-
-  void setFromDistrict(int? value) {
-    fromDistrictId = value;
-    _normalizeSelectedDistricts();
-    notifyListeners();
-  }
-
-  void setToProvince(int? value) {
-    toProvinceId = value;
-    _normalizeSelectedDistricts();
-    notifyListeners();
-  }
-
-  void setToDistrict(int? value) {
-    toDistrictId = value;
-    _normalizeSelectedDistricts();
     notifyListeners();
   }
 
@@ -338,22 +424,22 @@ class OrderFormProvider extends ChangeNotifier {
     }
 
     if (requiresPassengerQuantity) {
-      final q = tryParseInt(quantityController.text);
-      if (q == null || q < 1) {
+      final quantity = tryParseInt(quantityController.text);
+      if (quantity == null || quantity < 1) {
         return "Số lượng phải là số nguyên ≥ 1";
       }
     }
 
-    if (fromProvinceId == null ||
-        fromDistrictId == null ||
-        fromAddressController.text.trim().isEmpty) {
-      return "Vui lòng nhập đầy đủ điểm đón";
+    if (!hasFromSelection) {
+      return "Vui lòng chọn điểm đón bằng gợi ý hoặc trên bản đồ";
     }
 
-    if (toProvinceId == null ||
-        toDistrictId == null ||
-        toAddressController.text.trim().isEmpty) {
-      return "Vui lòng nhập đầy đủ điểm đến";
+    if (!hasToSelection) {
+      return "Vui lòng chọn điểm đến bằng gợi ý hoặc trên bản đồ";
+    }
+
+    if (selectedFromPoint!.identityKey == selectedToPoint!.identityKey) {
+      return "Điểm đón và điểm trả không được trùng nhau";
     }
 
     final pickupIso = buildPickupIso();
@@ -380,10 +466,11 @@ class OrderFormProvider extends ChangeNotifier {
 
   CreateBrokerRideRequest buildRequest({int? groupId}) {
     return CreateBrokerRideRequest(
-      fromDistrictId: fromDistrictId!,
-      toDistrictId: toDistrictId!,
-      fromAddress: fromAddressController.text.trim(),
-      toAddress: toAddressController.text.trim(),
+      from: selectedFromPoint!,
+      to: selectedToPoint!,
+      fromDisplayAddress: (fromSelectedAddress ?? fromAddressController.text)
+          .trim(),
+      toDisplayAddress: (toSelectedAddress ?? toAddressController.text).trim(),
       type: selectedType,
       customerName: customerNameController.text.trim(),
       customerPhone: phoneController.text.trim(),
@@ -398,6 +485,8 @@ class OrderFormProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _fromDebounce?.cancel();
+    _toDebounce?.cancel();
     offerPriceController.removeListener(_handleOfferPriceChanged);
     creatorEarnController.removeListener(_handleCreatorEarnChanged);
     phoneController.dispose();

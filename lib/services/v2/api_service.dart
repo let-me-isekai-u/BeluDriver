@@ -526,6 +526,89 @@ class ApiService {
     }
   }
 
+  static Future<http.Response> autocompleteTrackAsia({
+    required String input,
+    String? location,
+    int size = 5,
+  }) async {
+    final url =
+        Uri.parse(
+          "https://xeghepdongduong.com/api/track-asia/autocomplete",
+        ).replace(
+          queryParameters: {
+            "input": input,
+            "size": size.toString(),
+            if (location != null && location.trim().isNotEmpty)
+              "location": location.trim(),
+          },
+        );
+
+    try {
+      return await http
+          .get(url, headers: {"Accept": "application/json"})
+          .timeout(const Duration(seconds: 20));
+    } catch (e) {
+      return _errorResponse(e);
+    }
+  }
+
+  static Future<http.Response> getTrackAsiaPlaceDetail({
+    required String placeId,
+  }) async {
+    final url = Uri.parse(
+      "https://xeghepdongduong.com/api/track-asia/place-detail",
+    ).replace(queryParameters: {"placeId": placeId});
+
+    try {
+      return await http
+          .get(url, headers: {"Accept": "application/json"})
+          .timeout(const Duration(seconds: 20));
+    } catch (e) {
+      return _errorResponse(e);
+    }
+  }
+
+  static Future<http.Response> resolveRoutePreview({
+    required String fromPlaceId,
+    required String toPlaceId,
+    required int type,
+    required String pickupTime,
+    required int paymentMethod,
+    required int quantity,
+  }) async {
+    final url = Uri.parse(
+      "https://xeghepdongduong.com/api/v2/address/resolve-route",
+    );
+
+    try {
+      final body = jsonEncode({
+        "fromPlaceId": fromPlaceId,
+        "toPlaceId": toPlaceId,
+        "type": type,
+        "pickupTime": pickupTime,
+        "paymentMethod": paymentMethod,
+        "quantity": BrokerRideType.normalizeQuantity(
+          type: type,
+          quantity: quantity,
+        ),
+      });
+
+      debugPrint("➡️ [resolveRoutePreview] POST $url");
+      debugPrint("➡️ [resolveRoutePreview] body: $body");
+
+      final res = await http
+          .post(url, headers: _defaultHeaders(), body: body)
+          .timeout(const Duration(seconds: 30));
+
+      debugPrint("⬅️ [resolveRoutePreview] status: ${res.statusCode}");
+      debugPrint("⬅️ [resolveRoutePreview] body: ${res.body}");
+
+      return res;
+    } catch (e) {
+      return _errorResponse(e);
+    }
+  }
+
   //Lấy chi tiết chuyến xe
   static Future<http.Response> getRideDetail({
     required String accessToken,
@@ -819,15 +902,13 @@ class ApiService {
     }
   }
 
-  // API #23.5: Tạo đơn / Đẩy đơn (create-broker-ver2)
-  // POST https://xeghepdongduong.com/api/rideapi/create-broker-ver2
+  // API #23.5: Tạo đơn / Đẩy đơn
+  // POST https://xeghepdongduong.com/api/v2/ride/create-broker
   // Bearer Token: Access Token
   static Future<http.Response> createBrokerRide({
     required String accessToken,
-    required int fromDistrictId,
-    required int toDistrictId,
-    required String fromAddress,
-    required String toAddress,
+    required String fromPlaceId,
+    required String toPlaceId,
     required int type,
     required String customerName,
     required String customerPhone,
@@ -839,7 +920,7 @@ class ApiService {
     int? groupId,
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/rideapi/create-broker-ver2",
+      "https://xeghepdongduong.com/api/v2/ride/create-broker",
     );
 
     try {
@@ -848,10 +929,8 @@ class ApiService {
         quantity: quantity,
       );
       final payload = {
-        "fromDistrictId": fromDistrictId,
-        "toDistrictId": toDistrictId,
-        "fromAddress": fromAddress,
-        "toAddress": toAddress,
+        "fromPlaceId": fromPlaceId,
+        "toPlaceId": toPlaceId,
         "type": type,
         "customerName": customerName,
         "customerPhone": customerPhone,

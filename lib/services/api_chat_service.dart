@@ -430,9 +430,11 @@ class DriverChatGroupBrokerRideCardDto {
     required this.type,
     required this.quantity,
     required this.pickupTime,
+    required this.fromPlaceId,
     required this.fromDistrictId,
     required this.fromDistrictName,
     required this.fromAddress,
+    required this.toPlaceId,
     required this.toDistrictId,
     required this.toDistrictName,
     required this.toAddress,
@@ -457,9 +459,11 @@ class DriverChatGroupBrokerRideCardDto {
   final int? type;
   final int? quantity;
   final DateTime? pickupTime;
+  final String? fromPlaceId;
   final int? fromDistrictId;
   final String? fromDistrictName;
   final String? fromAddress;
+  final String? toPlaceId;
   final int? toDistrictId;
   final String? toDistrictName;
   final String? toAddress;
@@ -491,6 +495,26 @@ class DriverChatGroupBrokerRideCardDto {
       return int.tryParse(value.toString());
     }
 
+    Map<String, dynamic>? asMap(dynamic value) {
+      if (value is Map<String, dynamic>) return value;
+      if (value is Map) {
+        return value.map((key, val) => MapEntry(key.toString(), val));
+      }
+      return null;
+    }
+
+    String? pickNullableString(List<dynamic> values) {
+      for (final value in values) {
+        if (value == null) continue;
+        final raw = value.toString().trim();
+        if (raw.isNotEmpty) return raw;
+      }
+      return null;
+    }
+
+    final from = asMap(json['from']);
+    final to = asMap(json['to']);
+
     return DriverChatGroupBrokerRideCardDto(
       brokerRideId: parseInt(json['brokerRideId']),
       groupId: parseNullableInt(json['groupId']),
@@ -501,12 +525,30 @@ class DriverChatGroupBrokerRideCardDto {
       pickupTime: json['pickupTime'] != null
           ? DateTime.tryParse(json['pickupTime'].toString())
           : null,
+      fromPlaceId: pickNullableString([json['fromPlaceId'], from?['placeId']]),
       fromDistrictId: parseNullableInt(json['fromDistrictId']),
-      fromDistrictName: json['fromDistrictName']?.toString(),
-      fromAddress: json['fromAddress']?.toString(),
+      fromDistrictName: pickNullableString([
+        json['fromDistrictName'],
+        json['fromDistrict'],
+        from?['districtName'],
+      ]),
+      fromAddress: pickNullableString([
+        json['fromFormattedAddress'],
+        from?['formattedAddress'],
+        json['fromAddress'],
+      ]),
+      toPlaceId: pickNullableString([json['toPlaceId'], to?['placeId']]),
       toDistrictId: parseNullableInt(json['toDistrictId']),
-      toDistrictName: json['toDistrictName']?.toString(),
-      toAddress: json['toAddress']?.toString(),
+      toDistrictName: pickNullableString([
+        json['toDistrictName'],
+        json['toDistrict'],
+        to?['districtName'],
+      ]),
+      toAddress: pickNullableString([
+        json['toFormattedAddress'],
+        to?['formattedAddress'],
+        json['toAddress'],
+      ]),
       customerPhone: json['customerPhone']?.toString(),
       offerPrice: json['offerPrice'] as num?,
       acceptedPrice: json['acceptedPrice'] as num?,
@@ -531,9 +573,11 @@ class DriverChatGroupBrokerRideCardDto {
       'type': type,
       'quantity': quantity,
       'pickupTime': pickupTime?.toIso8601String(),
+      'fromPlaceId': fromPlaceId,
       'fromDistrictId': fromDistrictId,
       'fromDistrictName': fromDistrictName,
       'fromAddress': fromAddress,
+      'toPlaceId': toPlaceId,
       'toDistrictId': toDistrictId,
       'toDistrictName': toDistrictName,
       'toAddress': toAddress,

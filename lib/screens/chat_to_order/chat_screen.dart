@@ -982,8 +982,12 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
                       ),
                       const Divider(height: 24),
                       _buildChatRideLocationLine(
-                        '${ride.fromDistrictName ?? ''} - ${ride.fromAddress}',
-                        '${ride.toDistrictName ?? ''} - ${ride.toAddress}',
+                        (ride.fromDistrictName ?? '').trim().isEmpty
+                            ? ride.fromAddress
+                            : '${ride.fromDistrictName} - ${ride.fromAddress}',
+                        (ride.toDistrictName ?? '').trim().isEmpty
+                            ? ride.toAddress
+                            : '${ride.toDistrictName} - ${ride.toAddress}',
                       ),
                       const SizedBox(height: 14),
                       _buildCompactInfoRow(

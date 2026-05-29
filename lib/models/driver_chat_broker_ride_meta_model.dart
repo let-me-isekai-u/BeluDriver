@@ -7,10 +7,12 @@ class DriverChatBrokerRideMetaModel {
   final int quantity;
   final DateTime? pickupTime;
 
+  final String? fromPlaceId;
   final int? fromDistrictId;
   final String? fromDistrictName;
   final String fromAddress;
 
+  final String? toPlaceId;
   final int? toDistrictId;
   final String? toDistrictName;
   final String toAddress;
@@ -39,9 +41,11 @@ class DriverChatBrokerRideMetaModel {
     required this.type,
     required this.quantity,
     required this.pickupTime,
+    required this.fromPlaceId,
     required this.fromDistrictId,
     required this.fromDistrictName,
     required this.fromAddress,
+    required this.toPlaceId,
     required this.toDistrictId,
     required this.toDistrictName,
     required this.toAddress,
@@ -80,6 +84,26 @@ class DriverChatBrokerRideMetaModel {
       return int.tryParse(value.toString());
     }
 
+    Map<String, dynamic>? asMap(dynamic value) {
+      if (value is Map<String, dynamic>) return value;
+      if (value is Map) {
+        return value.map((key, val) => MapEntry(key.toString(), val));
+      }
+      return null;
+    }
+
+    String? pickNullableString(List<dynamic> values) {
+      for (final value in values) {
+        if (value == null) continue;
+        final raw = value.toString().trim();
+        if (raw.isNotEmpty) return raw;
+      }
+      return null;
+    }
+
+    final from = asMap(json['from']);
+    final to = asMap(json['to']);
+
     return DriverChatBrokerRideMetaModel(
       brokerRideId: parseInt(json['brokerRideId']),
       groupId: parseNullableInt(json['groupId']),
@@ -90,12 +114,34 @@ class DriverChatBrokerRideMetaModel {
       pickupTime: json['pickupTime'] == null
           ? null
           : DateTime.tryParse(json['pickupTime'].toString()),
+      fromPlaceId: pickNullableString([json['fromPlaceId'], from?['placeId']]),
       fromDistrictId: parseNullableInt(json['fromDistrictId']),
-      fromDistrictName: json['fromDistrictName']?.toString(),
-      fromAddress: json['fromAddress']?.toString() ?? '',
+      fromDistrictName: pickNullableString([
+        json['fromDistrictName'],
+        json['fromDistrict'],
+        from?['districtName'],
+      ]),
+      fromAddress:
+          pickNullableString([
+            json['fromFormattedAddress'],
+            from?['formattedAddress'],
+            json['fromAddress'],
+          ]) ??
+          '',
+      toPlaceId: pickNullableString([json['toPlaceId'], to?['placeId']]),
       toDistrictId: parseNullableInt(json['toDistrictId']),
-      toDistrictName: json['toDistrictName']?.toString(),
-      toAddress: json['toAddress']?.toString() ?? '',
+      toDistrictName: pickNullableString([
+        json['toDistrictName'],
+        json['toDistrict'],
+        to?['districtName'],
+      ]),
+      toAddress:
+          pickNullableString([
+            json['toFormattedAddress'],
+            to?['formattedAddress'],
+            json['toAddress'],
+          ]) ??
+          '',
       customerPhone: json['customerPhone']?.toString() ?? '',
       offerPrice: parseDouble(json['offerPrice']),
       acceptedPrice: parseDouble(json['acceptedPrice']),

@@ -32,10 +32,12 @@ class BrokerRideItem {
   final DateTime createdAt;
   final DateTime? pickupTime;
 
+  final String? fromPlaceId;
   final String fromProvince;
   final String fromDistrict;
   final String fromAddress;
 
+  final String? toPlaceId;
   final String toProvince;
   final String toDistrict;
   final String toAddress;
@@ -51,9 +53,11 @@ class BrokerRideItem {
     required this.code,
     required this.createdAt,
     required this.pickupTime,
+    required this.fromPlaceId,
     required this.fromProvince,
     required this.fromDistrict,
     required this.fromAddress,
+    required this.toPlaceId,
     required this.toProvince,
     required this.toDistrict,
     required this.toAddress,
@@ -86,17 +90,46 @@ class BrokerRideItem {
   }
 
   factory BrokerRideItem.fromJson(Map<String, dynamic> json) {
+    final from = _asMap(json['from']);
+    final to = _asMap(json['to']);
+
     return BrokerRideItem(
       rideId: int.tryParse(json['rideId']?.toString() ?? '0') ?? 0,
       code: (json['code'] ?? '').toString(),
       createdAt: _parseDateTime(json['createdAt']?.toString()),
       pickupTime: _parseNullableDateTime(json['pickupTime']?.toString()),
-      fromProvince: (json['fromProvince'] ?? '').toString(),
-      fromDistrict: (json['fromDistrict'] ?? '').toString(),
-      fromAddress: (json['fromAddress'] ?? '').toString(),
-      toProvince: (json['toProvince'] ?? '').toString(),
-      toDistrict: (json['toDistrict'] ?? '').toString(),
-      toAddress: (json['toAddress'] ?? '').toString(),
+      fromPlaceId: _pickNullableString([json['fromPlaceId'], from?['placeId']]),
+      fromProvince: _pickString([
+        json['fromProvinceName'],
+        json['fromProvince'],
+        from?['provinceName'],
+      ]),
+      fromDistrict: _pickString([
+        json['fromDistrictName'],
+        json['fromDistrict'],
+        from?['districtName'],
+      ]),
+      fromAddress: _pickString([
+        json['fromFormattedAddress'],
+        from?['formattedAddress'],
+        json['fromAddress'],
+      ]),
+      toPlaceId: _pickNullableString([json['toPlaceId'], to?['placeId']]),
+      toProvince: _pickString([
+        json['toProvinceName'],
+        json['toProvince'],
+        to?['provinceName'],
+      ]),
+      toDistrict: _pickString([
+        json['toDistrictName'],
+        json['toDistrict'],
+        to?['districtName'],
+      ]),
+      toAddress: _pickString([
+        json['toFormattedAddress'],
+        to?['formattedAddress'],
+        json['toAddress'],
+      ]),
       price: (json['price'] as num?) ?? 0,
       status: int.tryParse(json['status']?.toString() ?? '0') ?? 0,
       paymentMethod: (json['paymentMethod'] ?? '').toString(),
@@ -105,19 +138,29 @@ class BrokerRideItem {
     );
   }
 
-  String get rideTypeOrQuantityText {
-    switch (type) {
-      case BrokerRideType.passenger:
-        if (quantity != null) {
-          return '$quantity ghế';
-        }
-        return '';
-      case BrokerRideType.charter5Seats:
-        return 'Bao xe 5 chỗ';
-      case BrokerRideType.charter7Seats:
-        return 'Bao xe 7 chỗ';
-      default:
-        return '';
+  static Map<String, dynamic>? _asMap(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) {
+      return value.map((key, val) => MapEntry(key.toString(), val));
     }
+    return null;
+  }
+
+  static String _pickString(List<dynamic> values, {String fallback = ''}) {
+    for (final value in values) {
+      if (value == null) continue;
+      final raw = value.toString().trim();
+      if (raw.isNotEmpty) return raw;
+    }
+    return fallback;
+  }
+
+  static String? _pickNullableString(List<dynamic> values) {
+    final value = _pickString(values);
+    return value.isEmpty ? null : value;
+  }
+
+  String get rideTypeOrQuantityText {
+    return BrokerRideType.summaryOf(type, quantity);
   }
 }

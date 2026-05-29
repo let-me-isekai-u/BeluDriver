@@ -5,6 +5,7 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/broker_ride_models.dart';
 import '../models/paged_response_model.dart';
 import '../models/waiting_ride_model.dart';
 import '../models/driver/broker_rides_model.dart';
@@ -206,20 +207,7 @@ class RecieveOrderProvider extends ChangeNotifier {
   String rideTypeOrQuantityText(dynamic ride) {
     final int type = extractRideType(ride);
     final int? quantity = extractRideQuantity(ride);
-
-    switch (type) {
-      case 1:
-        if (quantity != null) {
-          return '$quantity ghế';
-        }
-        return '';
-      case 2:
-        return 'Bao xe 5 chỗ';
-      case 3:
-        return 'Bao xe 7 chỗ';
-      default:
-        return '';
-    }
+    return BrokerRideType.summaryOf(type, quantity);
   }
 
   bool shouldShowRideTypeOrQuantity(dynamic ride) {

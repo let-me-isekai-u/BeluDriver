@@ -14,10 +14,12 @@ class RideDetailModel {
   final String customerName;
   final String customerPhone;
 
+  final String? fromPlaceId;
   final String fromAddress;
   final String fromProvince;
   final String fromDistrict;
 
+  final String? toPlaceId;
   final String toAddress;
   final String toProvince;
   final String toDistrict;
@@ -37,9 +39,11 @@ class RideDetailModel {
     this.note,
     required this.customerName,
     required this.customerPhone,
+    required this.fromPlaceId,
     required this.fromAddress,
     required this.fromProvince,
     required this.fromDistrict,
+    required this.toPlaceId,
     required this.toAddress,
     required this.toProvince,
     required this.toDistrict,
@@ -83,6 +87,9 @@ class RideDetailModel {
       return '';
     }
 
+    final from = _asMap(json['from']);
+    final to = _asMap(json['to']);
+
     return RideDetailModel(
       id: _parseInt(json['id']),
       code: (json['code'] ?? '').toString(),
@@ -90,20 +97,70 @@ class RideDetailModel {
       price: _parseDouble(json['price']),
       netIncome: _parseDouble(json['netIncome'] ?? json['net_income']),
       type: _parseInt(json['type'], defaultValue: 1),
-      paymentMethod: (json['paymentMethod'] ?? 'Tiền mặt').toString(),
+      paymentMethod:
+          (json['paymentMethodText'] ?? json['paymentMethod'] ?? 'Tiền mặt')
+              .toString(),
       pickupTime: json['pickupTime']?.toString(),
       note: json['note']?.toString(),
       customerName: pickCustomerName(),
       customerPhone: pickCustomerPhone(),
-      fromAddress: (json['fromAddress'] ?? '').toString(),
-      fromProvince: (json['fromProvince'] ?? '').toString(),
-      fromDistrict: (json['fromDistrict'] ?? '').toString(),
-      toAddress: (json['toAddress'] ?? '').toString(),
-      toProvince: (json['toProvince'] ?? '').toString(),
-      toDistrict: (json['toDistrict'] ?? '').toString(),
+      fromPlaceId: _pickNullableString([json['fromPlaceId'], from?['placeId']]),
+      fromAddress: _pickString([
+        json['fromFormattedAddress'],
+        from?['formattedAddress'],
+        json['fromAddress'],
+      ]),
+      fromProvince: _pickString([
+        json['fromProvinceName'],
+        json['fromProvince'],
+        from?['provinceName'],
+      ]),
+      fromDistrict: _pickString([
+        json['fromDistrictName'],
+        json['fromDistrict'],
+        from?['districtName'],
+      ]),
+      toPlaceId: _pickNullableString([json['toPlaceId'], to?['placeId']]),
+      toAddress: _pickString([
+        json['toFormattedAddress'],
+        to?['formattedAddress'],
+        json['toAddress'],
+      ]),
+      toProvince: _pickString([
+        json['toProvinceName'],
+        json['toProvince'],
+        to?['provinceName'],
+      ]),
+      toDistrict: _pickString([
+        json['toDistrictName'],
+        json['toDistrict'],
+        to?['districtName'],
+      ]),
       createdAt: (json['createdAt'] ?? '').toString(),
       quantity: _parseInt(json['quantity'], defaultValue: 1),
     );
+  }
+
+  static Map<String, dynamic>? _asMap(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) {
+      return value.map((key, val) => MapEntry(key.toString(), val));
+    }
+    return null;
+  }
+
+  static String _pickString(List<dynamic> values, {String fallback = ''}) {
+    for (final value in values) {
+      if (value == null) continue;
+      final raw = value.toString().trim();
+      if (raw.isNotEmpty) return raw;
+    }
+    return fallback;
+  }
+
+  static String? _pickNullableString(List<dynamic> values) {
+    final value = _pickString(values);
+    return value.isEmpty ? null : value;
   }
 
   static int _parseInt(dynamic value, {int defaultValue = 0}) {

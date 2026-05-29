@@ -9,10 +9,12 @@ class RideModel {
   final String createdAt;
   final String? pickupTime;
 
+  final String? fromPlaceId;
   final String fromProvince;
   final String fromDistrict;
   final String fromAddress;
 
+  final String? toPlaceId;
   final String toProvince;
   final String toDistrict;
   final String toAddress;
@@ -31,9 +33,11 @@ class RideModel {
     required this.code,
     required this.createdAt,
     required this.pickupTime,
+    required this.fromPlaceId,
     required this.fromProvince,
     required this.fromDistrict,
     required this.fromAddress,
+    required this.toPlaceId,
     required this.toProvince,
     required this.toDistrict,
     required this.toAddress,
@@ -47,31 +51,81 @@ class RideModel {
   });
 
   factory RideModel.fromJson(Map<String, dynamic> json) {
+    final from = _asMap(json['from']);
+    final to = _asMap(json['to']);
+
     return RideModel(
       id: _parseInt(json['rideId'] ?? json['id']),
       code: (json['code'] ?? '').toString(),
       createdAt: (json['createdAt'] ?? DateTime.now().toIso8601String())
           .toString(),
       pickupTime: json['pickupTime']?.toString(),
-
-      fromProvince: (json['fromProvince'] ?? '').toString(),
-      fromDistrict: (json['fromDistrict'] ?? '').toString(),
-      fromAddress: (json['fromAddress'] ?? '').toString(),
-
-      toProvince: (json['toProvince'] ?? '').toString(),
-      toDistrict: (json['toDistrict'] ?? '').toString(),
-      toAddress: (json['toAddress'] ?? '').toString(),
+      fromPlaceId: _pickNullableString([json['fromPlaceId'], from?['placeId']]),
+      fromProvince: _pickString([
+        json['fromProvinceName'],
+        json['fromProvince'],
+        from?['provinceName'],
+      ]),
+      fromDistrict: _pickString([
+        json['fromDistrictName'],
+        json['fromDistrict'],
+        from?['districtName'],
+      ]),
+      fromAddress: _pickString([
+        json['fromFormattedAddress'],
+        from?['formattedAddress'],
+        json['fromAddress'],
+      ]),
+      toPlaceId: _pickNullableString([json['toPlaceId'], to?['placeId']]),
+      toProvince: _pickString([
+        json['toProvinceName'],
+        json['toProvince'],
+        to?['provinceName'],
+      ]),
+      toDistrict: _pickString([
+        json['toDistrictName'],
+        json['toDistrict'],
+        to?['districtName'],
+      ]),
+      toAddress: _pickString([
+        json['toFormattedAddress'],
+        to?['formattedAddress'],
+        json['toAddress'],
+      ]),
 
       price: _parseDouble(json['price']),
-      netIncome: _parseDouble(json['netIncome']),
+      netIncome: _parseDouble(json['netIncome'] ?? json['net_income']),
 
       status: _parseInt(json['status'], defaultValue: -1),
-      paymentMethod: (json['paymentMethod'] ?? '').toString(),
+      paymentMethod: (json['paymentMethodText'] ?? json['paymentMethod'] ?? '')
+          .toString(),
       type: _parseInt(json['type'], defaultValue: 1),
       quantity: _parseNullableInt(json['quantity']),
 
       rideSource: _parseInt(json['rideSource'], defaultValue: 1),
     );
+  }
+
+  static Map<String, dynamic>? _asMap(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) {
+      return value.map((key, val) => MapEntry(key.toString(), val));
+    }
+    return null;
+  }
+
+  static String _pickString(List<dynamic> values, {String fallback = ''}) {
+    for (final value in values) {
+      if (value == null) continue;
+      final raw = value.toString().trim();
+      if (raw.isNotEmpty) return raw;
+    }
+    return fallback;
+  }
+
+  static String? _pickNullableString(List<dynamic> values) {
+    final value = _pickString(values);
+    return value.isEmpty ? null : value;
   }
 
   static int _parseInt(dynamic value, {int defaultValue = 0}) {
@@ -161,18 +215,6 @@ class RideModel {
   }
 
   String get rideTypeOrQuantityText {
-    switch (type) {
-      case BrokerRideType.passenger:
-        if (quantity != null) {
-          return '$quantity ghế';
-        }
-        return '';
-      case BrokerRideType.charter5Seats:
-        return 'Bao xe 5 chỗ';
-      case BrokerRideType.charter7Seats:
-        return 'Bao xe 7 chỗ';
-      default:
-        return '';
-    }
+    return BrokerRideType.summaryOf(type, quantity);
   }
 }
