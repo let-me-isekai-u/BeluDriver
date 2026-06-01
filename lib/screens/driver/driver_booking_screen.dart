@@ -325,76 +325,6 @@ class _DriverBookingView extends StatelessWidget {
     });
   }
 
-  Widget _buildSelectedAddressHint(
-    BuildContext context,
-    String title,
-    String subtitle,
-    AddressSelectionSource? source,
-  ) {
-    if (title.trim().isEmpty) return const SizedBox.shrink();
-    final theme = Theme.of(context);
-    final sourceLabel = source == AddressSelectionSource.map
-        ? "Đã chọn trên bản đồ"
-        : "Đã chọn từ gợi ý";
-
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(top: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF123B33),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: theme.colorScheme.secondary.withValues(alpha: 0.24),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.verified_rounded,
-            size: 18,
-            color: theme.colorScheme.secondary,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                if (subtitle.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12.5,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 6),
-                Text(
-                  sourceLabel,
-                  style: TextStyle(
-                    color: theme.colorScheme.secondary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildAutocompleteField({
     required BuildContext context,
     required String label,
@@ -404,9 +334,6 @@ class _DriverBookingView extends StatelessWidget {
     required TextEditingController controller,
     required bool isLoading,
     required bool hasSelection,
-    required String selectedTitle,
-    required String selectedSubtitle,
-    required AddressSelectionSource? selectionSource,
     required List<TrackAsiaAutocompleteSuggestion> suggestions,
     required ValueChanged<TrackAsiaAutocompleteSuggestion> onSelected,
     required VoidCallback onClearSelection,
@@ -424,18 +351,15 @@ class _DriverBookingView extends StatelessWidget {
             onChanged: (value) => context
                 .read<OrderFormProvider>()
                 .onAddressTextChanged(isFrom: isFrom, query: value),
-            onTapOutside: (_) {
-              FocusManager.instance.primaryFocus?.unfocus();
-              context.read<OrderFormProvider>().closeAutocompleteSuggestions();
-            },
+            onTapOutside: (_) => context
+                .read<OrderFormProvider>()
+                .closeAutocompleteSuggestions(),
             style: const TextStyle(color: Colors.white),
             decoration: _fieldDecoration(
               context,
               label: label,
               hint: hint,
               icon: icon,
-              helperText:
-                  "Nhập tối thiểu 2 ký tự. Nếu sửa text sau khi chọn, cần chọn lại gợi ý.",
               suffixIcon: isLoading
                   ? const Padding(
                       padding: EdgeInsets.all(14),
@@ -454,27 +378,8 @@ class _DriverBookingView extends StatelessWidget {
                   : const Icon(Icons.search_rounded, color: Colors.white70),
             ),
           ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: onPickOnMap,
-              icon: const Icon(Icons.map_outlined, size: 18),
-              label: const Text("Chọn trên bản đồ"),
-              style: TextButton.styleFrom(
-                foregroundColor: theme.colorScheme.secondary,
-                padding: EdgeInsets.zero,
-              ),
-            ),
-          ),
-          _buildSelectedAddressHint(
-            context,
-            selectedTitle,
-            selectedSubtitle,
-            selectionSource,
-          ),
           if (showSuggestions) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Container(
               width: double.infinity,
               constraints: const BoxConstraints(maxHeight: 340),
@@ -487,6 +392,8 @@ class _DriverBookingView extends StatelessWidget {
               ),
               child: ListView.separated(
                 shrinkWrap: true,
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.manual,
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 itemCount: suggestions.length,
                 separatorBuilder: (_, _) => Divider(
@@ -497,10 +404,7 @@ class _DriverBookingView extends StatelessWidget {
                   final suggestion = suggestions[index];
                   return ListTile(
                     dense: true,
-                    onTap: () {
-                      FocusManager.instance.primaryFocus?.unfocus();
-                      onSelected(suggestion);
-                    },
+                    onTap: () => onSelected(suggestion),
                     leading: Icon(
                       Icons.location_on_rounded,
                       color: theme.colorScheme.secondary,
@@ -527,6 +431,19 @@ class _DriverBookingView extends StatelessWidget {
               ),
             ),
           ],
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: onPickOnMap,
+              icon: const Icon(Icons.map_outlined, size: 18),
+              label: const Text("Chọn trên bản đồ"),
+              style: TextButton.styleFrom(
+                foregroundColor: theme.colorScheme.secondary,
+                padding: EdgeInsets.zero,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -536,6 +453,8 @@ class _DriverBookingView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final gold = theme.colorScheme.secondary;
+    final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
+    final isKeyboardVisible = keyboardInset > 0;
 
     return Consumer<OrderFormProvider>(
       builder: (context, provider, _) {
@@ -568,307 +487,346 @@ class _DriverBookingView extends StatelessWidget {
                 ),
               ],
             ),
-            body: ListView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: EdgeInsets.fromLTRB(
-                16,
-                16,
-                16,
-                24 +
-                    MediaQuery.of(context).padding.bottom +
-                    MediaQuery.of(context).viewInsets.bottom,
-              ),
+            body: Stack(
               children: [
-                DriverSectionCard(
-                  title: "Tạo chuyến cộng đồng",
-                  subtitle:
-                      "Luồng tài xế dùng TrackAsia autocomplete, chọn `placeId` và tự nhập giá bán.",
-                  icon: Icons.auto_awesome_rounded,
-                  child: Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      DriverPill(
-                        label:
-                            provider.hasFromSelection && provider.hasToSelection
-                            ? "Đã chọn 2 địa chỉ"
-                            : "Chưa chọn đủ địa chỉ",
-                        icon:
-                            provider.hasFromSelection && provider.hasToSelection
-                            ? Icons.verified_rounded
-                            : Icons.route_outlined,
-                      ),
-                      DriverPill(
-                        label: provider.pickupDate == null
-                            ? "Chưa chọn ngày"
-                            : provider.formatDate(provider.pickupDate),
-                        icon: Icons.event_rounded,
-                      ),
-                      DriverPill(
-                        label: provider.pickupTime == null
-                            ? "Chưa chọn giờ"
-                            : provider.formatTime(provider.pickupTime),
-                        icon: Icons.schedule_rounded,
-                      ),
-                    ],
+                ListView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.manual,
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    16,
+                    16,
+                    24 + MediaQuery.of(context).padding.bottom + keyboardInset,
                   ),
-                ),
-                const SizedBox(height: 18),
-                _buildSectionCard(
-                  context: context,
-                  title: "Thông tin khách & ghi chú",
-                  icon: Icons.person_pin,
-                  subtitle: "Thông tin liên hệ của khách và ghi chú bổ sung.",
                   children: [
-                    TextField(
-                      controller: provider.customerNameController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: _fieldDecoration(
-                        context,
-                        label: "Tên khách hàng",
-                        icon: Icons.person,
+                    DriverSectionCard(
+                      title: "Tạo chuyến cộng đồng",
+                      subtitle:
+                          "Luồng tài xế dùng TrackAsia autocomplete, chọn `placeId` và tự nhập giá bán.",
+                      icon: Icons.auto_awesome_rounded,
+                      child: Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          DriverPill(
+                            label:
+                                provider.hasFromSelection &&
+                                    provider.hasToSelection
+                                ? "Đã chọn 2 địa chỉ"
+                                : "Chưa chọn đủ địa chỉ",
+                            icon:
+                                provider.hasFromSelection &&
+                                    provider.hasToSelection
+                                ? Icons.verified_rounded
+                                : Icons.route_outlined,
+                          ),
+                          DriverPill(
+                            label: provider.pickupDate == null
+                                ? "Chưa chọn ngày"
+                                : provider.formatDate(provider.pickupDate),
+                            icon: Icons.event_rounded,
+                          ),
+                          DriverPill(
+                            label: provider.pickupTime == null
+                                ? "Chưa chọn giờ"
+                                : provider.formatTime(provider.pickupTime),
+                            icon: Icons.schedule_rounded,
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: provider.phoneController,
-                      keyboardType: TextInputType.phone,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: _fieldDecoration(
-                        context,
-                        label: "SĐT khách",
-                        icon: Icons.phone,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: provider.noteController,
-                      maxLines: 3,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: _fieldDecoration(
-                        context,
-                        label: "Ghi chú",
-                        alignLabelWithHint: true,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                _buildSectionCard(
-                  context: context,
-                  title: "Loại chuyến",
-                  icon: Icons.directions_car,
-                  subtitle:
-                      "Chọn loại chuyến. Bao xe sẽ không yêu cầu nhập số lượng người.",
-                  children: [
-                    DropdownButtonFormField<int>(
-                      initialValue: provider.selectedType,
-                      dropdownColor: theme.colorScheme.primary,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: _fieldDecoration(
-                        context,
-                        label: "Loại chuyến",
-                        icon: Icons.category_outlined,
-                      ),
-                      items: BrokerRideType.options
-                          .map(
-                            (option) => DropdownMenuItem<int>(
-                              value: option.value,
-                              child: Text(option.label),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: provider.updateRideType,
-                    ),
-                    if (provider.requiresPassengerQuantity) ...[
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: provider.quantityController,
-                        keyboardType: TextInputType.number,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: _fieldDecoration(
-                          context,
-                          label: provider.quantityLabel,
-                          icon: Icons.people_outline_rounded,
-                          helperText: "Nhập số nguyên ≥ 1",
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 18),
-                _buildSectionCard(
-                  context: context,
-                  title: "Điểm đón",
-                  icon: Icons.my_location,
-                  children: [
-                    _buildAutocompleteField(
+                    const SizedBox(height: 18),
+                    _buildSectionCard(
                       context: context,
-                      label: "Địa chỉ đón",
-                      hint: "Ví dụ: Nội Bài, Hoàn Kiếm...",
-                      icon: Icons.location_searching_rounded,
-                      isFrom: true,
-                      controller: provider.fromAddressController,
-                      isLoading: provider.loadingFromSuggestions,
-                      hasSelection: provider.hasFromSelection,
-                      selectedTitle: provider.fromSelectionTitle,
-                      selectedSubtitle: provider.fromSelectionSubtitle,
-                      selectionSource: provider.fromSelectionSource,
-                      suggestions: provider.fromSuggestions,
-                      onSelected: provider.selectFromSuggestion,
-                      onClearSelection: provider.clearFromSelection,
-                      onPickOnMap: () =>
-                          _pickPointOnMap(context, provider, isFrom: true),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                _buildSectionCard(
-                  context: context,
-                  title: "Ngày & giờ đón",
-                  icon: Icons.calendar_today,
-                  subtitle: "Ấn vào từng ô để chọn ngày giờ đón khách.",
-                  children: [
-                    GestureDetector(
-                      onTap: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          firstDate: DateTime.now(),
-                          lastDate: DateTime.now().add(
-                            const Duration(days: 365),
-                          ),
-                          initialDate: provider.pickupDate ?? DateTime.now(),
-                          builder: (context, child) {
-                            return Theme(
-                              data: Theme.of(context).copyWith(
-                                colorScheme: ColorScheme.light(
-                                  primary: theme.colorScheme.secondary,
-                                  onPrimary: Colors.black87,
-                                  onSurface: Colors.black87,
-                                ),
-                                textButtonTheme: TextButtonThemeData(
-                                  style: TextButton.styleFrom(
-                                    foregroundColor:
-                                        theme.colorScheme.secondary,
-                                    textStyle: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              child: child!,
-                            );
-                          },
-                        );
-                        if (picked != null) {
-                          provider.setPickupDate(picked);
-                        }
-                      },
-                      child: AbsorbPointer(
-                        child: TextField(
-                          controller: TextEditingController(
-                            text: provider.formatDate(provider.pickupDate),
-                          ),
+                      title: "Thông tin khách & ghi chú",
+                      icon: Icons.person_pin,
+                      subtitle:
+                          "Thông tin liên hệ của khách và ghi chú bổ sung.",
+                      children: [
+                        TextField(
+                          controller: provider.customerNameController,
                           style: const TextStyle(color: Colors.white),
                           decoration: _fieldDecoration(
                             context,
-                            label: "Ngày đón",
-                            icon: Icons.event,
+                            label: "Tên khách hàng",
+                            icon: Icons.person,
                           ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    GestureDetector(
-                      onTap: () => _pickTimeDialog(context, provider),
-                      child: AbsorbPointer(
-                        child: TextField(
-                          controller: TextEditingController(
-                            text: provider.formatTime(provider.pickupTime),
-                          ),
-                          readOnly: true,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                          ),
-                          textAlign: TextAlign.center,
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: provider.phoneController,
+                          keyboardType: TextInputType.phone,
+                          style: const TextStyle(color: Colors.white),
                           decoration: _fieldDecoration(
                             context,
-                            label: "Giờ đón",
-                            hint: "HH:MM",
-                            icon: Icons.access_time,
-                            suffixIcon: const Icon(
-                              Icons.unfold_more_rounded,
-                              color: Colors.white70,
+                            label: "SĐT khách",
+                            icon: Icons.phone,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: provider.noteController,
+                          maxLines: 3,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: _fieldDecoration(
+                            context,
+                            label: "Ghi chú",
+                            alignLabelWithHint: true,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    _buildSectionCard(
+                      context: context,
+                      title: "Loại chuyến",
+                      icon: Icons.directions_car,
+                      subtitle:
+                          "Chọn loại chuyến. Bao xe sẽ không yêu cầu nhập số lượng người.",
+                      children: [
+                        DropdownButtonFormField<int>(
+                          initialValue: provider.selectedType,
+                          dropdownColor: theme.colorScheme.primary,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: _fieldDecoration(
+                            context,
+                            label: "Loại chuyến",
+                            icon: Icons.category_outlined,
+                          ),
+                          items: BrokerRideType.options
+                              .map(
+                                (option) => DropdownMenuItem<int>(
+                                  value: option.value,
+                                  child: Text(option.label),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: provider.updateRideType,
+                        ),
+                        if (provider.requiresPassengerQuantity) ...[
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: provider.quantityController,
+                            keyboardType: TextInputType.number,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: _fieldDecoration(
+                              context,
+                              label: provider.quantityLabel,
+                              icon: Icons.people_outline_rounded,
+                              helperText: "Nhập số nguyên ≥ 1",
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    _buildSectionCard(
+                      context: context,
+                      title: "Điểm đón",
+                      icon: Icons.my_location,
+                      children: [
+                        _buildAutocompleteField(
+                          context: context,
+                          label: "Địa chỉ đón",
+                          hint: "Ví dụ: Nội Bài, Hoàn Kiếm...",
+                          icon: Icons.location_searching_rounded,
+                          isFrom: true,
+                          controller: provider.fromAddressController,
+                          isLoading: provider.loadingFromSuggestions,
+                          hasSelection: provider.hasFromSelection,
+                          suggestions: provider.fromSuggestions,
+                          onSelected: provider.selectFromSuggestion,
+                          onClearSelection: provider.clearFromSelection,
+                          onPickOnMap: () =>
+                              _pickPointOnMap(context, provider, isFrom: true),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    _buildSectionCard(
+                      context: context,
+                      title: "Ngày & giờ đón",
+                      icon: Icons.calendar_today,
+                      subtitle: "Ấn vào từng ô để chọn ngày giờ đón khách.",
+                      children: [
+                        GestureDetector(
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime.now().add(
+                                const Duration(days: 365),
+                              ),
+                              initialDate:
+                                  provider.pickupDate ?? DateTime.now(),
+                              builder: (context, child) {
+                                return Theme(
+                                  data: Theme.of(context).copyWith(
+                                    colorScheme: ColorScheme.light(
+                                      primary: theme.colorScheme.secondary,
+                                      onPrimary: Colors.black87,
+                                      onSurface: Colors.black87,
+                                    ),
+                                    textButtonTheme: TextButtonThemeData(
+                                      style: TextButton.styleFrom(
+                                        foregroundColor:
+                                            theme.colorScheme.secondary,
+                                        textStyle: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  child: child!,
+                                );
+                              },
+                            );
+                            if (picked != null) {
+                              provider.setPickupDate(picked);
+                            }
+                          },
+                          child: AbsorbPointer(
+                            child: TextField(
+                              controller: TextEditingController(
+                                text: provider.formatDate(provider.pickupDate),
+                              ),
+                              style: const TextStyle(color: Colors.white),
+                              decoration: _fieldDecoration(
+                                context,
+                                label: "Ngày đón",
+                                icon: Icons.event,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        GestureDetector(
+                          onTap: () => _pickTimeDialog(context, provider),
+                          child: AbsorbPointer(
+                            child: TextField(
+                              controller: TextEditingController(
+                                text: provider.formatTime(provider.pickupTime),
+                              ),
+                              readOnly: true,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                              ),
+                              textAlign: TextAlign.center,
+                              decoration: _fieldDecoration(
+                                context,
+                                label: "Giờ đón",
+                                hint: "HH:MM",
+                                icon: Icons.access_time,
+                                suffixIcon: const Icon(
+                                  Icons.unfold_more_rounded,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    _buildSectionCard(
+                      context: context,
+                      title: "Điểm đến",
+                      icon: Icons.location_on,
+                      children: [
+                        _buildAutocompleteField(
+                          context: context,
+                          label: "Địa chỉ đến",
+                          hint: "Ví dụ: Mỹ Đình, Hai Bà Trưng...",
+                          icon: Icons.location_on_outlined,
+                          isFrom: false,
+                          controller: provider.toAddressController,
+                          isLoading: provider.loadingToSuggestions,
+                          hasSelection: provider.hasToSelection,
+                          suggestions: provider.toSuggestions,
+                          onSelected: provider.selectToSuggestion,
+                          onClearSelection: provider.clearToSelection,
+                          onPickOnMap: () =>
+                              _pickPointOnMap(context, provider, isFrom: false),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    _buildSectionCard(
+                      context: context,
+                      title: "Giá bán & tiền nhận",
+                      icon: Icons.payments,
+                      subtitle:
+                          "Tài xế tự nhập giá bán; app khách hàng mới theo giá hệ thống.",
+                      children: [
+                        TextField(
+                          controller: provider.offerPriceController,
+                          keyboardType: TextInputType.number,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: _fieldDecoration(
+                            context,
+                            label: "Giá chào (offerPrice)",
+                            icon: Icons.price_change,
+                            helperText: "Ví dụ: 400,000",
+                          ).copyWith(suffixText: "đ"),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: provider.creatorEarnController,
+                          keyboardType: TextInputType.number,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: _fieldDecoration(
+                            context,
+                            label: "Tiền nhận (creatorEarn)",
+                            icon: Icons.attach_money,
+                            helperText: "Ví dụ: 350,000",
+                          ).copyWith(suffixText: "đ"),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+                if (isKeyboardVisible)
+                  Positioned(
+                    right: 16,
+                    bottom: keyboardInset + 12,
+                    child: SafeArea(
+                      top: false,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () =>
+                              FocusManager.instance.primaryFocus?.unfocus(),
+                          borderRadius: BorderRadius.circular(22),
+                          child: Ink(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary,
+                              borderRadius: BorderRadius.circular(22),
+                              border: Border.all(
+                                color: gold.withValues(alpha: 0.3),
+                              ),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x22000000),
+                                  blurRadius: 12,
+                                  offset: Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              color: gold,
+                              size: 28,
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                _buildSectionCard(
-                  context: context,
-                  title: "Điểm đến",
-                  icon: Icons.location_on,
-                  children: [
-                    _buildAutocompleteField(
-                      context: context,
-                      label: "Địa chỉ đến",
-                      hint: "Ví dụ: Mỹ Đình, Hai Bà Trưng...",
-                      icon: Icons.location_on_outlined,
-                      isFrom: false,
-                      controller: provider.toAddressController,
-                      isLoading: provider.loadingToSuggestions,
-                      hasSelection: provider.hasToSelection,
-                      selectedTitle: provider.toSelectionTitle,
-                      selectedSubtitle: provider.toSelectionSubtitle,
-                      selectionSource: provider.toSelectionSource,
-                      suggestions: provider.toSuggestions,
-                      onSelected: provider.selectToSuggestion,
-                      onClearSelection: provider.clearToSelection,
-                      onPickOnMap: () =>
-                          _pickPointOnMap(context, provider, isFrom: false),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                _buildSectionCard(
-                  context: context,
-                  title: "Giá bán & tiền nhận",
-                  icon: Icons.payments,
-                  subtitle:
-                      "Tài xế tự nhập giá bán; app khách hàng mới theo giá hệ thống.",
-                  children: [
-                    TextField(
-                      controller: provider.offerPriceController,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: _fieldDecoration(
-                        context,
-                        label: "Giá chào (offerPrice)",
-                        icon: Icons.price_change,
-                        helperText: "Ví dụ: 400,000",
-                      ).copyWith(suffixText: "đ"),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: provider.creatorEarnController,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: _fieldDecoration(
-                        context,
-                        label: "Tiền nhận (creatorEarn)",
-                        icon: Icons.attach_money,
-                        helperText: "Ví dụ: 350,000",
-                      ).copyWith(suffixText: "đ"),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                const SizedBox(height: 24),
+                  ),
               ],
             ),
           ),

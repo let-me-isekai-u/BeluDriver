@@ -41,17 +41,15 @@ class _DriverAddressMapPickerScreenState
   bool _isResolving = false;
   bool _isResolvingPreview = false;
   bool _isLocating = false;
-  bool _didAutoCenterToCurrentLocation = false;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
     _mapCenter = _initialCenter();
-    _tryMoveToCurrentLocation();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        _schedulePreviewResolve();
+        _initializeMapCenter();
       }
     });
   }
@@ -68,6 +66,47 @@ class _DriverAddressMapPickerScreenState
       return latlng.LatLng(point.lat!, point.lng!);
     }
     return _defaultCenter;
+  }
+
+  Future<void> _initializeMapCenter() async {
+    final point = widget.initialPoint;
+    if (point != null && point.isPlaceId) {
+      await _moveToPlaceId(point.placeId!);
+      return;
+    }
+
+    _schedulePreviewResolve();
+  }
+
+  Future<void> _moveToPlaceId(String placeId) async {
+    try {
+      final response = await ApiService.getTrackAsiaPlaceDetail(
+        placeId: placeId,
+      );
+
+      if (!mounted) return;
+
+      final parsed = TrackAsiaPlaceDetailResponse.fromRawJson(response.body);
+      final detail = parsed.data;
+      if (response.statusCode >= 200 &&
+          response.statusCode < 300 &&
+          parsed.success &&
+          detail != null) {
+        final nextCenter = latlng.LatLng(detail.lat, detail.lng);
+        _mapController.move(nextCenter, 16);
+        setState(() {
+          _mapCenter = nextCenter;
+          _resolvedLocation = null;
+          _errorMessage = null;
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+    } finally {
+      if (mounted) {
+        _schedulePreviewResolve();
+      }
+    }
   }
 
   Future<void> _tryMoveToCurrentLocation() async {
@@ -97,9 +136,12 @@ class _DriverAddressMapPickerScreenState
 
       if (!mounted) return;
 
-      _didAutoCenterToCurrentLocation = true;
       _mapController.move(nextCenter, 16);
-      setState(() => _mapCenter = nextCenter);
+      setState(() {
+        _mapCenter = nextCenter;
+        _resolvedLocation = null;
+        _errorMessage = null;
+      });
       _schedulePreviewResolve();
     } catch (_) {
       if (!mounted) return;
@@ -258,11 +300,6 @@ class _DriverAddressMapPickerScreenState
               interactionOptions: const InteractionOptions(
                 flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
               ),
-              onMapReady: () {
-                if (!_didAutoCenterToCurrentLocation) {
-                  _schedulePreviewResolve();
-                }
-              },
               onPositionChanged: (camera, hasGesture) {
                 final center = camera.center;
                 setState(() {
@@ -321,20 +358,24 @@ class _DriverAddressMapPickerScreenState
             ),
           ),
           Positioned(
+            top: 16,
             right: 16,
-            bottom: 172,
-            child: FloatingActionButton.small(
-              heroTag: 'current-location',
-              onPressed: _isLocating ? null : _tryMoveToCurrentLocation,
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.black87,
-              child: _isLocating
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.my_location_rounded),
+            child: SafeArea(
+              bottom: false,
+              child: FloatingActionButton.small(
+                heroTag: 'current-location',
+                tooltip: 'Vị trí hiện tại',
+                onPressed: _isLocating ? null : _tryMoveToCurrentLocation,
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black87,
+                child: _isLocating
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.my_location_rounded),
+              ),
             ),
           ),
           Positioned(
