@@ -179,8 +179,7 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
                 // ── Header ──────────────────────────────────────────────
                 _buildHeader(selectedIds, maxCount),
 
-                // ── Info banner ─────────────────────────────────────────
-                _buildInfoBanner(),
+                
 
                 // ── Body scrollable ─────────────────────────────────────
                 Flexible(
@@ -315,36 +314,7 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
     );
   }
 
-  // ─── Info banner ────────────────────────────────────────────────────────
-  Widget _buildInfoBanner() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF7ED),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFF59E0B), width: 1),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.info_outline_rounded,
-              color: Color(0xFFF59E0B), size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Bạn cần đăng ký tuyến trước khi thực hiện KYC.',
-              style: TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w700,
-                color: Colors.orange.shade900,
-                height: 1.35,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   // ─── Picker trigger button ───────────────────────────────────────────────
   Widget _buildPickerTrigger(
