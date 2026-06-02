@@ -179,8 +179,6 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
                 // ── Header ──────────────────────────────────────────────
                 _buildHeader(selectedIds, maxCount),
 
-                
-
                 // ── Body scrollable ─────────────────────────────────────
                 Flexible(
                   child: isLoading
@@ -313,8 +311,6 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
       ),
     );
   }
-
-
 
   // ─── Picker trigger button ───────────────────────────────────────────────
   Widget _buildPickerTrigger(

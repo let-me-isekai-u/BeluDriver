@@ -802,7 +802,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
     if (!mounted || !parentContext.mounted) return;
 
     final qrUrl =
-        "https://img.vietqr.io/image/MB-246878888-compact2.png?amount=$amount&addInfo=$content&accountName=CTY%20CP%20CN%20VA%20DV%20TT%20THE%20BELUGAS";
+        "https://img.vietqr.io/image/MB-08102002-compact2.png?amount=$amount&addInfo=$content&accountName=CTY%20CP%20CN%20VA%20DV%20TT%20THE%20BELUGAS";
 
     int countdown = 300;
     Timer? countdownTimer;

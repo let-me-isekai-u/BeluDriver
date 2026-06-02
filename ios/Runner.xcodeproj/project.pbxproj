@@ -205,6 +205,7 @@
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				2C873AB3DE254C442844D64B /* [CP] Embed Pods Frameworks */,
+				64B0A41F2FE001E800C3B001 /* Generate MapLibre dSYM */,
 				E9E617FEA436359B686F6B43 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
@@ -278,6 +279,22 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		64B0A41F2FE001E800C3B001 /* Generate MapLibre dSYM */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Generate MapLibre dSYM";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ \"${ACTION}\" != \"install\" ]; then\n  exit 0\nfi\n\nif [ -z \"${DWARF_DSYM_FOLDER_PATH:-}\" ] || [ -z \"${FRAMEWORKS_FOLDER_PATH:-}\" ]; then\n  exit 0\nfi\n\nFRAMEWORK_BINARY=\"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/MapLibre.framework/MapLibre\"\nDSYM_PATH=\"${DWARF_DSYM_FOLDER_PATH}/MapLibre.framework.dSYM\"\n\nif [ ! -f \"$FRAMEWORK_BINARY\" ]; then\n  exit 0\nfi\n\nmkdir -p \"${DWARF_DSYM_FOLDER_PATH}\"\nrm -rf \"$DSYM_PATH\"\nxcrun dsymutil \"$FRAMEWORK_BINARY\" -o \"$DSYM_PATH\"\n";
+			showEnvVarsInLog = 0;
+		};
 		2C873AB3DE254C442844D64B /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
