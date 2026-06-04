@@ -59,7 +59,10 @@ class FirebaseNotificationService {
     );
 
     await _localNoti.initialize(
-      const InitializationSettings(android: androidInit, iOS: iosInit),
+      settings: const InitializationSettings(
+        android: androidInit,
+        iOS: iosInit,
+      ),
       onDidReceiveNotificationResponse: (details) {},
     );
 
@@ -91,10 +94,10 @@ class FirebaseNotificationService {
 
     try {
       await _localNoti.show(
-        message.hashCode,
-        title,
-        body,
-        const NotificationDetails(
+        id: message.hashCode,
+        title: title,
+        body: body,
+        notificationDetails: const NotificationDetails(
           android: AndroidNotificationDetails(
             _channelId,
             _channelName,
