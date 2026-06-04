@@ -6,11 +6,13 @@ class DepositProvider extends ChangeNotifier {
   bool _success = false;
   String? _errorMessage;
   String? _depositContent;
+  int? _depositId;
 
   bool get isLoading => _isLoading;
   bool get success => _success;
   String? get errorMessage => _errorMessage;
   String? get depositContent => _depositContent;
+  int? get depositId => _depositId;
 
   void _setLoading(bool value) {
     _isLoading = value;
@@ -22,6 +24,7 @@ class DepositProvider extends ChangeNotifier {
     _success = false;
     _errorMessage = null;
     _depositContent = null;
+    _depositId = null;
     notifyListeners();
   }
 
@@ -35,6 +38,7 @@ class DepositProvider extends ChangeNotifier {
     _success = false;
     _errorMessage = null;
     _depositContent = null;
+    _depositId = null;
 
     try {
       final response = await ApiService.createDepositRequest(
@@ -47,6 +51,12 @@ class DepositProvider extends ChangeNotifier {
       if (response.statusCode == 200 && data["success"] == true) {
         _success = true;
         _depositContent = data["data"]?["content"]?.toString();
+        final rawDepositId = data["data"]?["depositId"];
+        if (rawDepositId is int) {
+          _depositId = rawDepositId;
+        } else {
+          _depositId = int.tryParse(rawDepositId?.toString() ?? '');
+        }
         notifyListeners();
         return true;
       }
@@ -75,6 +85,7 @@ class DepositProvider extends ChangeNotifier {
     _setLoading(true);
     _success = false;
     _errorMessage = null;
+    _depositId = null;
 
     try {
       final response = await ApiService.cancelDepositRequest(
@@ -91,8 +102,8 @@ class DepositProvider extends ChangeNotifier {
       }
 
       _success = false;
-      _errorMessage = data["message"]?.toString() ??
-          "Không thể hủy yêu cầu nạp tiền";
+      _errorMessage =
+          data["message"]?.toString() ?? "Không thể hủy yêu cầu nạp tiền";
       notifyListeners();
       return false;
     } catch (e) {

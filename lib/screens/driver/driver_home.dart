@@ -43,6 +43,52 @@ class DriverHomeScreen extends StatelessWidget {
   }
 }
 
+class _DriverDepositInfoTile extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color valueColor;
+
+  const _DriverDepositInfoTile({
+    required this.label,
+    required this.value,
+    required this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF6F2E7),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.black.withValues(alpha: 0.58),
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: TextStyle(
+              color: valueColor,
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
+              height: 1.35,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DriverHomeView extends StatefulWidget {
   const _DriverHomeView();
 
@@ -1094,7 +1140,13 @@ class _HomeDashboard extends StatelessWidget {
 
                           Navigator.pop(dialogContext);
 
-                          _showQRDialog(parentContext, theme, amount, content);
+                          _showQRDialog(
+                            parentContext,
+                            theme,
+                            amount,
+                            content,
+                            depositProvider,
+                          );
                         },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.colorScheme.secondary,
@@ -1124,54 +1176,12 @@ class _HomeDashboard extends StatelessWidget {
     ThemeData theme,
     int amount,
     String content,
+    DepositProvider depositProvider,
   ) async {
-    final confirmed = await showDialog<bool>(
-      context: parentContext,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceGreen,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text(
-          "Lưu ý trước khi chuyển khoản",
-          style: theme.textTheme.titleLarge?.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        content: Text(
-          "Hệ thống đã tạo sẵn thông tin nạp tiền cho bạn. Khi chuyển khoản, hãy nhập đúng số tiền và đúng nội dung hiển thị để tiền được cộng vào ví nhanh và chính xác.",
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: AppColors.textSubtle,
-            height: 1.5,
-          ),
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.black87,
-              elevation: 0,
-            ),
-            child: const Text("Huỷ"),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.colorScheme.secondary,
-              foregroundColor: Colors.black87,
-            ),
-            child: const Text("Tôi đã hiểu"),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
     if (!parentContext.mounted) return;
 
     final qrUrl =
-        "https://img.vietqr.io/image/MB-08102002-compact2.png?amount=$amount&addInfo=$content&accountName=CTY%20CP%20CN%20VA%20DV%20TT%20THE%20BELUGAS";
+        "https://img.vietqr.io/image/MB-08102002-compact2.png?amount=$amount&addInfo=$content&accountName=CONG%20TY%20CP%20CONG%20NGHE%20VA%20QUAN%20LY%20VAN%20TAI%20DONG%20DUONG";
 
     int countdown = 300;
     Timer? countdownTimer;
@@ -1196,50 +1206,141 @@ class _HomeDashboard extends StatelessWidget {
 
             return Dialog(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(24),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(18),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
-                      "Quét mã QR để nạp tiền",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                    Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.secondary.withValues(
+                              alpha: 0.16,
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Icon(
+                            Icons.qr_code_rounded,
+                            color: theme.colorScheme.secondary,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            "QR nạp ví",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primaryGreen,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF6F2E7),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: const Text(
+                        'CONG TY CP CONG NGHE VA QUAN LY VAN TAI DONG DUONG',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.primaryGreen,
+                          fontWeight: FontWeight.w800,
+                          height: 1.35,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    Image.network(qrUrl, height: 280),
-                    const SizedBox(height: 12),
-                    Text(
-                      "Số tiền: ${NumberFormat('#,###').format(amount)} đ",
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    const SizedBox(height: 14),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Image.network(qrUrl, height: 220, width: 220),
                     ),
-                    const SizedBox(height: 6),
-                    SelectableText(
-                      "Nội dung: $content",
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      "Sau khi bạn chuyển khoản thành công, hệ thống sẽ kiểm tra thông tin và cộng tiền vào ví của bạn.",
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium?.copyWith(height: 1.45),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _DriverDepositInfoTile(
+                            label: 'Số tiền',
+                            value: "${NumberFormat('#,###').format(amount)} đ",
+                            valueColor: AppColors.primaryGreen,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _DriverDepositInfoTile(
+                            label: 'Nội dung',
+                            value: content,
+                            valueColor: theme.colorScheme.secondary,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     Text(
                       "Còn lại: $minutes:$seconds",
-                      style: const TextStyle(color: Colors.red),
+                      style: const TextStyle(
+                        color: Colors.redAccent,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                    TextButton(
-                      onPressed: () {
-                        countdownTimer?.cancel();
-                        Navigator.pop(dialogCtx);
-                      },
-                      child: const Text("Đóng"),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          countdownTimer?.cancel();
+                          final prefs = await SharedPreferences.getInstance();
+                          final token = prefs.getString('accessToken') ?? '';
+                          if (!dialogCtx.mounted) return;
+
+                          String message;
+                          Color color;
+
+                          if (token.isEmpty ||
+                              depositProvider.depositId == null) {
+                            message = "Không thể huỷ yêu cầu nạp tiền lúc này";
+                            color = Colors.orange;
+                          } else {
+                            final ok = await depositProvider
+                                .cancelDepositRequest(
+                                  accessToken: token,
+                                  depositId: depositProvider.depositId!,
+                                );
+                            message = ok
+                                ? "Huỷ yêu cầu nạp tiền thành công"
+                                : (depositProvider.errorMessage ??
+                                      "Không thể huỷ yêu cầu nạp tiền");
+                            color = ok ? Colors.green : Colors.orange;
+                          }
+
+                          if (dialogCtx.mounted) {
+                            Navigator.pop(dialogCtx);
+                          }
+                          if (!parentContext.mounted) return;
+                          ScaffoldMessenger.of(parentContext).showSnackBar(
+                            SnackBar(
+                              content: Text(message),
+                              backgroundColor: color,
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 52),
+                          backgroundColor: Colors.redAccent,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text("Huỷ yêu cầu"),
+                      ),
                     ),
                   ],
                 ),
