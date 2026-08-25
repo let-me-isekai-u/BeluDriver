@@ -1529,29 +1529,27 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
   void _showSupportDialog(BuildContext context, ProfileProvider provider) {
     final theme = Theme.of(context);
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      backgroundColor: AppColors.surfaceGreen,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
       builder: (context) {
-        return SafeArea(
-          top: false,
+        return Dialog(
+          backgroundColor: AppColors.surfaceGreen,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 44,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(999),
+                Align(
+                  alignment: Alignment.topRight,
+                  child: IconButton(
+                    tooltip: "Đóng",
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded, color: Colors.white),
                   ),
                 ),
-                const SizedBox(height: 18),
                 Text(
                   "Trung tâm hỗ trợ",
                   style: theme.textTheme.headlineSmall?.copyWith(fontSize: 24),
@@ -1581,7 +1579,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                     ),
                   ),
                   title: "Gọi điện thoại hỗ trợ",
-                  subtitle: "08 2341 6820",
+                  subtitle: "0379550130",
                   onTap: () async {
                     Navigator.pop(context);
                     await _handleCallSupport(provider);

@@ -102,7 +102,7 @@ class ProfileProvider extends ChangeNotifier {
   }
 
   Future<bool> callSupport() async {
-    final uri = Uri.parse('tel:0823416820');
+    final uri = Uri.parse('tel:0379550130');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
       return true;

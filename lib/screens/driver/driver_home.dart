@@ -18,6 +18,7 @@ import '../kyc/kyc_popup.dart';
 import '../popup_list/withdraw_request_failed_popup.dart';
 import '../popup_list/withdraw_request_success_popup.dart';
 import 'activity_history.dart';
+import 'concert_ticket_scanner_screen.dart';
 import 'driver_booking_screen.dart';
 import 'driver_profile.dart';
 import 'recieve_order_screen.dart';
@@ -281,6 +282,19 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
     setState(() => _currentIndex = index);
   }
 
+  Future<void> _handleBottomNavigationTap(
+    int bottomIndex,
+    HomeProvider homeProvider,
+  ) async {
+    if (bottomIndex == 2) {
+      _openConcertTicketScanner();
+      return;
+    }
+
+    final screenIndex = bottomIndex > 2 ? bottomIndex - 1 : bottomIndex;
+    await _handleNavigationRequest(screenIndex, homeProvider);
+  }
+
   void _navigateToActivityOngoingTab() {
     if (!mounted) return;
     setState(() {
@@ -289,11 +303,21 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
     });
   }
 
+  void _openConcertTicketScanner() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ConcertTicketScannerScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final goldColor = theme.colorScheme.secondary;
     final homeProvider = context.watch<HomeProvider>();
+    final bottomNavigationIndex = _currentIndex >= 2
+        ? _currentIndex + 1
+        : _currentIndex;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -337,8 +361,8 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
           ],
         ),
         child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) => _handleNavigationRequest(index, homeProvider),
+          currentIndex: bottomNavigationIndex,
+          onTap: (index) => _handleBottomNavigationTap(index, homeProvider),
           type: BottomNavigationBarType.fixed,
           selectedItemColor: goldColor,
           unselectedItemColor: Colors.grey,
@@ -358,6 +382,10 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
             const BottomNavigationBarItem(
               icon: Icon(Icons.upload_file_rounded),
               label: 'Đẩy đơn',
+            ),
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.qr_code_scanner_rounded),
+              label: 'Soát vé',
             ),
             BottomNavigationBarItem(
               icon: Container(
@@ -408,7 +436,7 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
                           child: Text(
                             '!',
                             style: TextStyle(
-                              color: Colors.white,
+                              color: AppColors.accentGold,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                               height: 1,
