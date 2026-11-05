@@ -1,6 +1,7 @@
 // Màn hình chế độ "Xe nhà xe": quét QR xe → chuyến được gán hôm nay → vận hành chuyến (điểm dừng,
 // danh sách khách, bắt đầu/hoàn thành) và gửi GPS cho khách có vé theo dõi.
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -312,9 +313,36 @@ class _CarrierRunScreenState extends State<CarrierRunScreen> {
         const SizedBox(width: 8),
         Expanded(child: Text(text, style: const TextStyle(color: Colors.black87))),
         if (!active && (_status == 'BOARDING' || _status == 'RUNNING')) TextButton(onPressed: _startGps, child: const Text('Bật lại')),
+        if (_gps.lastError != null || !active)
+          IconButton(tooltip: 'Hướng dẫn GPS', onPressed: _gpsHelp, icon: const Icon(Icons.help_outline, color: Colors.black54)),
       ]),
     );
   }
+
+  /// Giống Grab/Be: app phải được phép chạy nền, không bị tối ưu pin, và Vị trí của máy phải bật.
+  Future<void> _gpsHelp() => showDialog<void>(
+        context: context,
+        builder: (c) => AlertDialog(
+          title: const Text('Giữ GPS chạy khi tắt màn hình'),
+          content: const SingleChildScrollView(
+            child: Text(
+              '1. Bật Vị trí (GPS) của điện thoại.\n'
+              '2. Quyền vị trí cho app: chọn "Cho phép khi dùng ứng dụng" (app giữ thông báo "Đang chia sẻ vị trí" khi chạy nền).\n'
+              '3. Pin: đặt "Không giới hạn"/"Không tối ưu hóa" cho app.\n'
+              '   • Xiaomi/Redmi: Cài đặt → Ứng dụng → app → Tiết kiệm pin → Không hạn chế; bật "Tự khởi chạy".\n'
+              '   • Oppo/Realme: Cài đặt → Pin → app → Cho phép hoạt động nền.\n'
+              '   • Vivo: Cài đặt → Pin → Tiêu thụ điện nền cao → bật cho app.\n'
+              '   • Samsung: Cài đặt → Ứng dụng → app → Pin → Không hạn chế.\n'
+              '4. Không vuốt tắt app khỏi danh sách đa nhiệm khi đang chạy chuyến.',
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Geolocator.openLocationSettings(), child: const Text('Mở cài đặt vị trí')),
+            TextButton(onPressed: () => Geolocator.openAppSettings(), child: const Text('Mở cài đặt app')),
+            TextButton(onPressed: () => Navigator.pop(c), child: const Text('Đóng')),
+          ],
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -322,7 +350,10 @@ class _CarrierRunScreenState extends State<CarrierRunScreen> {
     final bookings = ((_manifest?['bookings'] as List?) ?? []).cast<Map>();
     final open = _status == 'SCHEDULED' || _status == 'BOARDING' || _status == 'RUNNING';
     return Scaffold(
-      appBar: AppBar(title: Text('${_time(_run['plannedDepartureAt'])} · ${_run['routeName']}')),
+      appBar: AppBar(
+        title: Text('${_time(_run['plannedDepartureAt'])} · ${_run['routeName']}'),
+        actions: [IconButton(tooltip: 'Hướng dẫn giữ GPS', onPressed: _gpsHelp, icon: const Icon(Icons.battery_saver_outlined))],
+      ),
       body: RefreshIndicator(
         onRefresh: _reload,
         child: ListView(children: [
