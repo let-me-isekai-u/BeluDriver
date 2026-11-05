@@ -1,3 +1,4 @@
+import 'package:beludriver_app/features/carrier_vehicle/carrier_vehicle_screens.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -352,6 +353,17 @@ class _LoginScreenState extends State<DriverLoginScreen>
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 8),
+          // Module Nhà xe: tài xế xe limousine/xe khách quét QR dán trên xe, không cần tài khoản.
+          OutlinedButton.icon(
+            onPressed: () => openCarrierVehicleMode(context),
+            icon: Icon(Icons.qr_code_scanner, color: theme.colorScheme.secondary),
+            label: Text(
+              "Tài xế nhà xe: quét QR trên xe",
+              style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700, color: theme.colorScheme.secondary),
+            ),
+            style: OutlinedButton.styleFrom(side: BorderSide(color: theme.colorScheme.secondary)),
           ),
         ],
       ),
