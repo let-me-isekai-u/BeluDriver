@@ -7,7 +7,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'carrier_vehicle_service.dart';
 
-const _navy = Color(0xFF041565);
 
 String _time(dynamic iso) => iso == null ? '—' : DateFormat('HH:mm').format(DateTime.parse('$iso').toLocal());
 
@@ -21,13 +20,13 @@ Future<void> openCarrierVehicleMode(BuildContext context) async {
   final session = await CarrierVehicleService.load();
   if (!context.mounted) return;
   Navigator.of(context).push(MaterialPageRoute(
-    builder: (_) => session != null ? const CarrierVehicleHomeScreen() : const CarrierQrScanScreen(),
+    builder: (_) => _CarrierTheme(child: session != null ? const CarrierVehicleHomeScreen() : const CarrierQrScanScreen()),
   ));
 }
 
 void _backToScan(BuildContext context, String message) {
   _toast(context, message);
-  Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const CarrierQrScanScreen()), (route) => route.isFirst);
+  Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const _CarrierTheme(child: CarrierQrScanScreen())), (route) => route.isFirst);
 }
 
 // ------------------------------------------------------------------------- scan
@@ -57,7 +56,7 @@ class _CarrierQrScanScreenState extends State<CarrierQrScanScreen> {
     try {
       await CarrierVehicleService.exchange(raw, deviceLabel: 'App tài xế');
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const CarrierVehicleHomeScreen()));
+      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const _CarrierTheme(child: CarrierVehicleHomeScreen())));
     } on CarrierVehicleException catch (e) {
       if (mounted) _toast(context, e.message);
     } catch (_) {
@@ -87,7 +86,7 @@ class _CarrierQrScanScreenState extends State<CarrierQrScanScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(title: const Text('Quét mã QR trên xe'), backgroundColor: _navy, foregroundColor: Colors.white),
+      appBar: AppBar(title: const Text('Quét mã QR trên xe')),
       body: Stack(children: [
         MobileScanner(
           controller: _controller,
@@ -168,8 +167,6 @@ class _CarrierVehicleHomeScreenState extends State<CarrierVehicleHomeScreen> {
     final s = CarrierVehicleService.session;
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: _navy,
-        foregroundColor: Colors.white,
         title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Xe ${s?.plate ?? ''}'),
           Text('${s?.carrierName ?? ''} · ${s?.category ?? ''}', style: const TextStyle(fontSize: 12)),
@@ -190,7 +187,7 @@ class _CarrierVehicleHomeScreenState extends State<CarrierVehicleHomeScreen> {
                         subtitle: Text('${_runStatus[r['status']] ?? r['status']} · ${r['passengers']} khách · ${(r['stops'] as List).length} điểm'),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () => Navigator.of(context)
-                            .push(MaterialPageRoute(builder: (_) => CarrierRunScreen(run: Map<String, dynamic>.from(r as Map))))
+                            .push(MaterialPageRoute(builder: (_) => _CarrierTheme(child: CarrierRunScreen(run: Map<String, dynamic>.from(r as Map)))))
                             .then((_) => _load()),
                       ),
                     )),
@@ -313,7 +310,7 @@ class _CarrierRunScreenState extends State<CarrierRunScreen> {
       child: Row(children: [
         Icon(active ? Icons.gps_fixed : Icons.gps_off, color: active ? Colors.green : Colors.grey),
         const SizedBox(width: 8),
-        Expanded(child: Text(text)),
+        Expanded(child: Text(text, style: const TextStyle(color: Colors.black87))),
         if (!active && (_status == 'BOARDING' || _status == 'RUNNING')) TextButton(onPressed: _startGps, child: const Text('Bật lại')),
       ]),
     );
@@ -325,7 +322,7 @@ class _CarrierRunScreenState extends State<CarrierRunScreen> {
     final bookings = ((_manifest?['bookings'] as List?) ?? []).cast<Map>();
     final open = _status == 'SCHEDULED' || _status == 'BOARDING' || _status == 'RUNNING';
     return Scaffold(
-      appBar: AppBar(backgroundColor: _navy, foregroundColor: Colors.white, title: Text('${_time(_run['plannedDepartureAt'])} · ${_run['routeName']}')),
+      appBar: AppBar(title: Text('${_time(_run['plannedDepartureAt'])} · ${_run['routeName']}')),
       body: RefreshIndicator(
         onRefresh: _reload,
         child: ListView(children: [
@@ -378,10 +375,10 @@ class _CarrierRunScreenState extends State<CarrierRunScreen> {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Row(children: [
                     Expanded(child: Text('${b['contactName']} · ${b['passengerCount']} người', style: const TextStyle(fontWeight: FontWeight.w600))),
-                    Text(_bookingStatus[status] ?? status, style: TextStyle(color: status == 'BOARDED' ? Colors.green : Colors.black54)),
+                    Text(_bookingStatus[status] ?? status, style: TextStyle(color: status == 'BOARDED' ? Colors.green : Colors.grey)),
                   ]),
                   Text('${pickup['name']} → ${dropoff['name']} · Vé ${b['code']}'),
-                  if (b['note'] != null) Text('Ghi chú: ${b['note']}', style: const TextStyle(color: Colors.black54)),
+                  if (b['note'] != null) Text('Ghi chú: ${b['note']}', style: const TextStyle(color: Colors.grey)),
                   Row(children: [
                     TextButton.icon(onPressed: () => launchUrl(Uri.parse('tel:${b['contactPhone']}')), icon: const Icon(Icons.phone), label: Text('${b['contactPhone']}')),
                     const Spacer(),
@@ -397,6 +394,24 @@ class _CarrierRunScreenState extends State<CarrierRunScreen> {
           const SizedBox(height: 24),
         ]),
       ),
+    );
+  }
+}
+
+/// Màn chế độ xe dùng nền xanh đậm của app: nút chữ/nút chính đổi sang màu vàng nhấn để đọc được.
+class _CarrierTheme extends StatelessWidget {
+  const _CarrierTheme({required this.child});
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final accent = theme.colorScheme.secondary;
+    return Theme(
+      data: theme.copyWith(
+        textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(foregroundColor: accent, disabledForegroundColor: Colors.grey)),
+        filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(backgroundColor: accent, foregroundColor: Colors.black87)),
+      ),
+      child: child,
     );
   }
 }

@@ -10,6 +10,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../config/api_config.dart';
+
 class CarrierVehicleException implements Exception {
   CarrierVehicleException(this.message, {this.sessionEnded = false});
   final String message;
@@ -45,7 +47,7 @@ class CarrierVehicleSession {
 }
 
 class CarrierVehicleService {
-  static const String baseUrl = 'https://xeghepdongduong.com/api/carrier-vehicle';
+  static const String baseUrl = '$apiOrigin/api/carrier-vehicle';
   static const String _prefsKey = 'carrier_vehicle_session_v1';
   static CarrierVehicleSession? _session;
 
@@ -227,7 +229,10 @@ class CarrierGpsTracker extends ChangeNotifier {
             ? AppleSettings(accuracy: LocationAccuracy.high, distanceFilter: 15, pauseLocationUpdatesAutomatically: false)
             : const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 15);
     _sub = Geolocator.getPositionStream(locationSettings: settings).listen(_onPosition, onError: (Object e) {
-      lastError = 'Mất tín hiệu GPS: $e';
+      lastError = e is LocationServiceDisabledException
+          ? 'Vị trí (GPS) trên máy đang tắt. Bật Vị trí để khách theo dõi được xe.'
+          : 'Mất tín hiệu GPS. Đang thử lại...';
+      debugPrint('carrier gps error: $e');
       notifyListeners();
     });
     _timer = Timer.periodic(const Duration(seconds: 10), (_) => flush());
