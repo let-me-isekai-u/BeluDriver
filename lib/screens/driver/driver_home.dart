@@ -284,18 +284,6 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
     setState(() => _currentIndex = index);
   }
 
-  Future<void> _handleBottomNavigationTap(
-    int bottomIndex,
-    HomeProvider homeProvider,
-  ) async {
-    if (bottomIndex == 2) {
-      _openConcertTicketScanner();
-      return;
-    }
-
-    final screenIndex = bottomIndex > 2 ? bottomIndex - 1 : bottomIndex;
-    await _handleNavigationRequest(screenIndex, homeProvider);
-  }
 
   void _navigateToActivityOngoingTab() {
     if (!mounted) return;
@@ -305,21 +293,13 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
     });
   }
 
-  void _openConcertTicketScanner() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const ConcertTicketScannerScreen()),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final goldColor = Brand.navy;
     final homeProvider = context.watch<HomeProvider>();
-    final bottomNavigationIndex = _currentIndex >= 2
-        ? _currentIndex + 1
-        : _currentIndex;
+    final bottomNavigationIndex = _currentIndex;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -355,7 +335,9 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
               homeProvider.isLoadingProfile,
             )
           : null,
-      body: screens[_currentIndex],
+      body: _currentIndex == 2
+          ? screens[_currentIndex]
+          : AnnotatedRegion<SystemUiOverlayStyle>(value: SystemUiOverlayStyle.dark, child: screens[_currentIndex]),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           boxShadow: [
@@ -364,7 +346,7 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
         ),
         child: BottomNavigationBar(
           currentIndex: bottomNavigationIndex,
-          onTap: (index) => _handleBottomNavigationTap(index, homeProvider),
+          onTap: (index) => _handleNavigationRequest(index, homeProvider),
           type: BottomNavigationBarType.fixed,
           backgroundColor: Colors.white,
           elevation: 0,
@@ -386,10 +368,6 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
             const BottomNavigationBarItem(
               icon: Icon(Icons.upload_file_rounded),
               label: 'Đẩy đơn',
-            ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.qr_code_scanner_rounded),
-              label: 'Soát vé',
             ),
             BottomNavigationBarItem(
               icon: Container(
@@ -563,8 +541,10 @@ class _HomeDashboard extends StatelessWidget {
             BrandCard(
               padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
               child: Row(children: [
-                _quick(Icons.near_me_rounded, 'Nhận đơn', () => onNavigate(0)),
-                _quick(Icons.upload_file_rounded, 'Đẩy đơn', () => onNavigate(1)),
+                _quick(Icons.qr_code_scanner_rounded, 'Soát vé', () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ConcertTicketScannerScreen()),
+                    )),
                 _quick(Icons.forum_rounded, 'Nhóm chat', () => Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const DriverChatGroupListScreen()),
@@ -583,10 +563,8 @@ class _HomeDashboard extends StatelessWidget {
                     if (route != profile!.routes.first) const Divider(height: 1, indent: 64),
                     ListTile(
                       leading: const IconTile(Icons.route_rounded, size: 40),
-                      title: Text(route.name.isNotEmpty ? route.name : route.code,
+                      title: Text('${route.fromProvinceName} → ${route.toProvinceName}',
                           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                      subtitle: Text('${route.fromProvinceName} → ${route.toProvinceName}',
-                          style: const TextStyle(fontSize: 12, color: Brand.inkMuted)),
                     ),
                   ],
                 ]),
@@ -657,12 +635,11 @@ class _HomeDashboard extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      canReceiveRide
-                          ? "Vào tab Nhận đơn để bắt đầu ca làm việc"
-                          : "Hoàn tất trạng thái tài khoản để mở nhận đơn",
+                      canReceiveRide ? "Sẵn sàng nhận đơn" : "Chưa thể nhận đơn",
                       style: theme.textTheme.headlineSmall?.copyWith(
                         color: Colors.white,
-                        fontSize: 24,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ],

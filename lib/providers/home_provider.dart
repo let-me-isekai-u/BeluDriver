@@ -32,10 +32,12 @@ class HomeProvider extends ChangeNotifier {
 
   int get kycStatus => _onboardingStatus?.kycStatus ?? 0;
   String get nextStep => _onboardingStatus?.nextStep ?? '';
-  String get kycStatusTextSafe =>
-      _onboardingStatus?.kycStatusText.trim().isNotEmpty == true
-      ? _onboardingStatus!.kycStatusText
-      : 'Chưa hoàn tất';
+  String get kycStatusTextSafe => switch (kycStatus) {
+        2 => 'Đã duyệt',
+        1 => 'Chờ duyệt',
+        3 => 'Cần bổ sung',
+        _ => 'Chưa nộp KYC',
+      };
 
   String get nextStepLabel {
     switch (nextStep.trim().toLowerCase()) {

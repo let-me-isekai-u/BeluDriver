@@ -468,7 +468,7 @@ class _DriverBookingView extends StatelessWidget {
           child: Scaffold(
             appBar: AppBar(
               title: Text(
-                'Tài xế - Đẩy đơn',
+                'Đẩy đơn',
                 style: TextStyle(color: Brand.navy),
               ),
               centerTitle: true,
@@ -477,7 +477,7 @@ class _DriverBookingView extends StatelessWidget {
                 TextButton(
                   onPressed: () => _goNext(context, provider),
                   child: Text(
-                    "TIẾP THEO",
+                    "Tiếp theo",
                     style: TextStyle(
                       color: Brand.navy,
                       fontWeight: FontWeight.w700,
@@ -535,10 +535,8 @@ class _DriverBookingView extends StatelessWidget {
                     const SizedBox(height: 18),
                     _buildSectionCard(
                       context: context,
-                      title: "Thông tin khách & ghi chú",
+                      title: "Khách hàng",
                       icon: Icons.person_pin,
-                      subtitle:
-                          "Liên hệ và ghi chú của khách.",
                       children: [
                         TextField(
                           controller: provider.customerNameController,

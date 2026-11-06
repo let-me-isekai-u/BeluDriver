@@ -69,18 +69,6 @@ class _WalletHistoryView extends StatelessWidget {
       ),
       body: Stack(
         children: [
-          Positioned(
-            top: -90,
-            left: -50,
-            child: Container(
-              width: 220,
-              height: 220,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Brand.navy.withValues(alpha: 0.06),
-              ),
-            ),
-          ),
           RefreshIndicator(
             onRefresh: provider.fetchData,
             child: ListView(

@@ -6,6 +6,7 @@ import 'package:beludriver_app/models/driver_onboarding_status_dto.dart';
 import 'package:beludriver_app/models/location_models.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../config/api_config.dart';
 
 class ApiService {
   static dynamic safeDecode(String? body) {
@@ -24,7 +25,7 @@ class ApiService {
   // BASE URL CHUẨN
   // -----------------------------------------------------------
   static const String _baseUrl =
-      "https://xeghepdongduong.com/api/accountdriverapi";
+      "$apiOrigin/api/accountdriverapi";
 
   // Default headers
   static Map<String, String> _defaultHeaders() => {
@@ -85,7 +86,7 @@ class ApiService {
   // -----------------------------------------------------------
   static Future<http.Response> Driverlogout(String accessToken) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/accountdriverapi/logout",
+      "$apiOrigin/api/accountdriverapi/logout",
     );
 
     try {
@@ -155,7 +156,7 @@ class ApiService {
     String? avatarFilePath, // optional
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/accountdriverapi/driver-update-profile",
+      "$apiOrigin/api/accountdriverapi/driver-update-profile",
     );
 
     try {
@@ -186,7 +187,7 @@ class ApiService {
     required String email,
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/accountdriverapi/forgot-password",
+      "$apiOrigin/api/accountdriverapi/forgot-password",
     );
 
     try {
@@ -207,7 +208,7 @@ class ApiService {
     required String newPassword,
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/accountdriverapi/reset-password",
+      "$apiOrigin/api/accountdriverapi/reset-password",
     );
 
     try {
@@ -247,7 +248,7 @@ class ApiService {
     required String newPassword,
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/accountdriverapi/change-password",
+      "$apiOrigin/api/accountdriverapi/change-password",
     );
 
     print("🔵 [API] CALL CHANGE PASSWORD → $url");
@@ -287,7 +288,7 @@ class ApiService {
     required String accessToken,
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/accountdriverapi/delete",
+      "$apiOrigin/api/accountdriverapi/delete",
     );
 
     print("🔵 [API] CALL DELETE ACCOUNT → $url");
@@ -320,7 +321,7 @@ class ApiService {
     required String content,
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/paymentapi/deposite",
+      "$apiOrigin/api/paymentapi/deposite",
     );
 
     print("🔵 [API] DEPOSIT WALLET → $url");
@@ -358,7 +359,7 @@ class ApiService {
     int pageSize = 20,
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/rideapi/waiting"
+      "$apiOrigin/api/rideapi/waiting"
       "?page=$page&pageSize=$pageSize",
     );
 
@@ -390,7 +391,7 @@ class ApiService {
     required String accessToken,
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/driverapi/ride-confirmed",
+      "$apiOrigin/api/driverapi/ride-confirmed",
     );
 
     print("🔵 [API] GET WAITING RIDES → $url");
@@ -424,7 +425,7 @@ class ApiService {
     required int rideSource, // 1 = hệ thống, 2 = đơn đẩy tài xế
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/rideapi/accept/$id/$rideSource",
+      "$apiOrigin/api/rideapi/accept/$id/$rideSource",
     );
 
     print("🔵 [API] ACCEPT RIDE → $url");
@@ -454,7 +455,7 @@ class ApiService {
   static Future<http.Response> getWalletHistory({
     required String accessToken,
   }) async {
-    final url = Uri.parse("https://xeghepdongduong.com/api/paymentapi/history");
+    final url = Uri.parse("$apiOrigin/api/paymentapi/history");
 
     print("🔵 [API] WALLET HISTORY → $url");
 
@@ -481,7 +482,7 @@ class ApiService {
 
   //lấy tỉnh để lọc đơn
   static Future<List<dynamic>> getProvinces() async {
-    final url = Uri.parse("https://xeghepdongduong.com/api/provinceapi/active");
+    final url = Uri.parse("$apiOrigin/api/provinceapi/active");
 
     try {
       final response = await http.get(url).timeout(const Duration(seconds: 15));
@@ -504,7 +505,7 @@ class ApiService {
   //Lấy huyện theo tỉnh
   static Future<List<dynamic>> getDistricts({required int provinceId}) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/provinceapi/district/$provinceId",
+      "$apiOrigin/api/provinceapi/district/$provinceId",
     );
 
     try {
@@ -532,7 +533,7 @@ class ApiService {
   }) async {
     final url =
         Uri.parse(
-          "https://xeghepdongduong.com/api/track-asia/autocomplete",
+          "$apiOrigin/api/track-asia/autocomplete",
         ).replace(
           queryParameters: {
             "input": input,
@@ -555,7 +556,7 @@ class ApiService {
     required String placeId,
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/track-asia/place-detail",
+      "$apiOrigin/api/track-asia/place-detail",
     ).replace(queryParameters: {"placeId": placeId});
 
     try {
@@ -572,7 +573,7 @@ class ApiService {
     required double lng,
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/track-asia/reverse",
+      "$apiOrigin/api/track-asia/reverse",
     ).replace(queryParameters: {"lat": lat.toString(), "lng": lng.toString()});
 
     try {
@@ -589,7 +590,7 @@ class ApiService {
     required double lng,
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/v2/address/resolve-point",
+      "$apiOrigin/api/v2/address/resolve-point",
     );
 
     try {
@@ -611,7 +612,7 @@ class ApiService {
     required int quantity,
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/v2/address/resolve-route",
+      "$apiOrigin/api/v2/address/resolve-route",
     );
 
     try {
@@ -650,7 +651,7 @@ class ApiService {
     required int rideSource, //
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/driverapi/ride-detail/$rideId/$rideSource",
+      "$apiOrigin/api/driverapi/ride-detail/$rideId/$rideSource",
     );
 
     try {
@@ -677,7 +678,7 @@ class ApiService {
     required int rideSource, // 👈 thêm
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/driverapi/start/$rideId/$rideSource",
+      "$apiOrigin/api/driverapi/start/$rideId/$rideSource",
     );
 
     try {
@@ -704,7 +705,7 @@ class ApiService {
     required int rideSource, // 👈 thêm
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/driverapi/complete/$rideId/$rideSource",
+      "$apiOrigin/api/driverapi/complete/$rideId/$rideSource",
     );
 
     try {
@@ -729,7 +730,7 @@ class ApiService {
     required String accessToken,
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/driverapi/ride-process",
+      "$apiOrigin/api/driverapi/ride-process",
     );
 
     print("🔵 [API] GET PROCESSING RIDES → $url");
@@ -760,7 +761,7 @@ class ApiService {
     required String accessToken,
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/driverapi/ride-history",
+      "$apiOrigin/api/driverapi/ride-history",
     );
 
     print("🔵 [API] GET RIDE HISTORY → $url");
@@ -796,7 +797,7 @@ class ApiService {
     required String accountName,
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/withdrawalapi/create",
+      "$apiOrigin/api/withdrawalapi/create",
     );
 
     return http.post(
@@ -820,7 +821,7 @@ class ApiService {
     required String accessToken,
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/withdrawalapi/history-withdrawal",
+      "$apiOrigin/api/withdrawalapi/history-withdrawal",
     );
 
     try {
@@ -862,7 +863,7 @@ class ApiService {
     required int fromDistrictId,
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/rideapi/search",
+      "$apiOrigin/api/rideapi/search",
     ).replace(queryParameters: {"fromDistrictId": fromDistrictId.toString()});
 
     print("🔵 [API] SEARCH RIDE BY DISTRICT → $url");
@@ -893,7 +894,7 @@ class ApiService {
     required String accessToken,
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/rideapi/ride-count-by-province",
+      "$apiOrigin/api/rideapi/ride-count-by-province",
     );
 
     return await http.get(
@@ -910,7 +911,7 @@ class ApiService {
     required int provinceId,
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/rideapi/ride-count-by-district/$provinceId",
+      "$apiOrigin/api/rideapi/ride-count-by-district/$provinceId",
     );
 
     print("🔵 [API] GET RIDE COUNT BY DISTRICT → $url");
@@ -937,7 +938,7 @@ class ApiService {
   }
 
   // API #23.5: Tạo đơn / Đẩy đơn
-  // POST https://xeghepdongduong.com/api/v2/ride/create-broker
+  // POST $apiOrigin/api/v2/ride/create-broker
   // Bearer Token: Access Token
   static Future<http.Response> createBrokerRide({
     required String accessToken,
@@ -954,7 +955,7 @@ class ApiService {
     int? groupId,
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/v2/ride/create-broker",
+      "$apiOrigin/api/v2/ride/create-broker",
     );
 
     try {
@@ -1009,13 +1010,13 @@ class ApiService {
   }
 
   // API #24: Lấy danh sách các chuyến đã đẩy lên (status = 1,2,3)
-  // GET https://xeghepdongduong.com/api/rideapi/ride-broker
+  // GET $apiOrigin/api/rideapi/ride-broker
   // Bearer Token: Access Token
   static Future<http.Response> getBrokerRides({
     required String accessToken,
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/rideapi/ride-broker",
+      "$apiOrigin/api/rideapi/ride-broker",
     );
 
     try {
@@ -1039,7 +1040,7 @@ class ApiService {
     required int rideId,
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/rideapi/cancel-broker/$rideId",
+      "$apiOrigin/api/rideapi/cancel-broker/$rideId",
     );
 
     print("=== CANCEL BROKER RIDE ===");
@@ -1099,7 +1100,7 @@ class ApiService {
     required String accessToken,
     required int amount,
   }) async {
-    final url = Uri.parse("https://xeghepdongduong.com/api/depositapi/create");
+    final url = Uri.parse("$apiOrigin/api/depositapi/create");
 
     print("🔵 [API] CREATE DEPOSIT REQUEST → $url");
     print("➡️ amount: $amount");
@@ -1133,7 +1134,7 @@ class ApiService {
     required int depositId,
   }) async {
     final url = Uri.parse(
-      "https://xeghepdongduong.com/api/depositapi/cancel/$depositId",
+      "$apiOrigin/api/depositapi/cancel/$depositId",
     );
 
     print("🔵 [API] CANCEL DEPOSIT REQUEST → $url");

@@ -81,18 +81,6 @@ class _RegisterView extends StatelessWidget {
               ),
             ),
           ),
-          Positioned(
-            top: -70,
-            left: -40,
-            child: Container(
-              width: 180,
-              height: 180,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Brand.navy.withValues(alpha: 0.07),
-              ),
-            ),
-          ),
           SafeArea(
             child: Stack(
               children: [

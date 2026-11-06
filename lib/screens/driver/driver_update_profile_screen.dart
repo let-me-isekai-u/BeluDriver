@@ -107,18 +107,6 @@ class _DriverUpdateProfileViewState extends State<_DriverUpdateProfileView> {
       ),
       body: Stack(
         children: [
-          Positioned(
-            top: -70,
-            right: -40,
-            child: Container(
-              width: 220,
-              height: 220,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Brand.navy.withValues(alpha: 0.06),
-              ),
-            ),
-          ),
           SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
             child: Column(

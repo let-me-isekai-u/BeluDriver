@@ -281,16 +281,6 @@ class _ActivityViewState extends State<_ActivityView>
     });
   }
 
-  String _tabTitle() {
-    switch (_tabController.index) {
-      case 1:
-        return "Lịch sử chuyến";
-      case 2:
-        return "Đơn đã đẩy";
-      default:
-        return "Đang vận hành";
-    }
-  }
 
   String _formatPickupTime(String? raw) {
     if (raw == null || raw.trim().isEmpty) return '';
@@ -310,7 +300,7 @@ class _ActivityViewState extends State<_ActivityView>
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
-          "Hoạt động chuyến xe",
+          "Hoạt động",
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w800,
@@ -320,18 +310,6 @@ class _ActivityViewState extends State<_ActivityView>
       ),
       body: Stack(
         children: [
-          Positioned(
-            top: -70,
-            right: -20,
-            child: Container(
-              width: 180,
-              height: 180,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Brand.navy.withValues(alpha: 0.05),
-              ),
-            ),
-          ),
           Column(
             children: [
               Padding(
@@ -355,117 +333,16 @@ class _ActivityViewState extends State<_ActivityView>
     );
   }
 
-  Widget _buildSummaryHeader(
-    ThemeData theme,
-    ActivityHistoryProvider provider,
-  ) {
-    return AnimatedBuilder(
-      animation: _tabController,
-      builder: (context, _) {
-        return Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Brand.navy,
-                Brand.b700,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(
-              color: Brand.navy.withValues(alpha: 0.16),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const DriverPill(
-                label: "Bảng điều phối",
-                icon: Icons.local_shipping_rounded,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                _tabTitle(),
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
-                  fontSize: 22,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                "Chuyến đang chạy, lịch sử và đơn đã đẩy.",
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Brand.inkMuted,
-                  height: 1.45,
-                ),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: DriverStatTile(
-                      label: "Đang chạy",
-                      value: provider.summaryCountText(
-                        isLoaded: provider.isOngoingLoaded,
-                        isLoading: provider.isLoadingOngoing,
-                        count: provider.ongoingRides.length,
-                      ),
-                      icon: Icons.timelapse_rounded,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DriverStatTile(
-                      label: "Lịch sử",
-                      value: provider.summaryCountText(
-                        isLoaded: provider.isHistoryLoaded,
-                        isLoading: provider.isLoadingHistory,
-                        count: provider.historyRides.length,
-                      ),
-                      icon: Icons.history_rounded,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DriverStatTile(
-                      label: "Đã đẩy",
-                      value: provider.summaryCountText(
-                        isLoaded: provider.isBrokerLoaded,
-                        isLoading: provider.isLoadingBroker,
-                        count: provider.brokerRides.length,
-                      ),
-                      icon: Icons.share_location_rounded,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   Widget _buildTabSwitcher(ThemeData theme) {
     return Container(
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: Brand.b50.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: Brand.navy.withValues(alpha: 0.12),
-        ),
-      ),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(color: Brand.b50, borderRadius: BorderRadius.circular(16)),
       child: TabBar(
         controller: _tabController,
         dividerColor: Colors.transparent,
-        indicator: BoxDecoration(
-          color: Brand.navy.withValues(alpha: 0.18),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        labelColor: Brand.navy,
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicator: BoxDecoration(color: Brand.navy, borderRadius: BorderRadius.circular(12)),
+        labelColor: Colors.white,
         unselectedLabelColor: Brand.inkMuted,
         labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
         unselectedLabelStyle: const TextStyle(
@@ -542,17 +419,11 @@ class _ActivityViewState extends State<_ActivityView>
           ),
           padding: _listPadding(context),
           children: [
-            _buildSummaryHeader(theme, provider),
-            const SizedBox(height: 16),
-            const DriverSectionCard(
-              title: "Đơn đã đẩy",
-              icon: Icons.share_rounded,
-              child: DriverEmptyState(
-                icon: Icons.move_down_rounded,
-                title: "Chưa có đơn nào được đẩy",
-                message:
-                    "Đơn bạn đẩy sẽ hiện ở đây.",
-              ),
+            const SizedBox(height: 48),
+            const DriverEmptyState(
+              icon: Icons.move_down_rounded,
+              title: "Chưa có đơn nào được đẩy",
+              message: "Đơn bạn đẩy sẽ hiện ở đây.",
             ),
           ],
         ),
@@ -568,8 +439,7 @@ class _ActivityViewState extends State<_ActivityView>
         padding: _listPadding(context),
         itemCount: provider.brokerRides.length + 2,
         itemBuilder: (context, index) {
-          if (index == 0) return _buildSummaryHeader(theme, provider);
-          if (index == 1) return const SizedBox(height: 16);
+          if (index < 2) return const SizedBox.shrink();
           return _buildBrokerRideCard(provider.brokerRides[index - 2], theme);
         },
       ),
@@ -591,16 +461,11 @@ class _ActivityViewState extends State<_ActivityView>
         ),
         padding: _listPadding(context),
         children: [
-          _buildSummaryHeader(theme, provider),
-          const SizedBox(height: 16),
-          DriverSectionCard(
-            title: emptyTitle,
+          const SizedBox(height: 48),
+          DriverEmptyState(
             icon: Icons.route_rounded,
-            child: DriverEmptyState(
-              icon: Icons.location_searching_rounded,
-              title: emptyTitle,
-              message: emptyMessage,
-            ),
+            title: emptyTitle,
+            message: emptyMessage,
           ),
         ],
       );
@@ -613,8 +478,7 @@ class _ActivityViewState extends State<_ActivityView>
       padding: _listPadding(context),
       itemCount: rides.length + 2,
       itemBuilder: (context, index) {
-        if (index == 0) return _buildSummaryHeader(theme, provider);
-        if (index == 1) return const SizedBox(height: 16);
+        if (index < 2) return const SizedBox.shrink();
         return _buildRideCard(rides[index - 2], theme);
       },
     );

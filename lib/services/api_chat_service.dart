@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import '../config/api_config.dart';
 
 class ApiChatService {
   ApiChatService({required this.tokenProvider, http.Client? client})
@@ -9,8 +10,8 @@ class ApiChatService {
   final Future<String?> Function() tokenProvider;
   final http.Client _client;
 
-  static const String baseUrl = 'https://xeghepdongduong.com/api';
-  static const String chatHubUrl = 'https://xeghepdongduong.com/hubs/chat';
+  static const String baseUrl = '$apiOrigin/api';
+  static const String chatHubUrl = '$apiOrigin/hubs/chat';
 
   Map<String, String> _headers({bool isJson = false}) {
     return {

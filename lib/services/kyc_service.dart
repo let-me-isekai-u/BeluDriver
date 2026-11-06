@@ -3,12 +3,13 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../config/api_config.dart';
 
 class KYCService {
   // -----------------------------------------------------------
   // BASE URL
   // -----------------------------------------------------------
-  static const String _baseUrl = "https://xeghepdongduong.com/api/accountdriverapi";
+  static const String _baseUrl = "$apiOrigin/api/accountdriverapi";
 
   // -----------------------------------------------------------
   // HEADERS

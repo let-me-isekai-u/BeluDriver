@@ -93,7 +93,7 @@ class _DriverProfileView extends StatefulWidget {
 
 class _DriverProfileViewState extends State<_DriverProfileView> {
   bool _isFinanceExpanded = false;
-  bool _isOnboardingExpanded = true;
+  bool _isOnboardingExpanded = false;
   bool _isSelectedProvincesExpanded = false;
   bool _isRoutesExpanded = false;
 
@@ -283,20 +283,6 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                 )
               : Stack(
                   children: [
-                    Positioned(
-                      top: -80,
-                      left: -50,
-                      child: Container(
-                        width: 220,
-                        height: 220,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Brand.navy.withValues(
-                            alpha: 0.05,
-                          ),
-                        ),
-                      ),
-                    ),
                     RefreshIndicator(
                       onRefresh: provider.loadProfile,
                       child: ListView(
@@ -379,9 +365,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
             children: [
               CircleAvatar(
                 radius: 38,
-                backgroundColor: Brand.navy.withValues(
-                  alpha: 0.14,
-                ),
+                backgroundColor: Colors.white,
                 backgroundImage: profile.avatarUrl.isNotEmpty
                     ? NetworkImage(profile.avatarUrl)
                     : null,
@@ -398,11 +382,6 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const DriverPill(
-                      label: "Tài khoản tài xế",
-                      icon: Icons.badge_rounded,
-                    ),
-                    const SizedBox(height: 10),
                     Text(
                       profile.fullName.isEmpty
                           ? "Chưa cập nhật tên"
@@ -416,7 +395,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                     Text(
                       profile.phone,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Brand.inkMuted,
+                        color: Brand.b200,
                         fontSize: 15,
                       ),
                     ),
@@ -433,9 +412,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
               DriverPill(
                 label: statusLabel,
                 icon: Icons.verified_user_rounded,
-                color: onboarding == null
-                    ? Brand.navy
-                    : _kycStatusColor(onboarding.kycStatus),
+                color: Colors.white,
               ),
               DriverPill(
                 label: canReceive
@@ -444,9 +421,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                 icon: canReceive
                     ? Icons.check_circle_rounded
                     : Icons.timelapse_rounded,
-                color: canReceive
-                    ? Brand.success
-                    : Brand.warning,
+                color: canReceive ? const Color(0xFF4ADE80) : Brand.lane,
               ),
             ],
           ),
@@ -1330,11 +1305,9 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Brand.b50.withValues(alpha: 0.34),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: Brand.navy.withValues(alpha: 0.14),
-        ),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: Brand.cardShadow,
       ),
       child: Column(
         children: [
@@ -1344,16 +1317,14 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
               onTap: onTap,
               borderRadius: BorderRadius.circular(24),
               child: Padding(
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
                 child: Row(
                   children: [
                     Container(
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
-                        color: Brand.navy.withValues(
-                          alpha: 0.12,
-                        ),
+                        color: Brand.b50,
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Icon(icon, color: Brand.navy),
@@ -1367,16 +1338,10 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                             title,
                             style: theme.textTheme.titleMedium?.copyWith(
                               color: Brand.ink,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            subtitle,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: Brand.inkMuted,
-                            ),
-                          ),
+
                         ],
                       ),
                     ),
@@ -1418,11 +1383,9 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
     bool isLast = false,
   }) {
     return Container(
-      margin: EdgeInsets.only(bottom: isLast ? 0 : 10),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        color: Brand.b50,
-        borderRadius: BorderRadius.circular(16),
+        border: isLast ? null : const Border(bottom: BorderSide(color: Brand.lineSoft)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1463,61 +1426,20 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
     required VoidCallback onTap,
     bool isLast = false,
   }) {
-    return Container(
-      margin: EdgeInsets.only(bottom: isLast ? 0 : 10),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(18),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Brand.b50,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: Brand.navy.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(icon, color: Brand.navy),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: Brand.ink,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        subtitle,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: Brand.inkMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 16,
-                  color: Brand.navy,
-                ),
-              ],
-            ),
-          ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          border: isLast ? null : const Border(bottom: BorderSide(color: Brand.lineSoft)),
         ),
+        child: Row(children: [
+          IconTile(icon, size: 40),
+          const SizedBox(width: 14),
+          Expanded(child: Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600))),
+          const Icon(Icons.chevron_right_rounded, color: Brand.inkSubtle),
+        ]),
       ),
     );
   }

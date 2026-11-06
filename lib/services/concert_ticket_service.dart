@@ -4,11 +4,12 @@ import 'package:http/http.dart' as http;
 
 import '../models/concert_ticket_verification_model.dart';
 import 'api_service.dart';
+import '../config/api_config.dart';
 
 class ConcertTicketService {
   const ConcertTicketService({http.Client? client}) : _client = client;
 
-  static const String _baseUrl = 'https://xeghepdongduong.com';
+  static const String _baseUrl = '$apiOrigin';
   static const String _checkInPath = '/api/v1/concert/driver/tickets/check-in';
 
   final http.Client? _client;
