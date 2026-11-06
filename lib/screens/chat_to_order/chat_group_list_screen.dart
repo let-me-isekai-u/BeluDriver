@@ -498,7 +498,7 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Hiện chưa có nhóm chat tuyến nào theo các tỉnh bạn đã đăng ký.',
+            'Chưa có nhóm chat cho tuyến của bạn.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: Colors.black45),
           ),

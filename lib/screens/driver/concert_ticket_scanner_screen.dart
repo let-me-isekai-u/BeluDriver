@@ -140,7 +140,7 @@ class _HeaderCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Quét mã QR trên vé khách đưa. App gửi toàn bộ chuỗi QR lên server để check-in.',
+            'Quét mã QR trên vé của khách.',
             style: TextStyle(color: Brand.navy, height: 1.4),
           ),
           const SizedBox(height: 18),
@@ -535,7 +535,7 @@ class _ConcertQrScannerPageState extends State<_ConcertQrScannerPage> {
             right: 24,
             bottom: 126,
             child: Text(
-              'Mã sẽ được gửi lên server để kiểm vé online',
+              'Mã được kiểm tra trực tuyến',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Brand.navy,

@@ -36,7 +36,6 @@ class _DriverBookingConfirmScreenState
   }
 
   Widget _buildInfoRow(String label, String value, {bool isBold = false}) {
-    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(

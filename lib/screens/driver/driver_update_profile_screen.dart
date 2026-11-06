@@ -129,8 +129,6 @@ class _DriverUpdateProfileViewState extends State<_DriverUpdateProfileView> {
                 const SizedBox(height: 16),
                 DriverSectionCard(
                   title: "Thông tin hiển thị",
-                  subtitle:
-                      "Chỉnh sửa hồ sơ cá nhân, email liên hệ và biển số xe.",
                   icon: Icons.edit_note_rounded,
                   child: Column(
                     children: [
@@ -287,7 +285,7 @@ class _DriverUpdateProfileViewState extends State<_DriverUpdateProfileView> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  "Ảnh đại diện và thông tin cơ bản sẽ được hiển thị xuyên suốt ứng dụng.",
+                  "Hiển thị trong toàn ứng dụng.",
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: Brand.inkMuted,
                     height: 1.45,

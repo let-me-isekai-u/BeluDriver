@@ -99,7 +99,6 @@ class _WithdrawalHistoryView extends StatelessWidget {
                   SizedBox(height: MediaQuery.of(context).size.height * 0.14),
                   DriverSectionCard(
                     title: "Không thể tải lịch sử",
-                    subtitle: "Kéo xuống để thử lại hoặc quay lại sau.",
                     icon: Icons.error_outline_rounded,
                     child: Text(
                       "Lỗi: ${provider.errorMessage}",
@@ -124,14 +123,12 @@ class _WithdrawalHistoryView extends StatelessWidget {
                   SizedBox(height: MediaQuery.of(context).size.height * 0.14),
                   const DriverSectionCard(
                     title: "Chưa có yêu cầu rút tiền",
-                    subtitle:
-                        "Mọi yêu cầu rút tiền của bạn sẽ xuất hiện tại đây.",
                     icon: Icons.account_balance_wallet_outlined,
                     child: DriverEmptyState(
                       icon: Icons.history_toggle_off_rounded,
                       title: "Danh sách đang trống",
                       message:
-                          "Khi bạn gửi yêu cầu rút tiền, trạng thái xử lý và lý do từ chối nếu có sẽ được cập nhật ngay trong màn hình này.",
+                          "Yêu cầu rút tiền sẽ hiện ở đây.",
                     ),
                   ),
                 ],
@@ -159,8 +156,6 @@ class _WithdrawalHistoryView extends StatelessWidget {
                 const SizedBox(height: 16),
                 DriverSectionCard(
                   title: "Danh sách yêu cầu",
-                  subtitle:
-                      "Xem trạng thái từng lần rút tiền và các phản hồi từ hệ thống.",
                   icon: Icons.payments_outlined,
                   child: Column(
                     children: list
@@ -222,7 +217,7 @@ class _WithdrawalHistoryView extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            "Kiểm tra tiến độ xử lý từng yêu cầu và tổng số tiền đã gửi đi.",
+            "Tiến độ xử lý từng yêu cầu.",
             style: theme.textTheme.bodyMedium?.copyWith(
               color: Brand.inkMuted,
               height: 1.45,

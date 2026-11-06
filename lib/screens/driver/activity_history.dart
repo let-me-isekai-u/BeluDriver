@@ -397,7 +397,7 @@ class _ActivityViewState extends State<_ActivityView>
               ),
               const SizedBox(height: 6),
               Text(
-                "Theo dõi chuyến đang chạy, lịch sử hoàn thành và các đơn đã đẩy trong cùng một nơi.",
+                "Chuyến đang chạy, lịch sử và đơn đã đẩy.",
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: Brand.inkMuted,
                   height: 1.45,
@@ -498,7 +498,7 @@ class _ActivityViewState extends State<_ActivityView>
         rides: provider.ongoingRides,
         emptyTitle: "Chưa có chuyến đang diễn ra",
         emptyMessage:
-            "Khi nhận đơn thành công, chuyến xe sẽ xuất hiện tại đây để bạn bắt đầu và hoàn tất hành trình.",
+            "Đơn bạn nhận sẽ hiện ở đây.",
         provider: provider,
       ),
     );
@@ -519,7 +519,7 @@ class _ActivityViewState extends State<_ActivityView>
         rides: provider.historyRides,
         emptyTitle: "Chưa có lịch sử chuyến",
         emptyMessage:
-            "Sau khi hoàn thành chuyến, thông tin hành trình và doanh thu sẽ được lưu ở đây.",
+            "Chuyến hoàn thành sẽ được lưu ở đây.",
         provider: provider,
       ),
     );
@@ -548,13 +548,12 @@ class _ActivityViewState extends State<_ActivityView>
             const SizedBox(height: 16),
             const DriverSectionCard(
               title: "Đơn đã đẩy",
-              subtitle: "Các chuyến chia sẻ của bạn sẽ xuất hiện tại đây.",
               icon: Icons.share_rounded,
               child: DriverEmptyState(
                 icon: Icons.move_down_rounded,
                 title: "Chưa có đơn nào được đẩy",
                 message:
-                    "Khi bạn tạo hoặc chia sẻ chuyến đi cho tài xế khác, danh sách sẽ được cập nhật tại màn hình này.",
+                    "Đơn bạn đẩy sẽ hiện ở đây.",
               ),
             ),
           ],
@@ -598,7 +597,6 @@ class _ActivityViewState extends State<_ActivityView>
           const SizedBox(height: 16),
           DriverSectionCard(
             title: emptyTitle,
-            subtitle: "Kéo xuống để tải lại dữ liệu bất kỳ lúc nào.",
             icon: Icons.route_rounded,
             child: DriverEmptyState(
               icon: Icons.location_searching_rounded,

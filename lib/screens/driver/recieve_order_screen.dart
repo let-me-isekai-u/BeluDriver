@@ -693,7 +693,7 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
         icon: Icons.inbox_outlined,
         title: "Chưa có đơn hàng chờ",
         message:
-            "Hệ thống sẽ cập nhật ngay khi có chuyến phù hợp. Bạn có thể vuốt xuống để làm mới danh sách.",
+            "Vuốt xuống để làm mới.",
       ),
     );
   }

@@ -166,7 +166,7 @@ class _LoginScreenState extends State<DriverLoginScreen>
         ),
         const SizedBox(height: 8),
         const Text(
-          'Nhận đơn, theo dõi doanh thu và vận hành công việc mỗi ngày.',
+          'Nhận đơn và theo dõi doanh thu mỗi ngày.',
           style: TextStyle(color: Brand.b100, fontSize: 14, height: 1.45),
         ),
       ],
@@ -176,7 +176,6 @@ class _LoginScreenState extends State<DriverLoginScreen>
   Widget _buildLoginFormCard(ThemeData theme, LoginProvider provider) {
     return DriverSectionCard(
       title: "Bắt đầu ca làm việc",
-      subtitle: "Đăng nhập tài khoản để vào giao diện vận hành tài xế.",
       icon: Icons.lock_open_rounded,
       child: Column(
         children: [
@@ -268,7 +267,7 @@ class _LoginScreenState extends State<DriverLoginScreen>
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    "Tài khoản được duyệt KYC sẽ mở đầy đủ chức năng nhận đơn.",
+                    "Cần duyệt KYC để nhận đơn.",
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: Brand.inkMuted,
                       height: 1.4,

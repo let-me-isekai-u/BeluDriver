@@ -42,7 +42,6 @@ class _RegisterView extends StatelessWidget {
 
   Future<void> _handleRegister(BuildContext context) async {
     final provider = context.read<RegisterProvider>();
-    final theme = Theme.of(context);
 
     final success = await provider.register(
       onSnack: (msg, {color}) => _showSnack(context, msg, color: color),
@@ -128,7 +127,7 @@ class _RegisterView extends StatelessWidget {
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        "Tạo hồ sơ tài xế để hoàn tất đăng ký, sau đó tiếp tục KYC và mở chức năng nhận đơn.",
+                        "Tạo hồ sơ, sau đó làm KYC để nhận đơn.",
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: Brand.inkMuted,
                           height: 1.5,
@@ -189,7 +188,7 @@ class _RegisterView extends StatelessWidget {
                         theme: theme,
                         title: "Thông tin liên hệ",
                         subtitle:
-                            "Số điện thoại dùng để đăng nhập và nhận liên hệ.",
+                            "Dùng để đăng nhập.",
                         icon: Icons.call_outlined,
                         children: [
                           _ProviderTextField(
@@ -212,7 +211,7 @@ class _RegisterView extends StatelessWidget {
                         theme: theme,
                         title: "Bảo mật tài khoản",
                         subtitle:
-                            "Đặt mật khẩu mạnh để bảo vệ tài khoản tài xế.",
+                            "Đặt mật khẩu mạnh.",
                         icon: Icons.lock_outline_rounded,
                         children: [
                           const _PasswordTextField(isConfirm: false),
@@ -223,8 +222,6 @@ class _RegisterView extends StatelessWidget {
                       const SizedBox(height: 16),
                       DriverSectionCard(
                         title: "Xác nhận điều kiện",
-                        subtitle:
-                            "Hoàn tất các xác nhận bắt buộc trước khi gửi hồ sơ.",
                         icon: Icons.verified_user_outlined,
                         child: _TermsAndButton(
                           onRegister: () => _handleRegister(context),

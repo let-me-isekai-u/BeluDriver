@@ -555,162 +555,63 @@ class _HomeDashboard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeroCard(context, wallet, routeCount, canReceiveRide),
-            const SizedBox(height: 18),
-            if (!canReceiveRide || !homeProvider.hasRegisteredRoute)
+            const SizedBox(height: 16),
+            if (!canReceiveRide || !homeProvider.hasRegisteredRoute) ...[
               _buildStatusBanner(context),
-            if (!canReceiveRide || !homeProvider.hasRegisteredRoute)
-              const SizedBox(height: 18),
-            Text(
-              "Lối vào nhanh",
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: Brand.ink,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildPrimaryActionCard(
-                    context: context,
-                    title: "Nhận đơn",
-                    subtitle: "Vào danh sách đơn đang chờ và thao tác ngay.",
-                    icon: Icons.near_me_rounded,
-                    accent: Brand.warning,
-                    onTap: () => onNavigate(0),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: _buildPrimaryActionCard(
-                    context: context,
-                    title: "Đẩy đơn",
-                    subtitle: "Tạo chuyến cộng đồng với biểu mẫu rõ hơn.",
-                    icon: Icons.upload_file_rounded,
-                    accent: Brand.navy,
-                    onTap: () => onNavigate(1),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: _buildPrimaryActionCard(
-                    context: context,
-                    title: "Nhóm chat",
-                    subtitle: "Trao đổi nhanh với các nhóm đơn và tài xế.",
-                    icon: Icons.forum_rounded,
-                    accent: Brand.success,
-                    onTap: () => Navigator.push(
+              const SizedBox(height: 16),
+            ],
+            BrandCard(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+              child: Row(children: [
+                _quick(Icons.near_me_rounded, 'Nhận đơn', () => onNavigate(0)),
+                _quick(Icons.upload_file_rounded, 'Đẩy đơn', () => onNavigate(1)),
+                _quick(Icons.forum_rounded, 'Nhóm chat', () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const DriverChatGroupListScreen(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const DriverChatGroupListScreen()),
+                    )),
+                _quick(Icons.add_card_rounded, 'Nạp ví', () => _showDepositDialog(context, theme)),
+                _quick(Icons.payments_outlined, 'Rút tiền', () => _showWithdrawDialog(context)),
+              ]),
+            ),
+            if (profile != null && profile!.routes.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              const SectionHeader('Tuyến của bạn'),
+              BrandCard(
+                padding: EdgeInsets.zero,
+                child: Column(children: [
+                  for (final route in profile!.routes.take(5)) ...[
+                    if (route != profile!.routes.first) const Divider(height: 1, indent: 64),
+                    ListTile(
+                      leading: const IconTile(Icons.route_rounded, size: 40),
+                      title: Text(route.name.isNotEmpty ? route.name : route.code,
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                      subtitle: Text('${route.fromProvinceName} → ${route.toProvinceName}',
+                          style: const TextStyle(fontSize: 12, color: Brand.inkMuted)),
                     ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            DriverSectionCard(
-              title: "Tiện ích vận hành",
-              subtitle: "Các công cụ phụ trợ cho lịch sử, chat và ví.",
-              icon: Icons.dashboard_customize_outlined,
-              child: GridView(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 14,
-                  crossAxisSpacing: 14,
-                  mainAxisExtent: 144,
-                ),
-                children: [
-                  _buildSecondaryActionCard(
-                    context,
-                    "Nạp tiền ví",
-                    Icons.account_balance_wallet_rounded,
-                    Brand.success,
-                    () => _showDepositDialog(context, theme),
-                  ),
-                  _buildSecondaryActionCard(
-                    context,
-                    "Rút tiền",
-                    Icons.payments_outlined,
-                    Brand.danger,
-                    () => _showWithdrawDialog(context),
-                  ),
-                ],
+                  ],
+                ]),
               ),
-            ),
-            const SizedBox(height: 18),
-            if (profile != null && profile!.routes.isNotEmpty)
-              DriverSectionCard(
-                title: "Tuyến đã đăng ký",
-                subtitle: "Các tuyến hiện tại đang gắn với tài khoản tài xế.",
-                icon: Icons.alt_route_rounded,
-                child: Column(
-                  children: profile!.routes.take(3).map((route) {
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Brand.b50,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.08,
-                          ),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: Brand.navy.withValues(
-                                alpha: 0.12,
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              Icons.route_rounded,
-                              color: Brand.navy,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  route.name.isNotEmpty
-                                      ? route.name
-                                      : route.code,
-                                  style: theme.textTheme.bodyLarge?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  "${route.fromProvinceName} -> ${route.toProvinceName}",
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: Brand.inkMuted,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
+            ],
           ],
         ),
       ),
     );
   }
+
+  Widget _quick(IconData icon, String label, VoidCallback onTap) => Expanded(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Column(children: [
+              IconTile(icon, size: 46, radius: 15),
+              const SizedBox(height: 6),
+              Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+            ]),
+          ),
+        ),
+      );
 
   Widget _buildHeroCard(
     BuildContext context,
@@ -805,154 +706,25 @@ class _HomeDashboard extends StatelessWidget {
   }
 
   Widget _buildStatusBanner(BuildContext context) {
-    final theme = Theme.of(context);
 
     String message;
     if (!homeProvider.hasRegisteredRoute) {
       message = "Bạn cần đăng ký tuyến trước khi bắt đầu nhận chuyến.";
     } else if (homeProvider.kycPendingReview) {
       message =
-          "Hồ sơ KYC đang chờ duyệt. Trong thời gian này bạn vẫn có thể xem thông tin và chuẩn bị công việc.";
+          "Hồ sơ KYC đang chờ duyệt.";
     } else if (homeProvider.kycStatus == 3) {
       message =
-          "Hồ sơ KYC cần bổ sung lại. Vui lòng cập nhật sớm để mở nhận đơn.";
+          "Hồ sơ KYC cần bổ sung.";
     } else {
       message =
-          "Tài khoản chưa đủ điều kiện nhận đơn. Hệ thống sẽ tiếp tục hướng dẫn các bước còn thiếu.";
+          "Tài khoản chưa đủ điều kiện nhận đơn.";
     }
 
-    return DriverSectionCard(
-      title: "Trạng thái tài khoản",
-      subtitle: message,
-      icon: Icons.info_outline_rounded,
-      trailing: DriverPill(
-        label: homeProvider.kycStatusTextSafe,
-        icon: Icons.flag_rounded,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              "Hành động ưu tiên: ${homeProvider.nextStepLabel}",
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: Brand.ink,
-                height: 1.5,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPrimaryActionCard({
-    required BuildContext context,
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color accent,
-    required VoidCallback onTap,
-  }) {
-    final theme = Theme.of(context);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: Brand.cardShadow,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Icon(icon, color: accent),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              title,
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: Brand.ink,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: Brand.inkMuted,
-                height: 1.45,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSecondaryActionCard(
-    BuildContext context,
-    String title,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    final theme = Theme.of(context);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Brand.b50,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color),
-            ),
-            const Spacer(),
-            Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              "Mở nhanh",
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: Brand.inkMuted,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return InfoBanner(
+      '$message\nTiếp theo: ${homeProvider.nextStepLabel}',
+      tone: Tone.warning,
+      icon: Icons.flag_rounded,
     );
   }
 
@@ -1006,7 +778,7 @@ class _HomeDashboard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Nhập số tiền bạn muốn nạp. Sau đó hệ thống sẽ tạo mã QR để bạn chuyển khoản nhanh hơn.",
+                  "Nhập số tiền, hệ thống sẽ tạo mã QR chuyển khoản.",
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: Brand.inkMuted,
                     height: 1.45,

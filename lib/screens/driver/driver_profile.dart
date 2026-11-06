@@ -280,7 +280,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                   icon: Icons.person_off_rounded,
                   title: 'Không có dữ liệu hồ sơ',
                   message:
-                      'Vui lòng thử tải lại hoặc đăng nhập lại để đồng bộ thông tin tài khoản.',
+                      'Thử tải lại hoặc đăng nhập lại.',
                 )
               : Stack(
                   children: [
@@ -459,7 +459,6 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
   Widget _buildWalletCard(ThemeData theme, DriverProfileModel profile) {
     return DriverSectionCard(
       title: "Tổng quan tài khoản",
-      subtitle: "Số dư ví và phạm vi hoạt động hiện tại của bạn.",
       icon: Icons.account_balance_wallet_rounded,
       child: Row(
         children: [
@@ -500,7 +499,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
     return _buildExpandableSection(
       theme: theme,
       title: "Tài chính",
-      subtitle: "Lịch sử ví, nạp tiền và gửi yêu cầu rút tiền.",
+      subtitle: "Lịch sử ví, nạp và rút tiền.",
       icon: Icons.account_balance_wallet_outlined,
       expanded: _isFinanceExpanded,
       onTap: () {
@@ -596,7 +595,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Nhập số tiền bạn muốn nạp. Sau đó hệ thống sẽ tạo mã QR để bạn chuyển khoản nhanh hơn.",
+                  "Nhập số tiền, hệ thống sẽ tạo mã QR chuyển khoản.",
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: Brand.inkMuted,
                     height: 1.45,
@@ -1041,7 +1040,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
     return _buildExpandableSection(
       theme: theme,
       title: "Trạng thái tài khoản",
-      subtitle: "Theo dõi KYC, tuyến đăng ký và bước cần thực hiện tiếp theo.",
+      subtitle: "KYC, tuyến và bước tiếp theo.",
       icon: Icons.shield_rounded,
       expanded: _isOnboardingExpanded,
       onTap: () {
@@ -1106,7 +1105,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
     return _buildExpandableSection(
       theme: theme,
       title: "Khu vực hoạt động",
-      subtitle: "Danh sách các tỉnh bạn đã chọn để nhận tuyến và chuyến.",
+      subtitle: "Tỉnh bạn nhận chuyến.",
       icon: Icons.map_outlined,
       expanded: _isSelectedProvincesExpanded,
       onTap: () {
@@ -1119,7 +1118,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
               icon: Icons.place_outlined,
               title: "Chưa chọn tỉnh hoạt động",
               message:
-                  "Bạn có thể cập nhật khu vực làm việc để nhận được nhiều chuyến phù hợp hơn.",
+                  "Cập nhật khu vực để nhận nhiều chuyến hơn.",
             )
           : Wrap(
               spacing: 10,
@@ -1140,7 +1139,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
     return _buildExpandableSection(
       theme: theme,
       title: "Tuyến đã đăng ký",
-      subtitle: "Các tuyến đang được áp dụng cho tài khoản tài xế của bạn.",
+      subtitle: "Tuyến đang áp dụng.",
       icon: Icons.route_rounded,
       expanded: _isRoutesExpanded,
       onTap: () {
@@ -1153,7 +1152,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
               icon: Icons.alt_route_rounded,
               title: "Chưa có tuyến nào",
               message:
-                  "Hãy đăng ký tuyến hoạt động để hệ thống phân phối chuyến phù hợp hơn.",
+                  "Đăng ký tuyến để nhận chuyến phù hợp.",
             )
           : Column(
               children: profile.routes
@@ -1217,7 +1216,6 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
   ) {
     return DriverSectionCard(
       title: "Tiện ích tài khoản",
-      subtitle: "Các thao tác thường dùng để quản lý hồ sơ và hỗ trợ vận hành.",
       icon: Icons.grid_view_rounded,
       child: Column(
         children: [
@@ -1274,7 +1272,6 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
   Widget _buildDetailsSection(ThemeData theme, DriverProfileModel profile) {
     return DriverSectionCard(
       title: "Thông tin cơ bản",
-      subtitle: "Các dữ liệu nhận diện của tài khoản tài xế.",
       icon: Icons.info_outline_rounded,
       child: Column(
         children: [
@@ -1299,7 +1296,6 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
   Widget _buildDangerZone(ThemeData theme, ProfileProvider provider) {
     return DriverSectionCard(
       title: "Bảo mật tài khoản",
-      subtitle: "Đăng xuất khi bạn kết thúc ca làm việc hoặc đổi thiết bị.",
       icon: Icons.logout_rounded,
       child: SizedBox(
         width: double.infinity,
@@ -1557,7 +1553,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "Chọn phương thức liên hệ phù hợp để được hỗ trợ nhanh nhất.",
+                  "Chọn cách liên hệ.",
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: Brand.inkMuted,

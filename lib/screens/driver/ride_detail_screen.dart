@@ -122,18 +122,6 @@ class _RideDetailView extends StatelessWidget {
           : _buildBottomActions(context, ride.status),
       body: Stack(
         children: [
-          Positioned(
-            top: -80,
-            right: -60,
-            child: Container(
-              width: 220,
-              height: 220,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Brand.navy.withValues(alpha: 0.06),
-              ),
-            ),
-          ),
           RefreshIndicator(
             onRefresh: provider.fetchRideDetail,
             child: ListView(
@@ -145,8 +133,6 @@ class _RideDetailView extends StatelessWidget {
                 _buildHeroSection(theme, statusInfo, ride),
                 const SizedBox(height: 16),
                 _buildOverviewStats(theme, ride),
-                const SizedBox(height: 16),
-                _buildFareSection(theme, ride),
                 const SizedBox(height: 16),
                 _buildCustomerSection(context, theme, ride),
                 const SizedBox(height: 16),
@@ -162,27 +148,13 @@ class _RideDetailView extends StatelessWidget {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(ThemeData theme, {required String title}) {
-    return AppBar(
-      title: Text(
-        title,
-        style: TextStyle(
-          color: Brand.navy,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-      backgroundColor: theme.colorScheme.primary,
-      foregroundColor: Brand.navy,
-      iconTheme: IconThemeData(color: Brand.navy),
-    );
-  }
+  PreferredSizeWidget _buildAppBar(ThemeData theme, {required String title}) => AppBar(title: Text(title));
 
   Widget _buildHeroSection(
     ThemeData theme,
     Map<String, dynamic> statusInfo,
     RideDetailModel ride,
   ) {
-    final statusColor = statusInfo['color'] as Color;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -196,8 +168,7 @@ class _RideDetailView extends StatelessWidget {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: statusColor.withValues(alpha: 0.28)),
-        boxShadow: [
+                boxShadow: [
           BoxShadow(
             color: const Color(0x1A041565),
             blurRadius: 24,
@@ -215,11 +186,6 @@ class _RideDetailView extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const DriverPill(
-                      label: "Chi tiết chuyến xe",
-                      icon: Icons.local_taxi_rounded,
-                    ),
-                    const SizedBox(height: 14),
                     Text(
                       ride.code,
                       style: theme.textTheme.headlineSmall?.copyWith(
@@ -228,45 +194,11 @@ class _RideDetailView extends StatelessWidget {
                         fontSize: 24,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Theo dõi trạng thái, hành trình và thông tin khách hàng trong một màn hình.",
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Brand.inkMuted,
-                        height: 1.45,
-                      ),
-                    ),
                   ],
                 ),
               ),
               const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: statusColor.withValues(alpha: 0.35),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Icon(Icons.flag_circle_rounded, color: statusColor),
-                    const SizedBox(height: 6),
-                    Text(
-                      statusInfo['text'] as String,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: statusColor,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              StatusChip(statusInfo['text'] as String, tone: Tone.lane),
             ],
           ),
           const SizedBox(height: 18),
@@ -275,12 +207,6 @@ class _RideDetailView extends StatelessWidget {
             runSpacing: 10,
             children: [
               DriverPill(label: _rideSourceText, color: _rideSourceColor),
-              DriverPill(
-                label: ride.paymentMethod.isEmpty
-                    ? "Chưa rõ thanh toán"
-                    : ride.paymentMethod,
-                icon: Icons.payments_outlined,
-              ),
               DriverPill(label: ride.typeText, icon: Icons.category_rounded),
             ],
           ),
@@ -312,69 +238,6 @@ class _RideDetailView extends StatelessWidget {
     );
   }
 
-  Widget _buildFareSection(ThemeData theme, RideDetailModel ride) {
-    return DriverSectionCard(
-      title: "Chi tiết cước phí",
-      subtitle: "Tổng tiền khách trả và phần thu nhập thực nhận của tài xế.",
-      icon: Icons.account_balance_wallet_rounded,
-      child: Column(
-        children: [
-          _buildAmountRow(
-            theme,
-            label: "Giá chuyến",
-            value: _formatMoney(ride.price),
-            valueColor: Brand.navy,
-          ),
-          const SizedBox(height: 14),
-          _buildAmountRow(
-            theme,
-            label: "Thu nhập ròng",
-            value: _formatMoney(ride.netIncome),
-            valueColor: Brand.success,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAmountRow(
-    ThemeData theme, {
-    required String label,
-    required String value,
-    required Color valueColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Brand.b50,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: Brand.ink,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          Text(
-            value,
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: valueColor,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildCustomerSection(
     BuildContext context,
     ThemeData theme,
@@ -384,7 +247,6 @@ class _RideDetailView extends StatelessWidget {
 
     return DriverSectionCard(
       title: "Khách hàng",
-      subtitle: "Thông tin liên hệ để hỗ trợ đón khách nhanh hơn.",
       icon: Icons.person_rounded,
       trailing: IconButton(
         tooltip: "Gọi khách",
@@ -453,8 +315,6 @@ class _RideDetailView extends StatelessWidget {
   Widget _buildRouteSection(ThemeData theme, RideDetailModel ride) {
     return DriverSectionCard(
       title: "Lộ trình chuyến xe",
-      subtitle:
-          "Điểm đón và điểm trả được trình bày rõ theo thứ tự hành trình.",
       icon: Icons.alt_route_rounded,
       child: Column(
         children: [
@@ -552,30 +412,12 @@ class _RideDetailView extends StatelessWidget {
 
   Widget _buildDetailSection(ThemeData theme, RideDetailModel ride) {
     return DriverSectionCard(
-      title: "Thông tin bổ sung",
-      subtitle: "Các dữ liệu vận hành quan trọng của chuyến xe.",
+      title: "Thông tin chuyến",
       icon: Icons.info_outline_rounded,
       child: Column(
         children: [
-          _detailRow(theme, "Loại dịch vụ", ride.typeText),
-          _detailRow(theme, "Nguồn đơn", _rideSourceText),
           _detailRow(theme, "Số lượng", ride.quantity.toString()),
-          _detailRow(
-            theme,
-            "Thanh toán",
-            ride.paymentMethod.isEmpty
-                ? "Chưa xác định"
-                : ride.paymentMethod,
-          ),
-          _detailRow(theme, "Thời gian tạo", _formatDate(ride.createdAt)),
           _detailRow(theme, "Thời gian đón", _formatDate(ride.pickupTime)),
-          _detailRow(
-            theme,
-            "Số điện thoại khách",
-            ride.customerPhone.trim().isEmpty
-                ? "Chưa có dữ liệu"
-                : ride.customerPhone.trim(),
-          ),
           _detailRow(
             theme,
             "Ghi chú",
@@ -643,66 +485,31 @@ class _RideDetailView extends StatelessWidget {
   }
 
   Widget _buildBottomActions(BuildContext context, int status) {
-    final theme = Theme.of(context);
     final isStart = status == 2;
-
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-        decoration: BoxDecoration(
-          color: Brand.navy,
-          border: Border(
-            top: BorderSide(
-              color: Brand.navy.withValues(alpha: 0.16),
-            ),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0x1A041565),
-              blurRadius: 14,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: SizedBox(
-          height: 54,
-          child: ElevatedButton.icon(
-            onPressed: () async {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        boxShadow: [BoxShadow(color: Color(0x14041565), blurRadius: 20, offset: Offset(0, -4))],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: SwipeToConfirm(
+            label: isStart ? 'Trượt để bắt đầu chuyến' : 'Trượt khi đã trả khách',
+            color: isStart ? Brand.navy : Brand.success,
+            onConfirmed: () async {
               final provider = context.read<RideDetailProvider>();
-              final ok = isStart
-                  ? await provider.startRide()
-                  : await provider.completeRide();
+              final ok = isStart ? await provider.startRide() : await provider.completeRide();
               if (!context.mounted) return;
               _showSnackBar(
                 context,
                 ok
-                    ? (isStart
-                          ? "Đã bắt đầu chuyến đi"
-                          : "Đã hoàn thành chuyến đi")
-                    : (isStart
-                          ? "Không thể bắt đầu chuyến đi"
-                          : "Không thể hoàn thành chuyến đi"),
-                ok ? Colors.green : Colors.red,
+                    ? (isStart ? 'Đã bắt đầu chuyến đi' : 'Đã hoàn thành chuyến đi')
+                    : (isStart ? 'Không thể bắt đầu chuyến đi' : 'Không thể hoàn thành chuyến đi'),
+                ok ? Brand.success : Brand.danger,
               );
             },
-            icon: Icon(
-              isStart ? Icons.play_circle_fill_rounded : Icons.task_alt_rounded,
-            ),
-            label: Text(isStart ? "Bắt đầu di chuyển" : "Xác nhận hoàn thành"),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isStart
-                  ? Brand.info
-                  : Brand.success,
-              foregroundColor: Colors.black87,
-              textStyle: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-              ),
-            ),
           ),
         ),
       ),

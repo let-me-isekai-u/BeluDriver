@@ -108,20 +108,17 @@ class _WalletHistoryView extends StatelessWidget {
                 else if (provider.transactions.isEmpty)
                   const DriverSectionCard(
                     title: "Chưa có giao dịch",
-                    subtitle: "Các biến động số dư sẽ hiển thị tại đây.",
                     icon: Icons.receipt_long_rounded,
                     child: DriverEmptyState(
                       icon: Icons.account_balance_wallet_outlined,
                       title: "Ví của bạn chưa phát sinh giao dịch",
                       message:
-                          "Khi có nạp tiền, rút tiền hoặc điều chỉnh số dư, hệ thống sẽ cập nhật trong danh sách này.",
+                          "Giao dịch ví sẽ hiện ở đây.",
                     ),
                   )
                 else
                   DriverSectionCard(
                     title: "Biến động số dư",
-                    subtitle:
-                        "Theo dõi các khoản cộng và trừ để kiểm soát ví tài xế.",
                     icon: Icons.swap_vert_rounded,
                     child: Column(
                       children: provider.transactions
@@ -186,7 +183,7 @@ class _WalletHistoryView extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            "Kiểm tra lịch sử để nắm rõ toàn bộ dòng tiền vào ra của tài khoản.",
+            "Dòng tiền vào ra của tài khoản.",
             style: theme.textTheme.bodyMedium?.copyWith(
               color: Brand.inkMuted,
               height: 1.45,
@@ -325,7 +322,6 @@ class _WalletHistoryView extends StatelessWidget {
   ) {
     return DriverSectionCard(
       title: "Không thể tải dữ liệu",
-      subtitle: "Bạn có thể thử lại sau ít phút.",
       icon: Icons.error_outline_rounded,
       child: Column(
         children: [

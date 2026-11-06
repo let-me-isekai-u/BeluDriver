@@ -56,7 +56,6 @@ class _DriverBookingView extends StatelessWidget {
     BuildContext context,
     OrderFormProvider provider,
   ) async {
-    final theme = Theme.of(context);
     int selectedHour = provider.pickupTime?.hour ?? TimeOfDay.now().hour;
     int selectedMinute = provider.pickupTime?.minute ?? TimeOfDay.now().minute;
 
@@ -340,7 +339,6 @@ class _DriverBookingView extends StatelessWidget {
     required VoidCallback onClearSelection,
     required VoidCallback onPickOnMap,
   }) {
-    final theme = Theme.of(context);
     final showSuggestions = suggestions.isNotEmpty;
 
     return TextFieldTapRegion(
@@ -502,8 +500,6 @@ class _DriverBookingView extends StatelessWidget {
                   children: [
                     DriverSectionCard(
                       title: "Tạo chuyến cộng đồng",
-                      subtitle:
-                          "Luồng tài xế dùng TrackAsia autocomplete, chọn `placeId` và tự nhập giá bán.",
                       icon: Icons.auto_awesome_rounded,
                       child: Wrap(
                         spacing: 10,
@@ -542,7 +538,7 @@ class _DriverBookingView extends StatelessWidget {
                       title: "Thông tin khách & ghi chú",
                       icon: Icons.person_pin,
                       subtitle:
-                          "Thông tin liên hệ của khách và ghi chú bổ sung.",
+                          "Liên hệ và ghi chú của khách.",
                       children: [
                         TextField(
                           controller: provider.customerNameController,
@@ -583,7 +579,7 @@ class _DriverBookingView extends StatelessWidget {
                       title: "Loại chuyến",
                       icon: Icons.directions_car,
                       subtitle:
-                          "Chọn loại chuyến. Bao xe sẽ không yêu cầu nhập số lượng người.",
+                          "Bao xe không cần nhập số người.",
                       children: [
                         DropdownButtonFormField<int>(
                           initialValue: provider.selectedType,
@@ -648,7 +644,7 @@ class _DriverBookingView extends StatelessWidget {
                       context: context,
                       title: "Ngày & giờ đón",
                       icon: Icons.calendar_today,
-                      subtitle: "Ấn vào từng ô để chọn ngày giờ đón khách.",
+                      subtitle: "Chạm để chọn ngày giờ đón.",
                       children: [
                         GestureDetector(
                           onTap: () async {
@@ -759,7 +755,7 @@ class _DriverBookingView extends StatelessWidget {
                       title: "Giá bán & tiền nhận",
                       icon: Icons.payments,
                       subtitle:
-                          "Tài xế tự nhập giá bán; app khách hàng mới theo giá hệ thống.",
+                          "Giá do tài xế tự nhập.",
                       children: [
                         TextField(
                           controller: provider.offerPriceController,
