@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -480,6 +481,7 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
         'Chat realtime cho tài xế';
 
     return AppBar(
+      systemOverlayStyle: SystemUiOverlayStyle.light,
       elevation: 0,
       centerTitle: false,
       flexibleSpace: Container(
@@ -530,7 +532,7 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: beluAccentGold,
+                    color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                     letterSpacing: 0.2,
@@ -1295,6 +1297,10 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
                 style: const TextStyle(color: Colors.white, fontSize: 14.5),
                 onSubmitted: (_) => _handleSendMessage(),
                 decoration: InputDecoration(
+                  filled: false,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
                   hintText: provider.groupId == null
                       ? 'Nhóm chat chưa sẵn sàng'
                       : (provider.isSending
