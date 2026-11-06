@@ -510,7 +510,7 @@ class _TermsAndButton extends StatelessWidget {
                     height: 22,
                     child: CircularProgressIndicator(
                       strokeWidth: 2.5,
-                      color: theme.colorScheme.primary,
+                      color: Colors.white,
                     ),
                   )
                 : const Text("Đăng ký"),

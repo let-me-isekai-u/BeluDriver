@@ -63,7 +63,7 @@ class _DriverDepositInfoTile extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF6F2E7),
+        color: Brand.canvas,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
@@ -955,7 +955,7 @@ class _HomeDashboard extends StatelessWidget {
                         },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Brand.navy,
-                    foregroundColor: Colors.black87,
+                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -1052,7 +1052,7 @@ class _HomeDashboard extends StatelessWidget {
                       width: double.infinity,
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF6F2E7),
+                        color: Brand.canvas,
                         borderRadius: BorderRadius.circular(18),
                       ),
                       child: const Text(
@@ -1094,7 +1094,7 @@ class _HomeDashboard extends StatelessWidget {
                     Text(
                       "Còn lại: $minutes:$seconds",
                       style: const TextStyle(
-                        color: Colors.redAccent,
+                        color: Brand.danger,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -1141,7 +1141,7 @@ class _HomeDashboard extends StatelessWidget {
                         },
                         style: ElevatedButton.styleFrom(
                           minimumSize: const Size(double.infinity, 52),
-                          backgroundColor: Colors.redAccent,
+                          backgroundColor: Brand.danger,
                           foregroundColor: Colors.white,
                         ),
                         child: const Text("Huỷ yêu cầu"),
@@ -1555,7 +1555,7 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
             child: ElevatedButton(
               onPressed: _isSubmitting ? null : _confirmWithdraw,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
+                backgroundColor: Brand.danger,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(

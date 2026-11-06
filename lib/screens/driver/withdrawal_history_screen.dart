@@ -70,7 +70,6 @@ class _WithdrawalHistoryView extends StatelessWidget {
             color: Brand.navy,
           ),
         ),
-        backgroundColor: theme.colorScheme.primary,
         iconTheme: IconThemeData(color: Brand.navy),
       ),
       body: RefreshIndicator(

@@ -55,7 +55,6 @@ class _WalletHistoryView extends StatelessWidget {
             fontWeight: FontWeight.w800,
           ),
         ),
-        backgroundColor: theme.colorScheme.primary,
         iconTheme: IconThemeData(color: Brand.navy),
         actions: [
           IconButton(

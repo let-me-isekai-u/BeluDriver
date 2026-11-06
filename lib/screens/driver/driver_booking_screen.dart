@@ -801,7 +801,7 @@ class _DriverBookingView extends StatelessWidget {
                           child: Ink(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.primary,
+                              color: Colors.white,
                               borderRadius: BorderRadius.circular(22),
                               border: Border.all(
                                 color: gold.withValues(alpha: 0.3),

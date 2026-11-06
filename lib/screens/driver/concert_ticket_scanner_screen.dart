@@ -82,7 +82,7 @@ class _ConcertTicketScannerScreenState
           style: TextStyle(color: Brand.navy),
         ),
         backgroundColor: Brand.navy,
-        foregroundColor: Brand.navy,
+        foregroundColor: Colors.white,
       ),
       body: SafeArea(
         child: ListView(
@@ -152,7 +152,7 @@ class _HeaderCard extends StatelessWidget {
               label: const Text('Quét QR'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Brand.navy,
-                foregroundColor: Colors.black,
+                foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -229,7 +229,7 @@ class _ManualInputCard extends StatelessWidget {
               icon: const Icon(Icons.fact_check_rounded),
               label: const Text('Kiểm vé'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: Brand.navy,
+                foregroundColor: Colors.white,
                 backgroundColor: Brand.navy,
                 side: const BorderSide(color: Brand.navy),
                 shape: RoundedRectangleBorder(

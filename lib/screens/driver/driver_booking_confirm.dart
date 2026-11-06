@@ -232,7 +232,6 @@ class _DriverBookingConfirmScreenState
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final req = widget.request;
     final rideTypeLabel = BrokerRideType.labelOf(req.type);
     final DateTime? pickupDt = DateTime.tryParse(req.pickupTime);
@@ -313,7 +312,7 @@ class _DriverBookingConfirmScreenState
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: theme.colorScheme.primary,
+          color: Colors.white,
           boxShadow: [
             BoxShadow(
               color: Colors.grey.withValues(alpha: 0.3),
@@ -361,7 +360,7 @@ class _DriverBookingConfirmScreenState
                     borderRadius: BorderRadius.circular(30),
                   ),
                   backgroundColor: Brand.navy,
-                  foregroundColor: Colors.black87,
+                  foregroundColor: Colors.white,
                 ),
                 child: _isCreatingRide
                     ? const SizedBox(

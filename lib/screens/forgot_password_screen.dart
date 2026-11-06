@@ -212,7 +212,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: theme.colorScheme.primary,
+                            color: Colors.white,
                           ),
                         )
                             : Text(_countdown > 0 ? "$_countdown s" : "Gửi mã"),
@@ -287,7 +287,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: theme.colorScheme.primary,
+                        color: Colors.white,
                       ),
                     )
                         : const Text("Đổi mật khẩu"),

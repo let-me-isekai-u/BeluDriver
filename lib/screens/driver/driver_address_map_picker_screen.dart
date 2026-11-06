@@ -388,7 +388,7 @@ class _DriverAddressMapPickerScreenState
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary,
+                  color: Brand.ink,
                   borderRadius: BorderRadius.circular(22),
                   boxShadow: const [
                     BoxShadow(
@@ -426,7 +426,7 @@ class _DriverAddressMapPickerScreenState
                             child: Text(
                               "Đang xác định địa chỉ gần vị trí ghim...",
                               style: TextStyle(
-                                color: Colors.white,
+                                color: Brand.ink,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -437,7 +437,7 @@ class _DriverAddressMapPickerScreenState
                       Text(
                         _resolvedLocation!.formattedAddress,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: Brand.ink,
                           fontWeight: FontWeight.w700,
                           fontSize: 16,
                         ),
@@ -462,7 +462,7 @@ class _DriverAddressMapPickerScreenState
                       Text(
                         "${_mapCenter.latitude.toStringAsFixed(6)}, ${_mapCenter.longitude.toStringAsFixed(6)}",
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: Brand.ink,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -471,7 +471,7 @@ class _DriverAddressMapPickerScreenState
                       Text(
                         _errorMessage!,
                         style: const TextStyle(
-                          color: Colors.redAccent,
+                          color: Brand.danger,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -484,7 +484,7 @@ class _DriverAddressMapPickerScreenState
                         style: ElevatedButton.styleFrom(
                           minimumSize: const Size(double.infinity, 52),
                           backgroundColor: Brand.navy,
-                          foregroundColor: Colors.black87,
+                          foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(18),
                           ),

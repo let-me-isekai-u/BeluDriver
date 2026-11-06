@@ -103,7 +103,6 @@ class _DriverUpdateProfileViewState extends State<_DriverUpdateProfileView> {
             fontWeight: FontWeight.w800,
           ),
         ),
-        backgroundColor: theme.colorScheme.primary,
         iconTheme: IconThemeData(color: Brand.navy),
       ),
       body: Stack(

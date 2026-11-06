@@ -55,7 +55,7 @@ class _DriverDepositInfoTile extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF6F2E7),
+        color: Brand.canvas,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
@@ -240,7 +240,6 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                 fontWeight: FontWeight.w800,
               ),
             ),
-            backgroundColor: theme.colorScheme.primary,
             iconTheme: IconThemeData(color: Brand.navy),
             actions: [
               Padding(
@@ -773,7 +772,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                         },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Brand.navy,
-                    foregroundColor: Colors.black87,
+                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -871,7 +870,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF6F2E7),
+                        color: Brand.canvas,
                         borderRadius: BorderRadius.circular(18),
                       ),
                       child: const Text(
@@ -913,7 +912,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                     Text(
                       "Còn lại: $minutes:$seconds",
                       style: const TextStyle(
-                        color: Colors.redAccent,
+                        color: Brand.danger,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -1698,7 +1697,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Brand.danger,
-              foregroundColor: Colors.black87,
+              foregroundColor: Colors.white,
             ),
             child: const Text("Xoá vĩnh viễn"),
           ),

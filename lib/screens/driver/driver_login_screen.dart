@@ -237,7 +237,7 @@ class _LoginScreenState extends State<DriverLoginScreen>
                       height: 22,
                       child: CircularProgressIndicator(
                         strokeWidth: 2.5,
-                        color: theme.colorScheme.primary,
+                        color: Colors.white,
                       ),
                     )
                   : const Text(

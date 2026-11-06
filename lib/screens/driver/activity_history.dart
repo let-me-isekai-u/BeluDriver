@@ -317,8 +317,6 @@ class _ActivityViewState extends State<_ActivityView>
             color: Brand.navy,
           ),
         ),
-        backgroundColor: theme.colorScheme.primary,
-        foregroundColor: Colors.white,
       ),
       body: Stack(
         children: [
@@ -811,7 +809,7 @@ class _ActivityViewState extends State<_ActivityView>
                         backgroundColor: ride.status == 2
                             ? Brand.info
                             : Brand.success,
-                        foregroundColor: Colors.black87,
+                        foregroundColor: Colors.white,
                         textStyle: const TextStyle(
                           fontWeight: FontWeight.w900,
                           fontSize: 15,

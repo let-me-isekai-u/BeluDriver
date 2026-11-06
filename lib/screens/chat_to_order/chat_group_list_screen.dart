@@ -445,9 +445,7 @@ class _InfoState extends StatelessWidget {
               label: const Text('Thử lại'),
               style: TextButton.styleFrom(
                 foregroundColor: Brand.b700,
-                backgroundColor: const Color(
-                  0xFF145E44,
-                ).withValues(alpha: 0.08),
+                backgroundColor: Brand.b700.withValues(alpha: 0.08),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
                   vertical: 10,

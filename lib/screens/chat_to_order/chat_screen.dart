@@ -545,7 +545,7 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
                       height: 7,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: connected ? Colors.greenAccent : Brand.inkSubtle,
+                        color: connected ? const Color(0xFF4ADE80) : Brand.inkSubtle,
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -755,7 +755,7 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
                         )
                       : null,
                   color: isSystem
-                      ? Colors.amber.shade50
+                      ? Brand.warning50
                       : (isMine ? null : Colors.white),
                   borderRadius: BorderRadius.only(
                     topLeft: const Radius.circular(20),
@@ -773,7 +773,7 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
                     ),
                   ],
                   border: isSystem
-                      ? Border.all(color: Colors.amber.shade200)
+                      ? Border.all(color: Brand.lane300)
                       : (!isMine
                             ? Border.all(color: Colors.grey.shade100)
                             : null),
@@ -846,7 +846,7 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
         break;
       case BrokerRideStatus.inProgress:
         headerColor = const Color(0xFF00897B);
-        borderColor = Colors.teal.shade200;
+        borderColor = Brand.b200;
         titleColor = Colors.white;
         headerIcon = Icons.local_taxi_rounded;
         break;
@@ -1392,7 +1392,7 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
       case BrokerRideStatus.accepted:
         return Colors.orange.shade700;
       case BrokerRideStatus.inProgress:
-        return Colors.teal.shade700;
+        return Brand.b600;
       case BrokerRideStatus.completed:
         return Colors.green.shade700;
       case BrokerRideStatus.cancelled:
@@ -1524,9 +1524,7 @@ class _ErrorState extends StatelessWidget {
               label: const Text('Thử lại'),
               style: TextButton.styleFrom(
                 foregroundColor: Brand.navy,
-                backgroundColor: const Color(
-                  0xFF0A422D,
-                ).withValues(alpha: 0.08),
+                backgroundColor: Brand.b50,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
                   vertical: 10,

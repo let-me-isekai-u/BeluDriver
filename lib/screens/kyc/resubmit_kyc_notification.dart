@@ -107,8 +107,8 @@ class ResubmitKycNotification extends StatelessWidget {
                   onConfirmed?.call();
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: Brand.navy,
+                  backgroundColor: Brand.navy,
+                  foregroundColor: Colors.white,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(

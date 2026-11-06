@@ -602,7 +602,7 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
               child: Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.12),
+                  color: Brand.success50,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(
@@ -611,7 +611,7 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
                     Text(
                       "Thu nhập ròng",
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.greenAccent.shade100,
+                        color: Brand.inkMuted,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -620,7 +620,7 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
-                        color: Colors.greenAccent,
+                        color: Brand.success,
                       ),
                     ),
                   ],
