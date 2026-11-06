@@ -1,5 +1,6 @@
 import 'package:beludriver_app/features/carrier_vehicle/carrier_vehicle_screens.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../app_theme.dart';
@@ -8,6 +9,7 @@ import '../../widgets/driver_ui.dart';
 import '../forgot_password_screen.dart';
 import 'driver_home.dart';
 import 'driver_register_screen.dart';
+import '../../ui/ui.dart';
 
 class DriverLoginScreen extends StatefulWidget {
   const DriverLoginScreen({super.key});
@@ -61,7 +63,7 @@ class _LoginScreenState extends State<DriverLoginScreen>
     if (result == null) {
       _showSnack(
         "Đăng nhập thành công!",
-        color: Theme.of(context).colorScheme.secondary,
+        color: Brand.navy,
       );
 
       Navigator.of(context).pushAndRemoveUntil(
@@ -96,43 +98,18 @@ class _LoginScreenState extends State<DriverLoginScreen>
       create: (_) => LoginProvider(),
       child: Consumer<LoginProvider>(
         builder: (context, provider, _) {
-          return Scaffold(
+          return AnnotatedRegion<SystemUiOverlayStyle>(
+            value: SystemUiOverlayStyle.light,
+            child: Scaffold(
             body: Stack(
               children: [
-                Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppColors.darkGreenBg, AppColors.primaryGreen],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
-                  ),
-                ),
+                const ColoredBox(color: Brand.canvas, child: SizedBox.expand()),
                 Positioned(
-                  top: -80,
-                  right: -30,
-                  child: Container(
-                    width: 220,
-                    height: 220,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: theme.colorScheme.secondary.withValues(
-                        alpha: 0.08,
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: size.height * 0.14,
-                  left: -60,
-                  child: Container(
-                    width: 180,
-                    height: 180,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: 0.04),
-                    ),
-                  ),
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  height: size.height * 0.42,
+                  child: const ColoredBox(color: Brand.navy),
                 ),
                 SafeArea(
                   child: SingleChildScrollView(
@@ -150,6 +127,7 @@ class _LoginScreenState extends State<DriverLoginScreen>
                 ),
               ],
             ),
+          ),
           );
         },
       ),
@@ -160,66 +138,36 @@ class _LoginScreenState extends State<DriverLoginScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const DriverPill(
-          label: "Nền tảng tài xế",
-          icon: Icons.workspace_premium_rounded,
-        ),
-        const SizedBox(height: 18),
-        ScaleTransition(
-          scale: Tween<double>(begin: 1.0, end: 1.05).animate(
-            CurvedAnimation(parent: _logoController, curve: Curves.easeInOut),
-          ),
-          child: Center(
+        Row(children: [
+          ScaleTransition(
+            scale: Tween<double>(begin: 1.0, end: 1.05).animate(
+              CurvedAnimation(parent: _logoController, curve: Curves.easeInOut),
+            ),
             child: Container(
-              width: 118,
-              height: 118,
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(28),
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.35),
-                    blurRadius: 24,
-                    spreadRadius: 2,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(22),
-                child: Image.asset(
-                  'lib/assets/icons/dong_duong_driver_logo.png',
-                  fit: BoxFit.contain,
-                ),
-              ),
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+              alignment: Alignment.center,
+              child: const BrandMark(size: 28),
             ),
           ),
-        ),
-        const SizedBox(height: 24),
-        Text(
-          "Tài xế Đông Dương",
-          style: theme.textTheme.headlineLarge?.copyWith(
-            fontSize: 30,
-            letterSpacing: 0.3,
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Đông Dương', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+              Text('Nền tảng tài xế', style: TextStyle(color: Brand.b200, fontSize: 12, fontWeight: FontWeight.w500)),
+            ]),
           ),
+        ]),
+        const SizedBox(height: 22),
+        const Text(
+          'Chào tài xế,\nsẵn sàng chạy chuyến?',
+          style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800, height: 1.2, letterSpacing: -0.3),
         ),
-        const SizedBox(height: 10),
-        Text(
-          "Đăng nhập để nhận chuyến, theo dõi doanh thu và vận hành công việc mỗi ngày trong cùng một hệ thống.",
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: AppColors.textSubtle,
-            height: 1.5,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: const [
-            DriverPill(label: "Nhận đơn nhanh", icon: Icons.flash_on_rounded),
-            DriverPill(label: "KYC rõ ràng", icon: Icons.verified_user_rounded),
-          ],
+        const SizedBox(height: 8),
+        const Text(
+          'Nhận đơn, theo dõi doanh thu và vận hành công việc mỗi ngày.',
+          style: TextStyle(color: Brand.b100, fontSize: 14, height: 1.45),
         ),
       ],
     );
@@ -257,7 +205,7 @@ class _LoginScreenState extends State<DriverLoginScreen>
               child: Text(
                 "Quên mật khẩu?",
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.secondary,
+                  color: Brand.navy,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -271,7 +219,7 @@ class _LoginScreenState extends State<DriverLoginScreen>
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
-                  color: theme.colorScheme.secondary.withValues(alpha: 0.16),
+                  color: Brand.navy.withValues(alpha: 0.16),
                   blurRadius: 18,
                   offset: const Offset(0, 8),
                 ),
@@ -304,7 +252,7 @@ class _LoginScreenState extends State<DriverLoginScreen>
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.04),
+              color: Brand.b50,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
@@ -314,7 +262,7 @@ class _LoginScreenState extends State<DriverLoginScreen>
               children: [
                 Icon(
                   Icons.info_outline_rounded,
-                  color: theme.colorScheme.secondary,
+                  color: Brand.navy,
                   size: 18,
                 ),
                 const SizedBox(width: 10),
@@ -322,7 +270,7 @@ class _LoginScreenState extends State<DriverLoginScreen>
                   child: Text(
                     "Tài khoản được duyệt KYC sẽ mở đầy đủ chức năng nhận đơn.",
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSubtle,
+                      color: Brand.inkMuted,
                       height: 1.4,
                     ),
                   ),
@@ -348,7 +296,7 @@ class _LoginScreenState extends State<DriverLoginScreen>
                   "Đăng ký ngay",
                   style: theme.textTheme.bodyLarge?.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: theme.colorScheme.secondary,
+                    color: Brand.navy,
                   ),
                 ),
               ),
@@ -358,12 +306,12 @@ class _LoginScreenState extends State<DriverLoginScreen>
           // Module Nhà xe: tài xế xe limousine/xe khách quét QR dán trên xe, không cần tài khoản.
           OutlinedButton.icon(
             onPressed: () => openCarrierVehicleMode(context),
-            icon: Icon(Icons.qr_code_scanner, color: theme.colorScheme.secondary),
+            icon: Icon(Icons.qr_code_scanner, color: Brand.navy),
             label: Text(
               "Tài xế nhà xe: quét QR trên xe",
-              style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700, color: theme.colorScheme.secondary),
+              style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700, color: Brand.navy),
             ),
-            style: OutlinedButton.styleFrom(side: BorderSide(color: theme.colorScheme.secondary)),
+            style: OutlinedButton.styleFrom(side: BorderSide(color: Brand.navy)),
           ),
         ],
       ),
@@ -382,7 +330,7 @@ class _LoginScreenState extends State<DriverLoginScreen>
 
     return TextField(
       controller: controller,
-      cursorColor: theme.colorScheme.secondary,
+      cursorColor: Brand.navy,
       obscureText: isPassword ? obscurePassword : false,
       keyboardType: isPassword ? TextInputType.text : TextInputType.phone,
       style: theme.textTheme.bodyLarge?.copyWith(

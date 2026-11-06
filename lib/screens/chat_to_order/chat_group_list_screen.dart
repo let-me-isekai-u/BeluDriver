@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../providers/chat_group_list_provider.dart';
 import '../../services/api_chat_service.dart';
 import 'chat_screen.dart';
+import '../../ui/ui.dart';
 
 class DriverChatGroupListScreen extends StatelessWidget {
   const DriverChatGroupListScreen({super.key});
@@ -21,9 +22,9 @@ class DriverChatGroupListScreen extends StatelessWidget {
 class _DriverChatGroupListView extends StatelessWidget {
   const _DriverChatGroupListView();
 
-  static const Color beluDarkGreen = Color(0xFF0A422D);
-  static const Color beluMediumGreen = Color(0xFF145E44);
-  static const Color beluAccentGold = Color(0xFFFFD700);
+  static const Color beluDarkGreen = Brand.navy;
+  static const Color beluMediumGreen = Brand.b700;
+  static const Color beluAccentGold = Brand.lane;
   static const Color bgCanvas = Color(0xFFF0F4F2);
 
   Future<void> _openGroup(BuildContext context, DriverChatGroupDto group) async {
@@ -198,12 +199,12 @@ class _GroupCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
               color: isActive
-                  ? const Color(0xFF145E44).withValues(alpha: 0.16)
+                  ? Brand.b700.withValues(alpha: 0.16)
                   : Colors.grey.shade300,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: const Color(0x1A041565),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -218,12 +219,12 @@ class _GroupCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: isActive
-                      ? const Color(0xFF145E44).withValues(alpha: 0.10)
+                      ? Brand.b700.withValues(alpha: 0.10)
                       : Colors.grey.shade200,
                 ),
                 child: Icon(
                   Icons.forum_rounded,
-                  color: isActive ? const Color(0xFF145E44) : Colors.grey,
+                  color: isActive ? Brand.b700 : Colors.grey,
                 ),
               ),
               const SizedBox(width: 14),
@@ -267,8 +268,8 @@ class _GroupCard extends StatelessWidget {
                           _ChipLabel(
                             icon: Icons.route_rounded,
                             label: provinceName,
-                            fg: const Color(0xFF145E44),
-                            bg: const Color(0xFF145E44).withValues(alpha: 0.10),
+                            fg: Brand.b700,
+                            bg: Brand.b700.withValues(alpha: 0.10),
                           ),
                         _ChipLabel(
                           icon: isActive
@@ -324,7 +325,7 @@ class _GroupCard extends StatelessWidget {
                               vertical: 5,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF145E44),
+                              color: Brand.b700,
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(
@@ -417,10 +418,10 @@ class _InfoState extends StatelessWidget {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: const Color(0xFF145E44).withValues(alpha: 0.08),
+                color: Brand.b700.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 34, color: const Color(0xFF145E44)),
+              child: Icon(icon, size: 34, color: Brand.b700),
             ),
             const SizedBox(height: 18),
             Text(
@@ -428,7 +429,7 @@ class _InfoState extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                color: Colors.white,
               ),
             ),
             const SizedBox(height: 8),
@@ -443,7 +444,7 @@ class _InfoState extends StatelessWidget {
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('Thử lại'),
               style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF145E44),
+                foregroundColor: Brand.b700,
                 backgroundColor: const Color(
                   0xFF145E44,
                 ).withValues(alpha: 0.08),
@@ -477,13 +478,13 @@ class _EmptyState extends StatelessWidget {
             width: 72,
             height: 72,
             decoration: BoxDecoration(
-              color: const Color(0xFF145E44).withValues(alpha: 0.08),
+              color: Brand.b700.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.groups_rounded,
               size: 34,
-              color: Color(0xFF145E44),
+              color: Brand.b700,
             ),
           ),
           const SizedBox(height: 18),
@@ -492,7 +493,7 @@ class _EmptyState extends StatelessWidget {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: Colors.white,
             ),
           ),
           const SizedBox(height: 8),

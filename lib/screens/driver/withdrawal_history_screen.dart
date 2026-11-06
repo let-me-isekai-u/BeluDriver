@@ -6,6 +6,7 @@ import '../../app_theme.dart';
 import '../../models/driver/withdrawal_history_model.dart';
 import '../../providers/driver/withdrawal_history_provider.dart';
 import '../../widgets/driver_ui.dart';
+import '../../ui/ui.dart';
 
 class WithdrawalHistoryScreen extends StatelessWidget {
   const WithdrawalHistoryScreen({super.key});
@@ -25,13 +26,13 @@ class _WithdrawalHistoryView extends StatelessWidget {
   Color _getStatusColor(String status) {
     final s = status.toLowerCase();
     if (s.contains("hoàn thành") || s.contains("success")) {
-      return const Color(0xFF6ED39B);
+      return Brand.success;
     }
     if (s.contains("đang xử lý") || s.contains("pending")) {
-      return const Color(0xFFFFB347);
+      return Brand.warning;
     }
     if (s.contains("từ chối") || s.contains("cancel") || s.contains("reject")) {
-      return const Color(0xFFFF8A8A);
+      return Brand.danger;
     }
     return Colors.grey;
   }
@@ -66,11 +67,11 @@ class _WithdrawalHistoryView extends StatelessWidget {
           "Lịch sử rút tiền",
           style: TextStyle(
             fontWeight: FontWeight.w800,
-            color: theme.colorScheme.secondary,
+            color: Brand.navy,
           ),
         ),
         backgroundColor: theme.colorScheme.primary,
-        iconTheme: IconThemeData(color: theme.colorScheme.secondary),
+        iconTheme: IconThemeData(color: Brand.navy),
       ),
       body: RefreshIndicator(
         onRefresh: provider.loadHistory,
@@ -83,7 +84,7 @@ class _WithdrawalHistoryView extends StatelessWidget {
                   SizedBox(height: MediaQuery.of(context).size.height * 0.28),
                   Center(
                     child: CircularProgressIndicator(
-                      color: theme.colorScheme.secondary,
+                      color: Brand.navy,
                     ),
                   ),
                 ],
@@ -104,7 +105,7 @@ class _WithdrawalHistoryView extends StatelessWidget {
                       "Lỗi: ${provider.errorMessage}",
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFFFFA3A3),
+                        color: Brand.danger,
                         height: 1.45,
                       ),
                     ),
@@ -193,15 +194,15 @@ class _WithdrawalHistoryView extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.primaryGreen,
-            AppColors.surfaceGreen.withValues(alpha: 0.95),
+            Brand.navy,
+            Brand.b700,
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: theme.colorScheme.secondary.withValues(alpha: 0.16),
+          color: Brand.navy.withValues(alpha: 0.16),
         ),
       ),
       child: Column(
@@ -223,7 +224,7 @@ class _WithdrawalHistoryView extends StatelessWidget {
           Text(
             "Kiểm tra tiến độ xử lý từng yêu cầu và tổng số tiền đã gửi đi.",
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppColors.textSubtle,
+              color: Brand.inkMuted,
               height: 1.45,
             ),
           ),
@@ -243,7 +244,7 @@ class _WithdrawalHistoryView extends StatelessWidget {
                   label: "Hoàn thành",
                   value: completedCount.toString(),
                   icon: Icons.check_circle_outline_rounded,
-                  accentColor: const Color(0xFF6ED39B),
+                  accentColor: Brand.success,
                 ),
               ),
               const SizedBox(width: 12),
@@ -252,7 +253,7 @@ class _WithdrawalHistoryView extends StatelessWidget {
                   label: "Tổng tiền",
                   value: _formatCurrency(totalAmount),
                   icon: Icons.account_balance_wallet_outlined,
-                  accentColor: const Color(0xFFFFD166),
+                  accentColor: Brand.lane,
                 ),
               ),
             ],
@@ -268,7 +269,7 @@ class _WithdrawalHistoryView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: Brand.b50,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: accent.withValues(alpha: 0.18)),
       ),
@@ -292,7 +293,7 @@ class _WithdrawalHistoryView extends StatelessWidget {
                     Text(
                       _formatDateTime(item.createDate),
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSubtle,
+                        color: Brand.inkMuted,
                       ),
                     ),
                   ],
@@ -316,7 +317,7 @@ class _WithdrawalHistoryView extends StatelessWidget {
               theme,
               "Lý do từ chối",
               item.reasonCancel!,
-              valueColor: const Color(0xFFFFA3A3),
+              valueColor: Brand.danger,
             ),
           ],
         ],
@@ -338,7 +339,7 @@ class _WithdrawalHistoryView extends StatelessWidget {
           child: Text(
             label,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: AppColors.textSubtle,
+              color: Brand.inkMuted,
               fontWeight: FontWeight.w700,
             ),
           ),

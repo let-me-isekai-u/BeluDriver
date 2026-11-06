@@ -5,6 +5,7 @@ import 'driver_login_screen.dart';
 import '../terms_screen.dart';
 import '../../providers/driver/register_provider.dart';
 import '../../widgets/driver_ui.dart';
+import '../../ui/ui.dart';
 
 class RegisterScreen extends StatelessWidget {
   const RegisterScreen({super.key});
@@ -51,7 +52,7 @@ class _RegisterView extends StatelessWidget {
       _showSnack(
         context,
         "Đăng ký thành công!",
-        color: theme.colorScheme.secondary,
+        color: Brand.navy,
       );
       Future.delayed(const Duration(seconds: 1), () {
         if (context.mounted) {
@@ -75,7 +76,7 @@ class _RegisterView extends StatelessWidget {
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.darkGreenBg, AppColors.primaryGreen],
+                colors: [Brand.canvas, Brand.canvas],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -89,7 +90,7 @@ class _RegisterView extends StatelessWidget {
               height: 180,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: theme.colorScheme.secondary.withValues(alpha: 0.07),
+                color: Brand.navy.withValues(alpha: 0.07),
               ),
             ),
           ),
@@ -129,7 +130,7 @@ class _RegisterView extends StatelessWidget {
                       Text(
                         "Tạo hồ sơ tài xế để hoàn tất đăng ký, sau đó tiếp tục KYC và mở chức năng nhận đơn.",
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppColors.textSubtle,
+                          color: Brand.inkMuted,
                           height: 1.5,
                         ),
                       ),
@@ -243,7 +244,7 @@ class _RegisterView extends StatelessWidget {
                           child: Text(
                             "Bạn đã có tài khoản? Quay về đăng nhập",
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.secondary,
+                              color: Brand.navy,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -258,7 +259,7 @@ class _RegisterView extends StatelessWidget {
                     color: theme.colorScheme.scrim.withValues(alpha: 0.35),
                     child: Center(
                       child: CircularProgressIndicator(
-                        color: theme.colorScheme.secondary,
+                        color: Brand.navy,
                       ),
                     ),
                   ),
@@ -385,11 +386,11 @@ class _RegionDropdownField extends StatelessWidget {
                       vertical: 14,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceGreen.withValues(alpha: 0.52),
+                      color: Brand.b50.withValues(alpha: 0.52),
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(
                         color: isSelected
-                            ? theme.colorScheme.secondary
+                            ? Brand.navy
                             : theme.colorScheme.onSurface.withValues(
                                 alpha: 0.12,
                               ),
@@ -403,7 +404,7 @@ class _RegionDropdownField extends StatelessWidget {
                               ? Icons.radio_button_checked
                               : Icons.radio_button_off,
                           color: isSelected
-                              ? theme.colorScheme.secondary
+                              ? Brand.navy
                               : theme.colorScheme.onSurface.withValues(
                                   alpha: 0.55,
                                 ),
@@ -449,7 +450,7 @@ class _TermsAndButton extends StatelessWidget {
           children: [
             Checkbox(
               value: provider.agreeTerms,
-              activeColor: theme.colorScheme.secondary,
+              activeColor: Brand.navy,
               checkColor: theme.colorScheme.onSecondary,
               side: BorderSide(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
@@ -466,7 +467,7 @@ class _TermsAndButton extends StatelessWidget {
                   "Tôi đồng ý với Chính sách & Điều khoản sử dụng",
                   style: theme.textTheme.bodyMedium?.copyWith(
                     decoration: TextDecoration.underline,
-                    color: theme.colorScheme.secondary,
+                    color: Brand.navy,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -480,7 +481,7 @@ class _TermsAndButton extends StatelessWidget {
           children: [
             Checkbox(
               value: provider.agreeCamera,
-              activeColor: theme.colorScheme.secondary,
+              activeColor: Brand.navy,
               checkColor: theme.colorScheme.onSecondary,
               side: BorderSide(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
@@ -493,7 +494,7 @@ class _TermsAndButton extends StatelessWidget {
                 child: Text(
                   "Tôi cam kết xe có gắn camera hành trình và đang hoạt động bình thường",
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.secondary,
+                    color: Brand.navy,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

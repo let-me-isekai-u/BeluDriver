@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../app_theme.dart';
+import '../ui/ui.dart';
 
+/// Ô nhập dùng chung của app tài xế — theo theme sáng (nền trắng, viền xám, focus navy).
 InputDecoration driverInputDecoration(
   ThemeData theme, {
   required String label,
@@ -12,44 +13,18 @@ InputDecoration driverInputDecoration(
   bool alignLabelWithHint = false,
   bool dense = false,
 }) {
-  final border = OutlineInputBorder(
-    borderRadius: BorderRadius.circular(18),
-    borderSide: BorderSide(
-      color: theme.colorScheme.onSurface.withValues(alpha: 0.12),
-    ),
-  );
-
   return InputDecoration(
     labelText: label,
     hintText: hint,
     helperText: helperText,
     alignLabelWithHint: alignLabelWithHint,
     isDense: dense,
-    filled: true,
-    fillColor: AppColors.surfaceGreen.withValues(alpha: 0.52),
-    labelStyle: theme.textTheme.bodyMedium?.copyWith(
-      color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
-      fontWeight: FontWeight.w600,
-    ),
-    hintStyle: theme.textTheme.bodyMedium?.copyWith(
-      color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
-    ),
-    helperStyle: theme.textTheme.bodySmall?.copyWith(
-      color: theme.colorScheme.onSurface.withValues(alpha: 0.62),
-    ),
-    prefixIcon: icon == null
-        ? null
-        : Icon(icon, color: theme.colorScheme.secondary),
+    prefixIcon: icon == null ? null : Icon(icon, color: Brand.navy),
     suffixIcon: suffixIcon,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-    enabledBorder: border,
-    border: border,
-    focusedBorder: border.copyWith(
-      borderSide: BorderSide(color: theme.colorScheme.secondary, width: 1.6),
-    ),
   );
 }
 
+/// Thẻ trắng có tiêu đề + icon (khung chung các màn tài xế).
 class DriverSectionCard extends StatelessWidget {
   const DriverSectionCard({
     super.key,
@@ -70,78 +45,33 @@ class DriverSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surfaceGreen.withValues(alpha: 0.34),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: theme.colorScheme.secondary.withValues(alpha: 0.15),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.18),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: padding ?? const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                if (icon != null)
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.secondary.withValues(
-                        alpha: 0.12,
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Icon(icon, color: theme.colorScheme.secondary),
-                  ),
-                if (icon != null) const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      if (subtitle != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          subtitle!,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: AppColors.textSubtle,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                if (trailing != null) trailing!,
-              ],
+    return BrandCard(
+      padding: padding ?? const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            if (icon != null) ...[IconTile(icon!, size: 42), const SizedBox(width: 12)],
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(subtitle!, style: const TextStyle(fontSize: 13, color: Brand.inkMuted, height: 1.4)),
+                ],
+              ]),
             ),
-            const SizedBox(height: 18),
-            child,
-          ],
-        ),
+            if (trailing != null) trailing!,
+          ]),
+          const SizedBox(height: 16),
+          child,
+        ],
       ),
     );
   }
 }
 
+/// Chip nhỏ có icon. Mặc định nền brand-50 chữ navy; truyền [color] để đổi tông.
 class DriverPill extends StatelessWidget {
   const DriverPill({super.key, required this.label, this.icon, this.color});
 
@@ -151,36 +81,22 @@ class DriverPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final resolvedColor = color ?? theme.colorScheme.secondary;
-
+    final fg = color ?? Brand.navy;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: resolvedColor.withValues(alpha: 0.12),
+        color: color == null ? Brand.b50 : fg.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: resolvedColor.withValues(alpha: 0.28)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 14, color: resolvedColor),
-            const SizedBox(width: 6),
-          ],
-          Text(
-            label,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: resolvedColor,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (icon != null) ...[Icon(icon, size: 14, color: fg), const SizedBox(width: 6)],
+        Text(label, style: TextStyle(color: fg, fontSize: 12, fontWeight: FontWeight.w700)),
+      ]),
     );
   }
 }
 
+/// Ô số liệu (thu nhập, số chuyến...).
 class DriverStatTile extends StatelessWidget {
   const DriverStatTile({
     super.key,
@@ -197,39 +113,16 @@ class DriverStatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final resolvedColor = accentColor ?? theme.colorScheme.secondary;
-
+    final accent = accentColor ?? Brand.navy;
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (icon != null) Icon(icon, size: 18, color: resolvedColor),
-          if (icon != null) const SizedBox(height: 12),
-          Text(
-            value,
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: AppColors.textSubtle,
-            ),
-          ),
-        ],
-      ),
+      decoration: BoxDecoration(color: Brand.canvas, borderRadius: BorderRadius.circular(16)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        if (icon != null) ...[Icon(icon, size: 18, color: accent), const SizedBox(height: 10)],
+        Text(value, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Brand.ink)),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(fontSize: 12, color: Brand.inkMuted, fontWeight: FontWeight.w600)),
+      ]),
     );
   }
 }
@@ -247,47 +140,5 @@ class DriverEmptyState extends StatelessWidget {
   final String? message;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.secondary.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 34, color: theme.colorScheme.secondary),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            if (message != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                message!,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSubtle,
-                  height: 1.45,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Center(child: EmptyState(icon: icon, title: title, message: message));
 }

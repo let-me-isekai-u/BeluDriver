@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,6 +27,7 @@ import 'recieve_order_screen.dart';
 import '../../providers/kyc/kyc_provider.dart';
 import '../../providers/routes/register_route_provider.dart';
 import '../register_route/register_route_popup.dart';
+import '../../ui/ui.dart';
 
 ///test màn hình facedetection
 
@@ -70,7 +72,7 @@ class _DriverDepositInfoTile extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: Colors.black.withValues(alpha: 0.58),
+              color: const Color(0x33041565),
               fontSize: 12,
             ),
           ),
@@ -251,8 +253,8 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFFD700), // gold
-              foregroundColor: Colors.black,
+              backgroundColor: Brand.navy,
+              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -313,7 +315,7 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final goldColor = theme.colorScheme.secondary;
+    final goldColor = Brand.navy;
     final homeProvider = context.watch<HomeProvider>();
     final bottomNavigationIndex = _currentIndex >= 2
         ? _currentIndex + 1
@@ -357,15 +359,17 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           boxShadow: [
-            BoxShadow(color: Colors.black12, blurRadius: 10, spreadRadius: 1),
+            BoxShadow(color: Color(0x14041565), blurRadius: 16, offset: Offset(0, -4)),
           ],
         ),
         child: BottomNavigationBar(
           currentIndex: bottomNavigationIndex,
           onTap: (index) => _handleBottomNavigationTap(index, homeProvider),
           type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          elevation: 0,
           selectedItemColor: goldColor,
-          unselectedItemColor: Colors.grey,
+          unselectedItemColor: Brand.inkMuted,
           selectedLabelStyle: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 11,
@@ -391,7 +395,7 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
               icon: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: _currentIndex == 2 ? goldColor : Colors.grey.shade200,
+                  color: _currentIndex == 2 ? goldColor : Brand.b50,
                   shape: BoxShape.circle,
                   boxShadow: [
                     if (_currentIndex == 2)
@@ -407,7 +411,7 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
                   size: 30,
                   color: _currentIndex == 2
                       ? Colors.white
-                      : Colors.grey.shade600,
+                      : Brand.navy,
                 ),
               ),
               label: 'Trang chủ',
@@ -429,14 +433,14 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
                         width: 16,
                         height: 16,
                         decoration: const BoxDecoration(
-                          color: Colors.red,
+                          color: Brand.danger,
                           shape: BoxShape.circle,
                         ),
                         child: const Center(
                           child: Text(
                             '!',
                             style: TextStyle(
-                              color: AppColors.accentGold,
+                              color: Colors.white,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                               height: 1,
@@ -462,7 +466,8 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
   ) {
     return AppBar(
       toolbarHeight: 95,
-      backgroundColor: theme.colorScheme.primary,
+      backgroundColor: Brand.navy,
+      systemOverlayStyle: SystemUiOverlayStyle.light,
       elevation: 0,
       automaticallyImplyLeading: false,
       titleSpacing: 16,
@@ -470,12 +475,12 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
         children: [
           CircleAvatar(
             radius: 26,
-            backgroundColor: Colors.white.withValues(alpha: 0.2),
+            backgroundColor: Colors.white,
             foregroundImage: (profile != null && profile.avatarUrl.isNotEmpty)
                 ? NetworkImage(profile.avatarUrl)
                 : null,
             child: (profile == null || profile.avatarUrl.isEmpty)
-                ? const Icon(Icons.person, size: 26, color: Colors.white)
+                ? const Icon(Icons.person, size: 26, color: Brand.navy)
                 : null,
           ),
           const SizedBox(width: 12),
@@ -502,8 +507,8 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.secondary,
-                    fontWeight: FontWeight.w700,
+                    color: Brand.b200,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -540,7 +545,7 @@ class _HomeDashboard extends StatelessWidget {
 
     return RefreshIndicator(
       onRefresh: onRefreshProfile,
-      color: theme.colorScheme.secondary,
+      color: Brand.navy,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
@@ -558,7 +563,7 @@ class _HomeDashboard extends StatelessWidget {
             Text(
               "Lối vào nhanh",
               style: theme.textTheme.titleMedium?.copyWith(
-                color: Colors.white,
+                color: Brand.ink,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -571,7 +576,7 @@ class _HomeDashboard extends StatelessWidget {
                     title: "Nhận đơn",
                     subtitle: "Vào danh sách đơn đang chờ và thao tác ngay.",
                     icon: Icons.near_me_rounded,
-                    accent: Colors.orange,
+                    accent: Brand.warning,
                     onTap: () => onNavigate(0),
                   ),
                 ),
@@ -582,7 +587,7 @@ class _HomeDashboard extends StatelessWidget {
                     title: "Đẩy đơn",
                     subtitle: "Tạo chuyến cộng đồng với biểu mẫu rõ hơn.",
                     icon: Icons.upload_file_rounded,
-                    accent: theme.colorScheme.secondary,
+                    accent: Brand.navy,
                     onTap: () => onNavigate(1),
                   ),
                 ),
@@ -593,7 +598,7 @@ class _HomeDashboard extends StatelessWidget {
                     title: "Nhóm chat",
                     subtitle: "Trao đổi nhanh với các nhóm đơn và tài xế.",
                     icon: Icons.forum_rounded,
-                    accent: const Color(0xFF2AA876),
+                    accent: Brand.success,
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -623,14 +628,14 @@ class _HomeDashboard extends StatelessWidget {
                     context,
                     "Nạp tiền ví",
                     Icons.account_balance_wallet_rounded,
-                    Colors.green,
+                    Brand.success,
                     () => _showDepositDialog(context, theme),
                   ),
                   _buildSecondaryActionCard(
                     context,
                     "Rút tiền",
                     Icons.payments_outlined,
-                    Colors.redAccent,
+                    Brand.danger,
                     () => _showWithdrawDialog(context),
                   ),
                 ],
@@ -648,7 +653,7 @@ class _HomeDashboard extends StatelessWidget {
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.04),
+                        color: Brand.b50,
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(
                           color: theme.colorScheme.onSurface.withValues(
@@ -662,14 +667,14 @@ class _HomeDashboard extends StatelessWidget {
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.secondary.withValues(
+                              color: Brand.navy.withValues(
                                 alpha: 0.12,
                               ),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
                               Icons.route_rounded,
-                              color: theme.colorScheme.secondary,
+                              color: Brand.navy,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -689,7 +694,7 @@ class _HomeDashboard extends StatelessWidget {
                                 Text(
                                   "${route.fromProvinceName} -> ${route.toProvinceName}",
                                   style: theme.textTheme.bodySmall?.copyWith(
-                                    color: AppColors.textSubtle,
+                                    color: Brand.inkMuted,
                                   ),
                                 ),
                               ],
@@ -719,15 +724,15 @@ class _HomeDashboard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [theme.colorScheme.primary, theme.colorScheme.surface],
+        gradient: const LinearGradient(
+          colors: [Brand.navy, Brand.b700],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.22),
+            color: const Color(0x1A041565),
             blurRadius: 26,
             offset: const Offset(0, 14),
           ),
@@ -745,8 +750,8 @@ class _HomeDashboard extends StatelessWidget {
                     Text(
                       isLoading ? "Đang tải hồ sơ..." : "Sẵn sàng làm việc?",
                       style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.colorScheme.secondary,
-                        fontWeight: FontWeight.w700,
+                        color: Brand.b200,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -769,8 +774,8 @@ class _HomeDashboard extends StatelessWidget {
                     ? Icons.verified_rounded
                     : Icons.pending_actions_rounded,
                 color: canReceiveRide
-                    ? Colors.greenAccent
-                    : theme.colorScheme.secondary,
+                    ? const Color(0xFF4ADE80)
+                    : Brand.lane,
               ),
             ],
           ),
@@ -830,7 +835,7 @@ class _HomeDashboard extends StatelessWidget {
             child: Text(
               "Hành động ưu tiên: ${homeProvider.nextStepLabel}",
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.white,
+                color: Brand.ink,
                 height: 1.5,
               ),
             ),
@@ -856,9 +861,9 @@ class _HomeDashboard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: AppColors.surfaceGreen.withValues(alpha: 0.4),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: accent.withValues(alpha: 0.28)),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: Brand.cardShadow,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -876,15 +881,15 @@ class _HomeDashboard extends StatelessWidget {
             Text(
               title,
               style: theme.textTheme.titleMedium?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
+                color: Brand.ink,
+                fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               subtitle,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: AppColors.textSubtle,
+                color: Brand.inkMuted,
                 height: 1.45,
               ),
             ),
@@ -909,7 +914,7 @@ class _HomeDashboard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.04),
+          color: Brand.b50,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
@@ -942,7 +947,7 @@ class _HomeDashboard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: AppColors.textSubtle,
+                color: Brand.inkMuted,
               ),
             ),
           ],
@@ -963,7 +968,7 @@ class _HomeDashboard extends StatelessWidget {
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(
-            backgroundColor: AppColors.surfaceGreen,
+            backgroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(24),
             ),
@@ -976,12 +981,12 @@ class _HomeDashboard extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.secondary.withValues(alpha: 0.14),
+                    color: Brand.navy.withValues(alpha: 0.14),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(
                     Icons.account_balance_wallet_rounded,
-                    color: theme.colorScheme.secondary,
+                    color: Brand.navy,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -989,7 +994,7 @@ class _HomeDashboard extends StatelessWidget {
                   child: Text(
                     "Nạp tiền vào ví",
                     style: theme.textTheme.titleLarge?.copyWith(
-                      color: Colors.white,
+                      color: Brand.ink,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -1003,7 +1008,7 @@ class _HomeDashboard extends StatelessWidget {
                 Text(
                   "Nhập số tiền bạn muốn nạp. Sau đó hệ thống sẽ tạo mã QR để bạn chuyển khoản nhanh hơn.",
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSubtle,
+                    color: Brand.inkMuted,
                     height: 1.45,
                   ),
                 ),
@@ -1011,10 +1016,10 @@ class _HomeDashboard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.06),
+                    color: Brand.b50,
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(
-                      color: theme.colorScheme.secondary.withValues(
+                      color: Brand.navy.withValues(
                         alpha: 0.12,
                       ),
                     ),
@@ -1025,7 +1030,7 @@ class _HomeDashboard extends StatelessWidget {
                       Text(
                         "Số tiền cần nạp",
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSubtle,
+                          color: Brand.inkMuted,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -1034,29 +1039,29 @@ class _HomeDashboard extends StatelessWidget {
                         controller: amountController,
                         keyboardType: TextInputType.number,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: Brand.ink,
                           fontSize: 24,
                           fontWeight: FontWeight.w800,
                         ),
                         decoration: InputDecoration(
                           hintText: "Ví dụ: 100000",
                           hintStyle: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.32),
+                            color: Brand.inkSubtle,
                             fontSize: 20,
                             fontWeight: FontWeight.w600,
                           ),
                           prefixIcon: Icon(
                             Icons.payments_outlined,
-                            color: theme.colorScheme.secondary,
+                            color: Brand.navy,
                           ),
                           suffixText: "đ",
                           suffixStyle: TextStyle(
-                            color: theme.colorScheme.secondary,
+                            color: Brand.navy,
                             fontWeight: FontWeight.w800,
                             fontSize: 18,
                           ),
                           filled: true,
-                          fillColor: Colors.black.withValues(alpha: 0.12),
+                          fillColor: const Color(0x1A041565),
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 18,
@@ -1072,7 +1077,7 @@ class _HomeDashboard extends StatelessWidget {
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide(
-                              color: theme.colorScheme.secondary,
+                              color: Brand.navy,
                             ),
                           ),
                         ),
@@ -1177,7 +1182,7 @@ class _HomeDashboard extends StatelessWidget {
                           );
                         },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colorScheme.secondary,
+                    backgroundColor: Brand.navy,
                     foregroundColor: Colors.black87,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -1247,14 +1252,14 @@ class _HomeDashboard extends StatelessWidget {
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.secondary.withValues(
+                            color: Brand.navy.withValues(
                               alpha: 0.16,
                             ),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Icon(
                             Icons.qr_code_rounded,
-                            color: theme.colorScheme.secondary,
+                            color: Brand.navy,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -1264,7 +1269,7 @@ class _HomeDashboard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.w800,
-                              color: AppColors.primaryGreen,
+                              color: Brand.navy,
                             ),
                           ),
                         ),
@@ -1282,7 +1287,7 @@ class _HomeDashboard extends StatelessWidget {
                         'CONG TY CP CONG NGHE VA QUAN LY VAN TAI DONG DUONG',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: AppColors.primaryGreen,
+                          color: Brand.navy,
                           fontWeight: FontWeight.w800,
                           height: 1.35,
                         ),
@@ -1300,7 +1305,7 @@ class _HomeDashboard extends StatelessWidget {
                           child: _DriverDepositInfoTile(
                             label: 'Số tiền',
                             value: "${NumberFormat('#,###').format(amount)} đ",
-                            valueColor: AppColors.primaryGreen,
+                            valueColor: Brand.navy,
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -1308,7 +1313,7 @@ class _HomeDashboard extends StatelessWidget {
                           child: _DriverDepositInfoTile(
                             label: 'Nội dung',
                             value: content,
-                            valueColor: theme.colorScheme.secondary,
+                            valueColor: Brand.navy,
                           ),
                         ),
                       ],
@@ -1389,7 +1394,7 @@ class _HomeDashboard extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surfaceGreen,
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
         contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
@@ -1399,12 +1404,12 @@ class _HomeDashboard extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: const Color(0xFFFF8A8A).withValues(alpha: 0.14),
+                color: Brand.danger.withValues(alpha: 0.14),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: const Icon(
                 Icons.payments_outlined,
-                color: Color(0xFFFF8A8A),
+                color: Brand.danger,
               ),
             ),
             const SizedBox(width: 12),
@@ -1412,7 +1417,7 @@ class _HomeDashboard extends StatelessWidget {
               child: Text(
                 "Rút tiền",
                 style: theme.textTheme.titleLarge?.copyWith(
-                  color: Colors.white,
+                  color: Brand.ink,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -1627,10 +1632,10 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.06),
+              color: Brand.b50,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: theme.colorScheme.secondary.withValues(alpha: 0.12),
+                color: Brand.navy.withValues(alpha: 0.12),
               ),
             ),
             child: Column(
@@ -1639,7 +1644,7 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
                 Text(
                   "Số dư khả dụng",
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSubtle,
+                    color: Brand.inkMuted,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1647,7 +1652,7 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
                 Text(
                   "${NumberFormat('#,###').format(widget.currentWallet.round())} đ",
                   style: theme.textTheme.headlineSmall?.copyWith(
-                    color: Colors.white,
+                    color: Brand.navy,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -1659,20 +1664,20 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
             controller: _amountController,
             keyboardType: TextInputType.number,
             style: const TextStyle(
-              color: Colors.white,
+              color: Brand.ink,
               fontWeight: FontWeight.w700,
             ),
             decoration: InputDecoration(
               labelText: "Số tiền muốn rút",
-              labelStyle: const TextStyle(color: Colors.white70),
+              labelStyle: const TextStyle(color: Brand.inkMuted),
               prefixIcon: const Icon(Icons.payments_outlined),
               suffixText: "đ",
               suffixStyle: TextStyle(
-                color: theme.colorScheme.secondary,
+                color: Brand.navy,
                 fontWeight: FontWeight.w800,
               ),
               filled: true,
-              fillColor: Colors.black.withValues(alpha: 0.12),
+              fillColor: const Color(0x1A041565),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,
@@ -1683,7 +1688,7 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: theme.colorScheme.secondary),
+                borderSide: BorderSide(color: Brand.navy),
               ),
             ),
           ),
@@ -1693,10 +1698,10 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
             child: InputDecorator(
               decoration: InputDecoration(
                 labelText: "Ngân hàng",
-                labelStyle: const TextStyle(color: Colors.white70),
+                labelStyle: const TextStyle(color: Brand.inkMuted),
                 prefixIcon: const Icon(Icons.account_balance_rounded),
                 filled: true,
-                fillColor: Colors.black.withValues(alpha: 0.12),
+                fillColor: const Color(0x1A041565),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,
@@ -1710,8 +1715,8 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
                 _selectedBankShortName ?? "Chạm để chọn",
                 style: TextStyle(
                   color: _selectedBankShortName == null
-                      ? Colors.white70
-                      : Colors.white,
+                      ? Brand.inkMuted
+                      : Brand.ink,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -1722,15 +1727,15 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
             controller: _accountNumberController,
             keyboardType: TextInputType.number,
             style: const TextStyle(
-              color: Colors.white,
+              color: Brand.ink,
               fontWeight: FontWeight.w700,
             ),
             decoration: InputDecoration(
               labelText: "Số tài khoản",
-              labelStyle: const TextStyle(color: Colors.white70),
+              labelStyle: const TextStyle(color: Brand.inkMuted),
               prefixIcon: const Icon(Icons.credit_card_rounded),
               filled: true,
-              fillColor: Colors.black.withValues(alpha: 0.12),
+              fillColor: const Color(0x1A041565),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,
@@ -1741,7 +1746,7 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: theme.colorScheme.secondary),
+                borderSide: BorderSide(color: Brand.navy),
               ),
             ),
           ),
@@ -1749,15 +1754,15 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
           TextField(
             controller: _accountNameController,
             style: const TextStyle(
-              color: Colors.white,
+              color: Brand.ink,
               fontWeight: FontWeight.w700,
             ),
             decoration: InputDecoration(
               labelText: "Tên chủ tài khoản",
-              labelStyle: const TextStyle(color: Colors.white70),
+              labelStyle: const TextStyle(color: Brand.inkMuted),
               prefixIcon: const Icon(Icons.person_outline_rounded),
               filled: true,
-              fillColor: Colors.black.withValues(alpha: 0.12),
+              fillColor: const Color(0x1A041565),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,
@@ -1768,7 +1773,7 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: theme.colorScheme.secondary),
+                borderSide: BorderSide(color: Brand.navy),
               ),
             ),
           ),

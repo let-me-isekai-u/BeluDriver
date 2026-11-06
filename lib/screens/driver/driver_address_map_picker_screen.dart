@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart' as latlng;
 
 import '../../models/location_models.dart';
 import '../../services/api_service.dart';
+import '../../ui/ui.dart';
 
 class DriverAddressMapPickerScreen extends StatefulWidget {
   final String title;
@@ -283,10 +284,10 @@ class _DriverAddressMapPickerScreenState
       appBar: AppBar(
         title: Text(
           widget.title,
-          style: TextStyle(color: theme.colorScheme.secondary),
+          style: TextStyle(color: Brand.navy),
         ),
         centerTitle: true,
-        iconTheme: IconThemeData(color: theme.colorScheme.secondary),
+        iconTheme: IconThemeData(color: Brand.navy),
       ),
       body: Stack(
         children: [
@@ -343,7 +344,7 @@ class _DriverAddressMapPickerScreenState
                       "Kéo bản đồ để đặt ghim",
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
-                        color: Colors.black87,
+                        color: Colors.white,
                       ),
                     ),
                   ),
@@ -404,7 +405,7 @@ class _DriverAddressMapPickerScreenState
                     Text(
                       "Điểm đang chọn",
                       style: theme.textTheme.titleMedium?.copyWith(
-                        color: theme.colorScheme.secondary,
+                        color: Brand.navy,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -453,7 +454,7 @@ class _DriverAddressMapPickerScreenState
                       Text(
                         "${_mapCenter.latitude.toStringAsFixed(6)}, ${_mapCenter.longitude.toStringAsFixed(6)}",
                         style: const TextStyle(
-                          color: Colors.white70,
+                          color: Brand.inkMuted,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -482,7 +483,7 @@ class _DriverAddressMapPickerScreenState
                         onPressed: _isResolving ? null : _confirmSelection,
                         style: ElevatedButton.styleFrom(
                           minimumSize: const Size(double.infinity, 52),
-                          backgroundColor: theme.colorScheme.secondary,
+                          backgroundColor: Brand.navy,
                           foregroundColor: Colors.black87,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(18),
@@ -494,7 +495,7 @@ class _DriverAddressMapPickerScreenState
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: Colors.black87,
+                                  color: Colors.white,
                                 ),
                               )
                             : const Text(

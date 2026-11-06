@@ -8,6 +8,7 @@ import '../../providers/driver/activity_history_provider.dart';
 import '../../widgets/driver_ui.dart';
 import '../popup_list/action_success_popup.dart';
 import 'ride_detail_screen.dart';
+import '../../ui/ui.dart';
 
 class ActivityScreen extends StatelessWidget {
   final int initialTabIndex;
@@ -89,22 +90,22 @@ class _ActivityViewState extends State<_ActivityView>
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surfaceGreen,
+        backgroundColor: Colors.white,
         title: Text(
           "Huỷ đơn đã đẩy",
           style: TextStyle(
-            color: theme.colorScheme.secondary,
+            color: Brand.navy,
             fontWeight: FontWeight.w700,
           ),
         ),
         content: Text(
           "Bạn chắc chắn muốn huỷ đơn ${ride.code} không?",
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: Brand.ink),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            style: TextButton.styleFrom(foregroundColor: Colors.white70),
+            style: TextButton.styleFrom(foregroundColor: Brand.inkMuted),
             child: const Text("Không"),
           ),
           ElevatedButton(
@@ -182,7 +183,7 @@ class _ActivityViewState extends State<_ActivityView>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Đã xuất phát chuyến ${ride.code}."),
-          backgroundColor: theme.colorScheme.secondary,
+          backgroundColor: Brand.navy,
         ),
       );
 
@@ -313,7 +314,7 @@ class _ActivityViewState extends State<_ActivityView>
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w800,
-            color: theme.colorScheme.secondary,
+            color: Brand.navy,
           ),
         ),
         backgroundColor: theme.colorScheme.primary,
@@ -329,7 +330,7 @@ class _ActivityViewState extends State<_ActivityView>
               height: 180,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: theme.colorScheme.secondary.withValues(alpha: 0.05),
+                color: Brand.navy.withValues(alpha: 0.05),
               ),
             ),
           ),
@@ -368,15 +369,15 @@ class _ActivityViewState extends State<_ActivityView>
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                AppColors.primaryGreen,
-                AppColors.surfaceGreen.withValues(alpha: 0.95),
+                Brand.navy,
+                Brand.b700,
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(28),
             border: Border.all(
-              color: theme.colorScheme.secondary.withValues(alpha: 0.16),
+              color: Brand.navy.withValues(alpha: 0.16),
             ),
           ),
           child: Column(
@@ -398,7 +399,7 @@ class _ActivityViewState extends State<_ActivityView>
               Text(
                 "Theo dõi chuyến đang chạy, lịch sử hoàn thành và các đơn đã đẩy trong cùng một nơi.",
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSubtle,
+                  color: Brand.inkMuted,
                   height: 1.45,
                 ),
               ),
@@ -453,21 +454,21 @@ class _ActivityViewState extends State<_ActivityView>
     return Container(
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
-        color: AppColors.surfaceGreen.withValues(alpha: 0.45),
+        color: Brand.b50.withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: theme.colorScheme.secondary.withValues(alpha: 0.12),
+          color: Brand.navy.withValues(alpha: 0.12),
         ),
       ),
       child: TabBar(
         controller: _tabController,
         dividerColor: Colors.transparent,
         indicator: BoxDecoration(
-          color: theme.colorScheme.secondary.withValues(alpha: 0.18),
+          color: Brand.navy.withValues(alpha: 0.18),
           borderRadius: BorderRadius.circular(16),
         ),
-        labelColor: theme.colorScheme.secondary,
-        unselectedLabelColor: Colors.white70,
+        labelColor: Brand.navy,
+        unselectedLabelColor: Brand.inkMuted,
         labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
         unselectedLabelStyle: const TextStyle(
           fontWeight: FontWeight.w600,
@@ -488,7 +489,7 @@ class _ActivityViewState extends State<_ActivityView>
   ) {
     if (provider.isLoadingOngoing) {
       return Center(
-        child: CircularProgressIndicator(color: theme.colorScheme.secondary),
+        child: CircularProgressIndicator(color: Brand.navy),
       );
     }
     return RefreshIndicator(
@@ -509,7 +510,7 @@ class _ActivityViewState extends State<_ActivityView>
   ) {
     if (provider.isLoadingHistory) {
       return Center(
-        child: CircularProgressIndicator(color: theme.colorScheme.secondary),
+        child: CircularProgressIndicator(color: Brand.navy),
       );
     }
     return RefreshIndicator(
@@ -530,7 +531,7 @@ class _ActivityViewState extends State<_ActivityView>
   ) {
     if (provider.isLoadingBroker) {
       return Center(
-        child: CircularProgressIndicator(color: theme.colorScheme.secondary),
+        child: CircularProgressIndicator(color: Brand.navy),
       );
     }
 
@@ -646,13 +647,13 @@ class _ActivityViewState extends State<_ActivityView>
   Color _rideStatusColor(int status) {
     switch (status) {
       case 2:
-        return const Color(0xFF73B7FF);
+        return Brand.info;
       case 3:
-        return const Color(0xFFFFB347);
+        return Brand.warning;
       case 4:
-        return const Color(0xFF6ED39B);
+        return Brand.success;
       case 5:
-        return const Color(0xFFFF8A8A);
+        return Brand.danger;
       default:
         return Colors.grey;
     }
@@ -666,12 +667,12 @@ class _ActivityViewState extends State<_ActivityView>
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: AppColors.surfaceGreen.withValues(alpha: 0.34),
+        color: Brand.b50.withValues(alpha: 0.34),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: statusColor.withValues(alpha: 0.18)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.18),
+            color: const Color(0x1A041565),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
@@ -697,7 +698,7 @@ class _ActivityViewState extends State<_ActivityView>
                           Text(
                             ride.code,
                             style: theme.textTheme.titleMedium?.copyWith(
-                              color: Colors.white,
+                              color: Brand.ink,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
@@ -705,7 +706,7 @@ class _ActivityViewState extends State<_ActivityView>
                           Text(
                             ride.formattedDate,
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: AppColors.textSubtle,
+                              color: Brand.inkMuted,
                             ),
                           ),
                         ],
@@ -725,7 +726,7 @@ class _ActivityViewState extends State<_ActivityView>
                           icon: Icons.layers_rounded,
                           color: ride.rideSource == 2
                               ? const Color(0xFFC49BFF)
-                              : const Color(0xFF73B7FF),
+                              : Brand.info,
                         ),
                       ],
                     ),
@@ -765,7 +766,7 @@ class _ActivityViewState extends State<_ActivityView>
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.04),
+                    color: Brand.b50,
                     borderRadius: BorderRadius.circular(18),
                   ),
                   child: Row(
@@ -783,7 +784,7 @@ class _ActivityViewState extends State<_ActivityView>
                       Text(
                         ride.formattedPrice,
                         style: theme.textTheme.titleMedium?.copyWith(
-                          color: theme.colorScheme.secondary,
+                          color: Brand.navy,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -810,8 +811,8 @@ class _ActivityViewState extends State<_ActivityView>
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: ride.status == 2
-                            ? const Color(0xFF73B7FF)
-                            : const Color(0xFF6ED39B),
+                            ? Brand.info
+                            : Brand.success,
                         foregroundColor: Colors.black87,
                         textStyle: const TextStyle(
                           fontWeight: FontWeight.w900,
@@ -843,12 +844,12 @@ class _ActivityViewState extends State<_ActivityView>
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: AppColors.surfaceGreen.withValues(alpha: 0.34),
+        color: Brand.b50.withValues(alpha: 0.34),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: statusColor.withValues(alpha: 0.18)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.18),
+            color: const Color(0x1A041565),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
@@ -874,7 +875,7 @@ class _ActivityViewState extends State<_ActivityView>
                           Text(
                             ride.code,
                             style: theme.textTheme.titleMedium?.copyWith(
-                              color: Colors.white,
+                              color: Brand.ink,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
@@ -882,7 +883,7 @@ class _ActivityViewState extends State<_ActivityView>
                           Text(
                             _formatDateTime(ride.createdAt),
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: AppColors.textSubtle,
+                              color: Brand.inkMuted,
                             ),
                           ),
                         ],
@@ -925,7 +926,7 @@ class _ActivityViewState extends State<_ActivityView>
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.04),
+                    color: Brand.b50,
                     borderRadius: BorderRadius.circular(18),
                   ),
                   child: Row(
@@ -943,7 +944,7 @@ class _ActivityViewState extends State<_ActivityView>
                       Text(
                         _formatMoney(ride.price),
                         style: theme.textTheme.titleMedium?.copyWith(
-                          color: theme.colorScheme.secondary,
+                          color: Brand.navy,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -961,8 +962,8 @@ class _ActivityViewState extends State<_ActivityView>
                       icon: const Icon(Icons.cancel_outlined),
                       label: const Text("Huỷ đơn đã đẩy"),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFFF8A8A),
-                        side: const BorderSide(color: Color(0xFFFF8A8A)),
+                        foregroundColor: Brand.danger,
+                        side: const BorderSide(color: Brand.danger),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -990,14 +991,14 @@ class _ActivityViewState extends State<_ActivityView>
         Text(
           label,
           style: theme.textTheme.bodySmall?.copyWith(
-            color: AppColors.textSubtle,
+            color: Brand.inkMuted,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           value,
           style: theme.textTheme.bodyMedium?.copyWith(
-            color: Colors.white,
+            color: Brand.ink,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -1017,17 +1018,17 @@ class _ActivityViewState extends State<_ActivityView>
   Color _brokerStatusColor(int status) {
     switch (status) {
       case 0:
-        return const Color(0xFFFFB347);
+        return Brand.warning;
       case 1:
-        return const Color(0xFFE5C17B);
+        return Brand.lane;
       case 2:
-        return const Color(0xFF73B7FF);
+        return Brand.info;
       case 3:
         return const Color(0xFF8FA8FF);
       case 4:
-        return const Color(0xFF6ED39B);
+        return Brand.success;
       case 5:
-        return const Color(0xFFFF8A8A);
+        return Brand.danger;
       default:
         return Colors.grey;
     }
@@ -1064,7 +1065,7 @@ class _ActivityViewState extends State<_ActivityView>
         _buildLocationPoint(
           theme,
           icon: Icons.trip_origin_rounded,
-          color: const Color(0xFF6ED39B),
+          color: Brand.success,
           title: fromTitle,
           address: fromAddress,
         ),
@@ -1073,13 +1074,13 @@ class _ActivityViewState extends State<_ActivityView>
           child: Container(
             width: 2,
             height: 24,
-            color: theme.colorScheme.secondary.withValues(alpha: 0.22),
+            color: Brand.navy.withValues(alpha: 0.22),
           ),
         ),
         _buildLocationPoint(
           theme,
           icon: Icons.location_on_rounded,
-          color: const Color(0xFFFF8A8A),
+          color: Brand.danger,
           title: toTitle,
           address: toAddress,
         ),
@@ -1114,7 +1115,7 @@ class _ActivityViewState extends State<_ActivityView>
               Text(
                 title,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.white,
+                  color: Brand.ink,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -1124,7 +1125,7 @@ class _ActivityViewState extends State<_ActivityView>
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSubtle,
+                  color: Brand.inkMuted,
                   height: 1.4,
                 ),
               ),

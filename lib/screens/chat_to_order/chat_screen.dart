@@ -11,6 +11,7 @@ import '../../providers/chat_provider.dart';
 import '../../services/api_chat_service.dart';
 import '../../services/api_service.dart';
 import '../driver/driver_booking_screen.dart';
+import '../../ui/ui.dart';
 
 class DriverGroupChatScreen extends StatelessWidget {
   const DriverGroupChatScreen({super.key, this.initialGroup});
@@ -41,9 +42,9 @@ class _DriverGroupChatView extends StatefulWidget {
 }
 
 class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
-  static const Color beluDarkGreen = Color(0xFF0A422D);
-  static const Color beluMediumGreen = Color(0xFF145E44);
-  static const Color beluAccentGold = Color(0xFFFFD700);
+  static const Color beluDarkGreen = Brand.navy;
+  static const Color beluMediumGreen = Brand.b700;
+  static const Color beluAccentGold = Brand.lane;
   static const Color bgCanvas = Color(0xFFF0F4F2);
 
   final TextEditingController _controller = TextEditingController();
@@ -277,7 +278,7 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
         title: Text(
           'Huỷ đơn đã đẩy',
           style: TextStyle(
-            color: theme.colorScheme.secondary,
+            color: Brand.navy,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -544,7 +545,7 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
                       height: 7,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: connected ? Colors.greenAccent : Colors.white38,
+                        color: connected ? Colors.greenAccent : Brand.inkSubtle,
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -554,7 +555,7 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          color: Colors.white70,
+                          color: Brand.inkMuted,
                           fontSize: 11.5,
                         ),
                       ),
@@ -766,7 +767,7 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
                     BoxShadow(
                       color: isMine
                           ? beluDarkGreen.withValues(alpha: 0.18)
-                          : Colors.black.withValues(alpha: 0.06),
+                          : const Color(0x1A041565),
                       blurRadius: 10,
                       offset: const Offset(0, 3),
                     ),
@@ -888,7 +889,7 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
           border: Border.all(color: borderColor, width: 1),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
+              color: const Color(0x1A041565),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -1152,7 +1153,7 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
               value,
               style: const TextStyle(
                 fontSize: 13,
-                color: Colors.black87,
+                color: Colors.white,
                 height: 1.35,
               ),
             ),
@@ -1231,7 +1232,7 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.07),
+            color: const Color(0x1A041565),
             offset: const Offset(0, -3),
             blurRadius: 14,
           ),
@@ -1291,7 +1292,7 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
                 minLines: 1,
                 enabled: !disabled,
                 cursorColor: beluDarkGreen,
-                style: const TextStyle(color: Colors.black87, fontSize: 14.5),
+                style: const TextStyle(color: Colors.white, fontSize: 14.5),
                 onSubmitted: (_) => _handleSendMessage(),
                 decoration: InputDecoration(
                   hintText: provider.groupId == null
@@ -1426,7 +1427,7 @@ class _FullScreenLoader extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Center(
       child: CircularProgressIndicator(
-        color: Color(0xFF145E44),
+        color: Brand.b700,
         strokeWidth: 2.5,
       ),
     );
@@ -1456,10 +1457,10 @@ class _EmptyState extends StatelessWidget {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: const Color(0xFF0A422D).withValues(alpha: 0.08),
+                color: Brand.navy.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 34, color: const Color(0xFF0A422D)),
+              child: Icon(icon, size: 34, color: Brand.navy),
             ),
             const SizedBox(height: 18),
             Text(
@@ -1467,7 +1468,7 @@ class _EmptyState extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                color: Colors.white,
               ),
             ),
             const SizedBox(height: 8),
@@ -1522,7 +1523,7 @@ class _ErrorState extends StatelessWidget {
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('Thử lại'),
               style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF0A422D),
+                foregroundColor: Brand.navy,
                 backgroundColor: const Color(
                   0xFF0A422D,
                 ).withValues(alpha: 0.08),
@@ -1570,20 +1571,20 @@ class _DateSeparator extends StatelessWidget {
       child: Row(
         children: [
           const Expanded(
-            child: Divider(color: Color(0xFFD0D8D4), thickness: 1),
+            child: Divider(color: Brand.inkMuted, thickness: 1),
           ),
           const SizedBox(width: 10),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              color: const Color(0xFF0A422D).withValues(alpha: 0.08),
+              color: Brand.navy.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               _label(),
               style: const TextStyle(
                 fontSize: 11.5,
-                color: Color(0xFF0A422D),
+                color: Brand.navy,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.3,
               ),
@@ -1591,7 +1592,7 @@ class _DateSeparator extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           const Expanded(
-            child: Divider(color: Color(0xFFD0D8D4), thickness: 1),
+            child: Divider(color: Brand.inkMuted, thickness: 1),
           ),
         ],
       ),
@@ -1614,7 +1615,7 @@ class _LoadingOlderBanner extends StatelessWidget {
             height: 14,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: Color(0xFF145E44),
+              color: Brand.b700,
             ),
           ),
           SizedBox(width: 8),

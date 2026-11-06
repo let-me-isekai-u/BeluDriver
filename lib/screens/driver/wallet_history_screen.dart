@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../app_theme.dart';
 import '../../providers/driver/wallet_history_provider.dart';
 import '../../widgets/driver_ui.dart';
+import '../../ui/ui.dart';
 
 class WalletHistoryScreen extends StatelessWidget {
   const WalletHistoryScreen({super.key});
@@ -50,19 +51,19 @@ class _WalletHistoryView extends StatelessWidget {
         title: Text(
           "Lịch sử tài chính",
           style: TextStyle(
-            color: theme.colorScheme.secondary,
+            color: Brand.navy,
             fontWeight: FontWeight.w800,
           ),
         ),
         backgroundColor: theme.colorScheme.primary,
-        iconTheme: IconThemeData(color: theme.colorScheme.secondary),
+        iconTheme: IconThemeData(color: Brand.navy),
         actions: [
           IconButton(
             tooltip: "Làm mới",
             onPressed: provider.fetchData,
             icon: Icon(
               Icons.refresh_rounded,
-              color: theme.colorScheme.secondary,
+              color: Brand.navy,
             ),
           ),
         ],
@@ -77,7 +78,7 @@ class _WalletHistoryView extends StatelessWidget {
               height: 220,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: theme.colorScheme.secondary.withValues(alpha: 0.06),
+                color: Brand.navy.withValues(alpha: 0.06),
               ),
             ),
           ),
@@ -98,7 +99,7 @@ class _WalletHistoryView extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 72),
                     child: Center(
                       child: CircularProgressIndicator(
-                        color: theme.colorScheme.secondary,
+                        color: Brand.navy,
                       ),
                     ),
                   )
@@ -153,15 +154,15 @@ class _WalletHistoryView extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.primaryGreen,
-            AppColors.surfaceGreen.withValues(alpha: 0.95),
+            Brand.navy,
+            Brand.b700,
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: theme.colorScheme.secondary.withValues(alpha: 0.16),
+          color: Brand.navy.withValues(alpha: 0.16),
         ),
       ),
       child: Column(
@@ -175,7 +176,7 @@ class _WalletHistoryView extends StatelessWidget {
           Text(
             "Số dư khả dụng",
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppColors.textSubtle,
+              color: Brand.inkMuted,
             ),
           ),
           const SizedBox(height: 8),
@@ -187,7 +188,7 @@ class _WalletHistoryView extends StatelessWidget {
           Text(
             "Kiểm tra lịch sử để nắm rõ toàn bộ dòng tiền vào ra của tài khoản.",
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppColors.textSubtle,
+              color: Brand.inkMuted,
               height: 1.45,
             ),
           ),
@@ -227,7 +228,7 @@ class _WalletHistoryView extends StatelessWidget {
             label: "Tiền vào",
             value: _formatMoney(incoming),
             icon: Icons.add_circle_outline_rounded,
-            accentColor: const Color(0xFF6ED39B),
+            accentColor: Brand.success,
           ),
         ),
         const SizedBox(width: 12),
@@ -248,12 +249,12 @@ class _WalletHistoryView extends StatelessWidget {
     final bool isNegative = amount < 0;
     final Color accent = isNegative
         ? const Color(0xFFFF9A9A)
-        : const Color(0xFF6ED39B);
+        : Brand.success;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: Brand.b50,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: accent.withValues(alpha: 0.18)),
       ),
@@ -289,7 +290,7 @@ class _WalletHistoryView extends StatelessWidget {
                 Text(
                   _formatDateTime(item['createdDate']?.toString()),
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSubtle,
+                    color: Brand.inkMuted,
                   ),
                 ),
               ],
@@ -332,7 +333,7 @@ class _WalletHistoryView extends StatelessWidget {
             provider.errorMessage ?? "Đã có lỗi xảy ra",
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: const Color(0xFFFFA3A3),
+              color: Brand.danger,
               height: 1.45,
             ),
           ),

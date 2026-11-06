@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../ui/ui.dart';
 
 class ResubmitKycNotification extends StatelessWidget {
   final String? rejectReason;
@@ -51,7 +52,7 @@ class ResubmitKycNotification extends StatelessWidget {
               textAlign: TextAlign.center,
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                color: Colors.white,
               ),
             ),
             const SizedBox(height: 12),
@@ -59,7 +60,7 @@ class ResubmitKycNotification extends StatelessWidget {
               "Hồ sơ xác minh của bạn chưa được duyệt. Vui lòng kiểm tra lý do bên dưới và cập nhật lại hồ sơ.",
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.black87,
+                color: Colors.white,
                 height: 1.45,
               ),
             ),
@@ -107,7 +108,7 @@ class ResubmitKycNotification extends StatelessWidget {
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: theme.colorScheme.secondary,
+                  foregroundColor: Brand.navy,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(

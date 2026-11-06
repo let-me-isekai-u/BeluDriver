@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
+import '../ui/ui.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -45,7 +46,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         title: Text(
           "Đổi mật khẩu",
           style: theme.appBarTheme.titleTextStyle?.copyWith(
-            color: theme.colorScheme.secondary, // GOLD title
+            color: Brand.navy, // GOLD title
           ),
         ),
         // không set backgroundColor để ăn appBarTheme
@@ -60,7 +61,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 child: Icon(
                   Icons.lock_reset,
                   size: 85,
-                  color: theme.colorScheme.secondary, // GOLD icon
+                  color: Brand.navy, // GOLD icon
                 ),
               ),
               const SizedBox(height: 30),
@@ -162,7 +163,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     );
 
     if (res.statusCode == 200) {
-      _toast("Đổi mật khẩu thành công!", color: Theme.of(context).colorScheme.secondary);
+      _toast("Đổi mật khẩu thành công!", color: Brand.navy);
       if (mounted) Navigator.pop(context);
     } else {
       _toast("Đổi mật khẩu thất bại\n${res.body}", color: Theme.of(context).colorScheme.error);
@@ -189,7 +190,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         ),
         filled: true,
         fillColor: theme.colorScheme.surface.withOpacity(0.65),
-        prefixIcon: Icon(Icons.key, color: theme.colorScheme.secondary),
+        prefixIcon: Icon(Icons.key, color: Brand.navy),
         suffixIcon: IconButton(
           onPressed: onToggle,
           icon: Icon(
@@ -212,7 +213,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(
-            color: theme.colorScheme.secondary, // GOLD focus
+            color: Brand.navy, // GOLD focus
             width: 1.8,
           ),
         ),

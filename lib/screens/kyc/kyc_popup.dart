@@ -366,7 +366,7 @@ class _KycPopupState extends State<KycPopup> {
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.12),
+                  color: const Color(0x1A041565),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Center(

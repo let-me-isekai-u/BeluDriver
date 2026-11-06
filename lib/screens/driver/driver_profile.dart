@@ -21,6 +21,7 @@ import '../register_route/register_route_popup.dart';
 import 'driver_login_screen.dart';
 import 'driver_update_profile_screen.dart';
 import 'wallet_history_screen.dart';
+import '../../ui/ui.dart';
 
 class DriverProfileScreen extends StatelessWidget {
   const DriverProfileScreen({super.key});
@@ -63,7 +64,7 @@ class _DriverDepositInfoTile extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: Colors.black.withValues(alpha: 0.58),
+              color: const Color(0x33041565),
               fontSize: 12,
             ),
           ),
@@ -128,7 +129,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
   }
 
   Color _kycStatusColor(int kycStatus) {
-    return kycStatus == 2 ? const Color(0xFF6ED39B) : const Color(0xFFFFB347);
+    return kycStatus == 2 ? Brand.success : Brand.warning;
   }
 
   Future<void> _handleDeleteAccount(ProfileProvider provider) async {
@@ -235,12 +236,12 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
             title: Text(
               'Hồ sơ tài xế',
               style: TextStyle(
-                color: theme.colorScheme.secondary,
+                color: Brand.navy,
                 fontWeight: FontWeight.w800,
               ),
             ),
             backgroundColor: theme.colorScheme.primary,
-            iconTheme: IconThemeData(color: theme.colorScheme.secondary),
+            iconTheme: IconThemeData(color: Brand.navy),
             actions: [
               Padding(
                 padding: const EdgeInsets.only(right: 10),
@@ -253,15 +254,15 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFF8A8A).withValues(alpha: 0.12),
+                      color: Brand.danger.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: const Color(0xFFFF8A8A).withValues(alpha: 0.3),
+                        color: Brand.danger.withValues(alpha: 0.3),
                       ),
                     ),
                     child: const Icon(
                       Icons.delete_outline_rounded,
-                      color: Color(0xFFFF8A8A),
+                      color: Brand.danger,
                     ),
                   ),
                 ),
@@ -271,7 +272,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
           body: provider.loading
               ? Center(
                   child: CircularProgressIndicator(
-                    color: theme.colorScheme.secondary,
+                    color: Brand.navy,
                   ),
                 )
               : profile == null
@@ -291,7 +292,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                         height: 220,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: theme.colorScheme.secondary.withValues(
+                          color: Brand.navy.withValues(
                             alpha: 0.05,
                           ),
                         ),
@@ -362,15 +363,15 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.primaryGreen,
-            AppColors.surfaceGreen.withValues(alpha: 0.95),
+            Brand.navy,
+            Brand.b700,
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: theme.colorScheme.secondary.withValues(alpha: 0.16),
+          color: Brand.navy.withValues(alpha: 0.16),
         ),
       ),
       child: Column(
@@ -379,7 +380,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
             children: [
               CircleAvatar(
                 radius: 38,
-                backgroundColor: theme.colorScheme.secondary.withValues(
+                backgroundColor: Brand.navy.withValues(
                   alpha: 0.14,
                 ),
                 backgroundImage: profile.avatarUrl.isNotEmpty
@@ -389,7 +390,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                     ? Icon(
                         Icons.person_rounded,
                         size: 42,
-                        color: theme.colorScheme.secondary,
+                        color: Brand.navy,
                       )
                     : null,
               ),
@@ -416,7 +417,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                     Text(
                       profile.phone,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSubtle,
+                        color: Brand.inkMuted,
                         fontSize: 15,
                       ),
                     ),
@@ -434,7 +435,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                 label: statusLabel,
                 icon: Icons.verified_user_rounded,
                 color: onboarding == null
-                    ? theme.colorScheme.secondary
+                    ? Brand.navy
                     : _kycStatusColor(onboarding.kycStatus),
               ),
               DriverPill(
@@ -445,8 +446,8 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                     ? Icons.check_circle_rounded
                     : Icons.timelapse_rounded,
                 color: canReceive
-                    ? const Color(0xFF6ED39B)
-                    : const Color(0xFFFFB347),
+                    ? Brand.success
+                    : Brand.warning,
               ),
             ],
           ),
@@ -557,7 +558,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(
-            backgroundColor: AppColors.surfaceGreen,
+            backgroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(24),
             ),
@@ -570,12 +571,12 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.secondary.withValues(alpha: 0.14),
+                    color: Brand.navy.withValues(alpha: 0.14),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(
                     Icons.account_balance_wallet_rounded,
-                    color: theme.colorScheme.secondary,
+                    color: Brand.navy,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -583,7 +584,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                   child: Text(
                     "Nạp tiền vào ví",
                     style: theme.textTheme.titleLarge?.copyWith(
-                      color: Colors.white,
+                      color: Brand.ink,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -597,7 +598,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                 Text(
                   "Nhập số tiền bạn muốn nạp. Sau đó hệ thống sẽ tạo mã QR để bạn chuyển khoản nhanh hơn.",
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSubtle,
+                    color: Brand.inkMuted,
                     height: 1.45,
                   ),
                 ),
@@ -605,10 +606,10 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.06),
+                    color: Brand.b50,
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(
-                      color: theme.colorScheme.secondary.withValues(
+                      color: Brand.navy.withValues(
                         alpha: 0.12,
                       ),
                     ),
@@ -619,7 +620,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                       Text(
                         "Số tiền cần nạp",
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSubtle,
+                          color: Brand.inkMuted,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -628,29 +629,29 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                         controller: amountController,
                         keyboardType: TextInputType.number,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: Brand.ink,
                           fontSize: 24,
                           fontWeight: FontWeight.w800,
                         ),
                         decoration: InputDecoration(
                           hintText: "Ví dụ: 100000",
                           hintStyle: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.32),
+                            color: Brand.inkSubtle,
                             fontSize: 20,
                             fontWeight: FontWeight.w600,
                           ),
                           prefixIcon: Icon(
                             Icons.payments_outlined,
-                            color: theme.colorScheme.secondary,
+                            color: Brand.navy,
                           ),
                           suffixText: "đ",
                           suffixStyle: TextStyle(
-                            color: theme.colorScheme.secondary,
+                            color: Brand.navy,
                             fontWeight: FontWeight.w800,
                             fontSize: 18,
                           ),
                           filled: true,
-                          fillColor: Colors.black.withValues(alpha: 0.12),
+                          fillColor: const Color(0x1A041565),
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 18,
@@ -666,7 +667,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide(
-                              color: theme.colorScheme.secondary,
+                              color: Brand.navy,
                             ),
                           ),
                         ),
@@ -772,7 +773,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                           );
                         },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colorScheme.secondary,
+                    backgroundColor: Brand.navy,
                     foregroundColor: Colors.black87,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -843,14 +844,14 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.secondary.withValues(
+                            color: Brand.navy.withValues(
                               alpha: 0.16,
                             ),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Icon(
                             Icons.qr_code_rounded,
-                            color: theme.colorScheme.secondary,
+                            color: Brand.navy,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -860,7 +861,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.w800,
-                              color: AppColors.primaryGreen,
+                              color: Brand.navy,
                             ),
                           ),
                         ),
@@ -878,7 +879,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                         'CONG TY CP CONG NGHE VA QUAN LY VAN TAI DONG DUONG',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: AppColors.primaryGreen,
+                          color: Brand.navy,
                           fontWeight: FontWeight.w800,
                           height: 1.35,
                         ),
@@ -896,7 +897,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                           child: _DriverDepositInfoTile(
                             label: 'Số tiền',
                             value: "${NumberFormat('#,###').format(amount)} đ",
-                            valueColor: AppColors.primaryGreen,
+                            valueColor: Brand.navy,
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -904,7 +905,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                           child: _DriverDepositInfoTile(
                             label: 'Nội dung',
                             value: content,
-                            valueColor: theme.colorScheme.secondary,
+                            valueColor: Brand.navy,
                           ),
                         ),
                       ],
@@ -960,7 +961,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                         },
                         style: ElevatedButton.styleFrom(
                           minimumSize: const Size(double.infinity, 52),
-                          backgroundColor: Colors.redAccent,
+                          backgroundColor: Brand.danger,
                           foregroundColor: Colors.white,
                         ),
                         child: const Text("Huỷ yêu cầu"),
@@ -988,7 +989,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surfaceGreen,
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
         contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
@@ -998,12 +999,12 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: const Color(0xFFFF8A8A).withValues(alpha: 0.14),
+                color: Brand.danger.withValues(alpha: 0.14),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: const Icon(
                 Icons.payments_outlined,
-                color: Color(0xFFFF8A8A),
+                color: Brand.danger,
               ),
             ),
             const SizedBox(width: 12),
@@ -1011,7 +1012,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
               child: Text(
                 "Rút tiền",
                 style: theme.textTheme.titleLarge?.copyWith(
-                  color: Colors.white,
+                  color: Brand.ink,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -1052,7 +1053,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
           ? Text(
               "Không có dữ liệu trạng thái tài khoản.",
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSubtle,
+                color: Brand.inkMuted,
               ),
             )
           : Column(
@@ -1089,7 +1090,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                     "Lý do từ chối KYC",
                     onboarding.kycRejectReason!,
                     isLast: true,
-                    valueColor: const Color(0xFFFF8A8A),
+                    valueColor: Brand.danger,
                   )
                 else
                   const SizedBox.shrink(),
@@ -1165,10 +1166,10 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.05),
+                          color: Brand.b50,
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(
-                            color: theme.colorScheme.secondary.withValues(
+                            color: Brand.navy.withValues(
                               alpha: 0.08,
                             ),
                           ),
@@ -1179,7 +1180,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                             Text(
                               route.name,
                               style: theme.textTheme.titleSmall?.copyWith(
-                                color: Colors.white,
+                                color: Brand.ink,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -1187,14 +1188,14 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                             Text(
                               'Mã tuyến: ${route.code}',
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: AppColors.textSubtle,
+                                color: Brand.inkMuted,
                               ),
                             ),
                             const SizedBox(height: 6),
                             Text(
                               '${route.fromProvinceName} → ${route.toProvinceName}',
                               style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.secondary,
+                                color: Brand.navy,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -1307,8 +1308,8 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
           icon: const Icon(Icons.logout_rounded),
           label: const Text("Đăng xuất tài khoản"),
           style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFFFF8A8A),
-            side: const BorderSide(color: Color(0xFFFF8A8A)),
+            foregroundColor: Brand.danger,
+            side: const BorderSide(color: Brand.danger),
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
@@ -1334,10 +1335,10 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceGreen.withValues(alpha: 0.34),
+        color: Brand.b50.withValues(alpha: 0.34),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: theme.colorScheme.secondary.withValues(alpha: 0.14),
+          color: Brand.navy.withValues(alpha: 0.14),
         ),
       ),
       child: Column(
@@ -1355,12 +1356,12 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.secondary.withValues(
+                        color: Brand.navy.withValues(
                           alpha: 0.12,
                         ),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: Icon(icon, color: theme.colorScheme.secondary),
+                      child: Icon(icon, color: Brand.navy),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -1370,7 +1371,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                           Text(
                             title,
                             style: theme.textTheme.titleMedium?.copyWith(
-                              color: Colors.white,
+                              color: Brand.ink,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -1378,7 +1379,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                           Text(
                             subtitle,
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              color: AppColors.textSubtle,
+                              color: Brand.inkMuted,
                             ),
                           ),
                         ],
@@ -1389,7 +1390,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                       duration: const Duration(milliseconds: 220),
                       child: Icon(
                         Icons.keyboard_arrow_down_rounded,
-                        color: theme.colorScheme.secondary,
+                        color: Brand.navy,
                         size: 28,
                       ),
                     ),
@@ -1425,7 +1426,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
       margin: EdgeInsets.only(bottom: isLast ? 0 : 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: Brand.b50,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -1436,7 +1437,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
             child: Text(
               title,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSubtle,
+                color: Brand.inkMuted,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1448,7 +1449,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
               value,
               textAlign: TextAlign.right,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: valueColor ?? Colors.white,
+                color: valueColor ?? Brand.ink,
                 fontWeight: FontWeight.w800,
                 height: 1.4,
               ),
@@ -1477,7 +1478,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
+              color: Brand.b50,
               borderRadius: BorderRadius.circular(18),
             ),
             child: Row(
@@ -1486,10 +1487,10 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.secondary.withValues(alpha: 0.12),
+                    color: Brand.navy.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Icon(icon, color: theme.colorScheme.secondary),
+                  child: Icon(icon, color: Brand.navy),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -1499,7 +1500,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                       Text(
                         title,
                         style: theme.textTheme.titleSmall?.copyWith(
-                          color: Colors.white,
+                          color: Brand.ink,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -1507,7 +1508,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                       Text(
                         subtitle,
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSubtle,
+                          color: Brand.inkMuted,
                         ),
                       ),
                     ],
@@ -1516,7 +1517,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                 Icon(
                   Icons.arrow_forward_ios_rounded,
                   size: 16,
-                  color: theme.colorScheme.secondary,
+                  color: Brand.navy,
                 ),
               ],
             ),
@@ -1533,7 +1534,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
       context: context,
       builder: (context) {
         return Dialog(
-          backgroundColor: AppColors.surfaceGreen,
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
           ),
@@ -1547,7 +1548,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                   child: IconButton(
                     tooltip: "Đóng",
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close_rounded, color: Colors.white),
+                    icon: const Icon(Icons.close_rounded, color: Brand.ink),
                   ),
                 ),
                 Text(
@@ -1559,7 +1560,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                   "Chọn phương thức liên hệ phù hợp để được hỗ trợ nhanh nhất.",
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSubtle,
+                    color: Brand.inkMuted,
                     height: 1.45,
                   ),
                 ),
@@ -1570,12 +1571,12 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF6ED39B).withValues(alpha: 0.14),
+                      color: Brand.success.withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: const Icon(
                       Icons.phone_in_talk_rounded,
-                      color: Color(0xFF6ED39B),
+                      color: Brand.success,
                     ),
                   ),
                   title: "Gọi điện thoại hỗ trợ",
@@ -1627,9 +1628,9 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
+            color: Brand.b50,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border: Border.all(color: Brand.line),
           ),
           child: Row(
             children: [
@@ -1642,7 +1643,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                     Text(
                       title,
                       style: theme.textTheme.titleSmall?.copyWith(
-                        color: Colors.white,
+                        color: Brand.ink,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -1650,7 +1651,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                     Text(
                       subtitle,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSubtle,
+                        color: Brand.inkMuted,
                       ),
                     ),
                   ],
@@ -1659,7 +1660,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
               Icon(
                 Icons.arrow_forward_ios_rounded,
                 size: 16,
-                color: theme.colorScheme.secondary,
+                color: Brand.navy,
               ),
             ],
           ),
@@ -1676,18 +1677,18 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surfaceGreen,
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           "Xác nhận xoá tài khoản",
           style: TextStyle(
-            color: theme.colorScheme.secondary,
+            color: Brand.navy,
             fontWeight: FontWeight.w800,
           ),
         ),
         content: const Text(
           "Bạn có chắc chắn muốn xoá tài khoản tài xế không? Tất cả dữ liệu về ví và lịch sử chuyến xe sẽ bị mất vĩnh viễn.",
-          style: TextStyle(color: Colors.white, height: 1.45),
+          style: TextStyle(color: Brand.ink, height: 1.45),
         ),
         actions: [
           TextButton(
@@ -1700,7 +1701,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
               await _handleDeleteAccount(provider);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF8A8A),
+              backgroundColor: Brand.danger,
               foregroundColor: Colors.black87,
             ),
             child: const Text("Xoá vĩnh viễn"),
@@ -1905,10 +1906,10 @@ class _ProfileWithdrawDialogContentState
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.06),
+              color: Brand.b50,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: theme.colorScheme.secondary.withValues(alpha: 0.12),
+                color: Brand.navy.withValues(alpha: 0.12),
               ),
             ),
             child: Column(
@@ -1917,7 +1918,7 @@ class _ProfileWithdrawDialogContentState
                 Text(
                   "Số dư khả dụng",
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSubtle,
+                    color: Brand.inkMuted,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1925,7 +1926,7 @@ class _ProfileWithdrawDialogContentState
                 Text(
                   "${NumberFormat('#,###').format(widget.currentWallet.round())} đ",
                   style: theme.textTheme.headlineSmall?.copyWith(
-                    color: Colors.white,
+                    color: Brand.navy,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -1937,20 +1938,20 @@ class _ProfileWithdrawDialogContentState
             controller: _amountController,
             keyboardType: TextInputType.number,
             style: const TextStyle(
-              color: Colors.white,
+              color: Brand.ink,
               fontWeight: FontWeight.w700,
             ),
             decoration: InputDecoration(
               labelText: "Số tiền muốn rút",
-              labelStyle: const TextStyle(color: Colors.white70),
+              labelStyle: const TextStyle(color: Brand.inkMuted),
               prefixIcon: const Icon(Icons.payments_outlined),
               suffixText: "đ",
               suffixStyle: TextStyle(
-                color: theme.colorScheme.secondary,
+                color: Brand.navy,
                 fontWeight: FontWeight.w800,
               ),
               filled: true,
-              fillColor: Colors.black.withValues(alpha: 0.12),
+              fillColor: const Color(0x1A041565),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,
@@ -1961,7 +1962,7 @@ class _ProfileWithdrawDialogContentState
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: theme.colorScheme.secondary),
+                borderSide: BorderSide(color: Brand.navy),
               ),
             ),
           ),
@@ -1971,10 +1972,10 @@ class _ProfileWithdrawDialogContentState
             child: InputDecorator(
               decoration: InputDecoration(
                 labelText: "Ngân hàng",
-                labelStyle: const TextStyle(color: Colors.white70),
+                labelStyle: const TextStyle(color: Brand.inkMuted),
                 prefixIcon: const Icon(Icons.account_balance_rounded),
                 filled: true,
-                fillColor: Colors.black.withValues(alpha: 0.12),
+                fillColor: const Color(0x1A041565),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,
@@ -1988,8 +1989,8 @@ class _ProfileWithdrawDialogContentState
                 _selectedBankShortName ?? "Chạm để chọn",
                 style: TextStyle(
                   color: _selectedBankShortName == null
-                      ? Colors.white70
-                      : Colors.white,
+                      ? Brand.inkMuted
+                      : Brand.ink,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -2000,15 +2001,15 @@ class _ProfileWithdrawDialogContentState
             controller: _accountNumberController,
             keyboardType: TextInputType.number,
             style: const TextStyle(
-              color: Colors.white,
+              color: Brand.ink,
               fontWeight: FontWeight.w700,
             ),
             decoration: InputDecoration(
               labelText: "Số tài khoản",
-              labelStyle: const TextStyle(color: Colors.white70),
+              labelStyle: const TextStyle(color: Brand.inkMuted),
               prefixIcon: const Icon(Icons.credit_card_rounded),
               filled: true,
-              fillColor: Colors.black.withValues(alpha: 0.12),
+              fillColor: const Color(0x1A041565),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,
@@ -2019,7 +2020,7 @@ class _ProfileWithdrawDialogContentState
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: theme.colorScheme.secondary),
+                borderSide: BorderSide(color: Brand.navy),
               ),
             ),
           ),
@@ -2027,15 +2028,15 @@ class _ProfileWithdrawDialogContentState
           TextField(
             controller: _accountNameController,
             style: const TextStyle(
-              color: Colors.white,
+              color: Brand.ink,
               fontWeight: FontWeight.w700,
             ),
             decoration: InputDecoration(
               labelText: "Tên chủ tài khoản",
-              labelStyle: const TextStyle(color: Colors.white70),
+              labelStyle: const TextStyle(color: Brand.inkMuted),
               prefixIcon: const Icon(Icons.person_outline_rounded),
               filled: true,
-              fillColor: Colors.black.withValues(alpha: 0.12),
+              fillColor: const Color(0x1A041565),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,
@@ -2046,7 +2047,7 @@ class _ProfileWithdrawDialogContentState
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: theme.colorScheme.secondary),
+                borderSide: BorderSide(color: Brand.navy),
               ),
             ),
           ),
@@ -2056,7 +2057,7 @@ class _ProfileWithdrawDialogContentState
             child: ElevatedButton(
               onPressed: _isSubmitting ? null : _confirmWithdraw,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
+                backgroundColor: Brand.danger,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../app_theme.dart';
 import '../../models/concert_ticket_verification_model.dart';
 import '../../services/concert_ticket_service.dart';
+import '../../ui/ui.dart';
 
 class ConcertTicketScannerScreen extends StatefulWidget {
   const ConcertTicketScannerScreen({super.key});
@@ -66,7 +67,7 @@ class _ConcertTicketScannerScreenState
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message, style: const TextStyle(color: Colors.black)),
-        backgroundColor: AppColors.accentGold,
+        backgroundColor: Brand.navy,
       ),
     );
   }
@@ -78,10 +79,10 @@ class _ConcertTicketScannerScreenState
       appBar: AppBar(
         title: const Text(
           'Quét QR vé concert',
-          style: TextStyle(color: AppColors.accentGold),
+          style: TextStyle(color: Brand.navy),
         ),
-        backgroundColor: AppColors.primaryGreen,
-        foregroundColor: AppColors.accentGold,
+        backgroundColor: Brand.navy,
+        foregroundColor: Brand.navy,
       ),
       body: SafeArea(
         child: ListView(
@@ -116,23 +117,23 @@ class _HeaderCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.primaryGreen,
+        color: Brand.navy,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.accentGold),
+        border: Border.all(color: Brand.navy),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Icon(
             Icons.qr_code_scanner_rounded,
-            color: AppColors.accentGold,
+            color: Brand.navy,
             size: 42,
           ),
           const SizedBox(height: 14),
           const Text(
             'Kiểm vé lên xe',
             style: TextStyle(
-              color: AppColors.accentGold,
+              color: Brand.navy,
               fontSize: 22,
               fontWeight: FontWeight.w900,
             ),
@@ -140,7 +141,7 @@ class _HeaderCard extends StatelessWidget {
           const SizedBox(height: 8),
           const Text(
             'Quét mã QR trên vé khách đưa. App gửi toàn bộ chuỗi QR lên server để check-in.',
-            style: TextStyle(color: AppColors.accentGold, height: 1.4),
+            style: TextStyle(color: Brand.navy, height: 1.4),
           ),
           const SizedBox(height: 18),
           SizedBox(
@@ -150,7 +151,7 @@ class _HeaderCard extends StatelessWidget {
               icon: const Icon(Icons.center_focus_strong_rounded),
               label: const Text('Quét QR'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentGold,
+                backgroundColor: Brand.navy,
                 foregroundColor: Colors.black,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -180,7 +181,7 @@ class _ManualInputCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.accentGold,
+        color: Brand.navy,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.black),
       ),
@@ -203,7 +204,7 @@ class _ManualInputCard extends StatelessWidget {
             style: const TextStyle(color: Colors.black),
             decoration: InputDecoration(
               hintText: 'Dán toàn bộ chuỗi QR',
-              hintStyle: TextStyle(color: Colors.black.withValues(alpha: 0.55)),
+              hintStyle: TextStyle(color: const Color(0x33041565)),
               prefixIcon: const Icon(
                 Icons.confirmation_num,
                 color: Colors.black,
@@ -228,9 +229,9 @@ class _ManualInputCard extends StatelessWidget {
               icon: const Icon(Icons.fact_check_rounded),
               label: const Text('Kiểm vé'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.accentGold,
-                backgroundColor: AppColors.primaryGreen,
-                side: const BorderSide(color: AppColors.primaryGreen),
+                foregroundColor: Brand.navy,
+                backgroundColor: Brand.navy,
+                side: const BorderSide(color: Brand.navy),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -251,9 +252,9 @@ class _CheckingCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.primaryGreen,
+        color: Brand.navy,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.accentGold),
+        border: Border.all(color: Brand.navy),
       ),
       child: const Row(
         children: [
@@ -262,7 +263,7 @@ class _CheckingCard extends StatelessWidget {
             height: 22,
             child: CircularProgressIndicator(
               strokeWidth: 2.4,
-              color: AppColors.accentGold,
+              color: Brand.navy,
             ),
           ),
           SizedBox(width: 12),
@@ -270,7 +271,7 @@ class _CheckingCard extends StatelessWidget {
             child: Text(
               'Đang kiểm tra vé...',
               style: TextStyle(
-                color: AppColors.accentGold,
+                color: Brand.navy,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -288,14 +289,14 @@ class _VerificationResultCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = result.isValid ? AppColors.accentGold : Colors.black;
+    final borderColor = result.isValid ? Brand.navy : Colors.black;
     final resultColor = result.isValid
         ? const Color(0xFF2FBF71)
         : const Color(0xFFE53935);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: result.isValid ? AppColors.primaryGreen : AppColors.accentGold,
+        color: result.isValid ? Brand.navy : Brand.navy,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: borderColor, width: 1.4),
       ),
@@ -414,7 +415,7 @@ class _ResultLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (value == null || value!.trim().isEmpty) return const SizedBox.shrink();
-    final textColor = isValid ? AppColors.accentGold : Colors.black;
+    final textColor = isValid ? Brand.navy : Colors.black;
 
     return Padding(
       padding: const EdgeInsets.only(top: 8),
@@ -453,7 +454,7 @@ class _ConcertQrScannerPageState extends State<_ConcertQrScannerPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.darkGreenBg,
+      backgroundColor: Brand.canvas,
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -466,7 +467,7 @@ class _ConcertQrScannerPageState extends State<_ConcertQrScannerPage> {
               Navigator.of(context).pop(code.trim());
             },
           ),
-          Container(color: AppColors.darkGreenBg.withValues(alpha: 0.32)),
+          Container(color: Brand.canvas.withValues(alpha: 0.32)),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(18),
@@ -474,20 +475,20 @@ class _ConcertQrScannerPageState extends State<_ConcertQrScannerPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   CircleAvatar(
-                    backgroundColor: AppColors.primaryGreen,
+                    backgroundColor: Brand.navy,
                     child: IconButton(
                       icon: const Icon(
                         Icons.close,
-                        color: AppColors.accentGold,
+                        color: Brand.navy,
                       ),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ),
                   const CircleAvatar(
-                    backgroundColor: AppColors.primaryGreen,
+                    backgroundColor: Brand.navy,
                     child: Icon(
                       Icons.qr_code_scanner,
-                      color: AppColors.accentGold,
+                      color: Brand.navy,
                     ),
                   ),
                 ],
@@ -501,7 +502,7 @@ class _ConcertQrScannerPageState extends State<_ConcertQrScannerPage> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
               decoration: BoxDecoration(
-                color: AppColors.accentGold,
+                color: Brand.navy,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.black, width: 1.5),
               ),
@@ -537,7 +538,7 @@ class _ConcertQrScannerPageState extends State<_ConcertQrScannerPage> {
               'Mã sẽ được gửi lên server để kiểm vé online',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: AppColors.accentGold,
+                color: Brand.navy,
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
               ),
@@ -553,7 +554,7 @@ class _ConcertQrScannerPageState extends State<_ConcertQrScannerPage> {
               label: const Text('Nhập mã thủ công'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.black,
-                backgroundColor: AppColors.accentGold,
+                backgroundColor: Brand.navy,
                 side: const BorderSide(color: Colors.black),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -577,7 +578,7 @@ class _ConcertScannerFramePainter extends CustomPainter {
       height: frameSize * 1.18,
     );
     final corner = Paint()
-      ..color = AppColors.accentGold
+      ..color = Brand.navy
       ..style = PaintingStyle.stroke
       ..strokeWidth = 5
       ..strokeCap = StrokeCap.round;
@@ -608,7 +609,7 @@ class _ConcertScannerFramePainter extends CustomPainter {
       canvas.drawLine(points[0], points[2], corner);
     }
     final line = Paint()
-      ..color = AppColors.accentGold.withValues(alpha: 0.7)
+      ..color = Brand.navy.withValues(alpha: 0.7)
       ..strokeWidth = 1.5;
     canvas.drawLine(
       Offset(rect.left, rect.center.dy),

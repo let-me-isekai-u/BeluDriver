@@ -7,6 +7,7 @@ import '../../app_theme.dart';
 import '../../models/driver/driver_profile_model.dart';
 import '../../providers/driver/update_profile_provider.dart';
 import '../../widgets/driver_ui.dart';
+import '../../ui/ui.dart';
 
 class DriverUpdateProfileScreen extends StatelessWidget {
   final DriverProfileModel profile;
@@ -98,12 +99,12 @@ class _DriverUpdateProfileViewState extends State<_DriverUpdateProfileView> {
         title: Text(
           'Cập nhật hồ sơ',
           style: TextStyle(
-            color: theme.colorScheme.secondary,
+            color: Brand.navy,
             fontWeight: FontWeight.w800,
           ),
         ),
         backgroundColor: theme.colorScheme.primary,
-        iconTheme: IconThemeData(color: theme.colorScheme.secondary),
+        iconTheme: IconThemeData(color: Brand.navy),
       ),
       body: Stack(
         children: [
@@ -115,7 +116,7 @@ class _DriverUpdateProfileViewState extends State<_DriverUpdateProfileView> {
               height: 220,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: theme.colorScheme.secondary.withValues(alpha: 0.06),
+                color: Brand.navy.withValues(alpha: 0.06),
               ),
             ),
           ),
@@ -167,7 +168,7 @@ class _DriverUpdateProfileViewState extends State<_DriverUpdateProfileView> {
                             height: 18,
                             child: CircularProgressIndicator(
                               strokeWidth: 2.2,
-                              color: Colors.black87,
+                              color: Colors.white,
                             ),
                           )
                         : const Icon(Icons.save_rounded),
@@ -191,7 +192,7 @@ class _DriverUpdateProfileViewState extends State<_DriverUpdateProfileView> {
               color: Colors.black26,
               child: Center(
                 child: CircularProgressIndicator(
-                  color: theme.colorScheme.secondary,
+                  color: Brand.navy,
                 ),
               ),
             ),
@@ -206,15 +207,15 @@ class _DriverUpdateProfileViewState extends State<_DriverUpdateProfileView> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.primaryGreen,
-            AppColors.surfaceGreen.withValues(alpha: 0.95),
+            Brand.navy,
+            Brand.b700,
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: theme.colorScheme.secondary.withValues(alpha: 0.16),
+          color: Brand.navy.withValues(alpha: 0.16),
         ),
       ),
       child: Row(
@@ -223,7 +224,7 @@ class _DriverUpdateProfileViewState extends State<_DriverUpdateProfileView> {
             children: [
               CircleAvatar(
                 radius: 42,
-                backgroundColor: theme.colorScheme.secondary.withValues(
+                backgroundColor: Brand.navy.withValues(
                   alpha: 0.14,
                 ),
                 backgroundImage: _avatarProvider(provider),
@@ -231,7 +232,7 @@ class _DriverUpdateProfileViewState extends State<_DriverUpdateProfileView> {
                     ? Icon(
                         Icons.person_rounded,
                         size: 46,
-                        color: theme.colorScheme.secondary,
+                        color: Brand.navy,
                       )
                     : null,
               ),
@@ -247,17 +248,17 @@ class _DriverUpdateProfileViewState extends State<_DriverUpdateProfileView> {
                       width: 34,
                       height: 34,
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.secondary,
+                        color: Brand.navy,
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: AppColors.primaryGreen,
+                          color: Brand.navy,
                           width: 2,
                         ),
                       ),
                       child: const Icon(
                         Icons.camera_alt_rounded,
                         size: 18,
-                        color: Colors.black87,
+                        color: Colors.white,
                       ),
                     ),
                   ),
@@ -288,7 +289,7 @@ class _DriverUpdateProfileViewState extends State<_DriverUpdateProfileView> {
                 Text(
                   "Ảnh đại diện và thông tin cơ bản sẽ được hiển thị xuyên suốt ứng dụng.",
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSubtle,
+                    color: Brand.inkMuted,
                     height: 1.45,
                   ),
                 ),
@@ -310,7 +311,7 @@ class _DriverUpdateProfileViewState extends State<_DriverUpdateProfileView> {
 
     return TextField(
       controller: controller,
-      style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white),
+      style: theme.textTheme.bodyLarge?.copyWith(color: Brand.ink),
       decoration: driverInputDecoration(
         theme,
         label: label,

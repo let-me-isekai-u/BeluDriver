@@ -9,6 +9,7 @@ import '../../providers/broker/order_form_provider.dart';
 import '../../widgets/driver_ui.dart';
 import 'driver_address_map_picker_screen.dart';
 import 'driver_booking_confirm.dart';
+import '../../ui/ui.dart';
 
 class DriverBookingScreen extends StatefulWidget {
   final VoidCallback? onGoToPushedOrdersTab;
@@ -74,10 +75,10 @@ class _DriverBookingView extends StatelessWidget {
               return Container(
                 height: 320,
                 decoration: BoxDecoration(
-                  color: AppColors.darkGreenBg,
+                  color: Brand.canvas,
                   borderRadius: BorderRadius.circular(22),
                   border: Border.all(
-                    color: theme.colorScheme.secondary.withValues(alpha: 0.16),
+                    color: Brand.navy.withValues(alpha: 0.16),
                   ),
                 ),
                 child: Column(
@@ -92,7 +93,7 @@ class _DriverBookingView extends StatelessWidget {
                             child: Text(
                               "Hủy",
                               style: TextStyle(
-                                color: theme.colorScheme.secondary,
+                                color: Brand.navy,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -103,7 +104,7 @@ class _DriverBookingView extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: theme.colorScheme.secondary,
+                              color: Brand.navy,
                             ),
                           ),
                           TextButton(
@@ -119,7 +120,7 @@ class _DriverBookingView extends StatelessWidget {
                             child: Text(
                               "Xong",
                               style: TextStyle(
-                                color: theme.colorScheme.secondary,
+                                color: Brand.navy,
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -142,11 +143,11 @@ class _DriverBookingView extends StatelessWidget {
                                 decoration: BoxDecoration(
                                   border: Border(
                                     top: BorderSide(
-                                      color: theme.colorScheme.secondary,
+                                      color: Brand.navy,
                                       width: 1.5,
                                     ),
                                     bottom: BorderSide(
-                                      color: theme.colorScheme.secondary,
+                                      color: Brand.navy,
                                       width: 1.5,
                                     ),
                                   ),
@@ -162,7 +163,7 @@ class _DriverBookingView extends StatelessWidget {
                                     style: const TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.w600,
-                                      color: Colors.white,
+                                      color: Brand.ink,
                                     ),
                                   ),
                                 ),
@@ -174,7 +175,7 @@ class _DriverBookingView extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
-                              color: theme.colorScheme.secondary,
+                              color: Brand.navy,
                             ),
                           ),
                           Expanded(
@@ -187,11 +188,11 @@ class _DriverBookingView extends StatelessWidget {
                                 decoration: BoxDecoration(
                                   border: Border(
                                     top: BorderSide(
-                                      color: theme.colorScheme.secondary,
+                                      color: Brand.navy,
                                       width: 1.5,
                                     ),
                                     bottom: BorderSide(
-                                      color: theme.colorScheme.secondary,
+                                      color: Brand.navy,
                                       width: 1.5,
                                     ),
                                   ),
@@ -207,7 +208,7 @@ class _DriverBookingView extends StatelessWidget {
                                     style: const TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.w600,
-                                      color: Colors.white,
+                                      color: Brand.ink,
                                     ),
                                   ),
                                 ),
@@ -354,7 +355,7 @@ class _DriverBookingView extends StatelessWidget {
             onTapOutside: (_) => context
                 .read<OrderFormProvider>()
                 .closeAutocompleteSuggestions(),
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: Brand.ink),
             decoration: _fieldDecoration(
               context,
               label: label,
@@ -373,9 +374,9 @@ class _DriverBookingView extends StatelessWidget {
                   ? IconButton(
                       onPressed: onClearSelection,
                       icon: const Icon(Icons.close_rounded),
-                      color: Colors.white70,
+                      color: Brand.inkMuted,
                     )
-                  : const Icon(Icons.search_rounded, color: Colors.white70),
+                  : const Icon(Icons.search_rounded, color: Brand.inkMuted),
             ),
           ),
           if (showSuggestions) ...[
@@ -384,10 +385,10 @@ class _DriverBookingView extends StatelessWidget {
               width: double.infinity,
               constraints: const BoxConstraints(maxHeight: 340),
               decoration: BoxDecoration(
-                color: AppColors.darkGreenBg,
+                color: Brand.canvas,
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                  color: theme.colorScheme.secondary.withValues(alpha: 0.18),
+                  color: Brand.navy.withValues(alpha: 0.18),
                 ),
               ),
               child: ListView.separated(
@@ -398,7 +399,7 @@ class _DriverBookingView extends StatelessWidget {
                 itemCount: suggestions.length,
                 separatorBuilder: (_, _) => Divider(
                   height: 1,
-                  color: Colors.white.withValues(alpha: 0.08),
+                  color: Brand.b50,
                 ),
                 itemBuilder: (context, index) {
                   final suggestion = suggestions[index];
@@ -407,7 +408,7 @@ class _DriverBookingView extends StatelessWidget {
                     onTap: () => onSelected(suggestion),
                     leading: Icon(
                       Icons.location_on_rounded,
-                      color: theme.colorScheme.secondary,
+                      color: Brand.navy,
                       size: 20,
                     ),
                     title: Text(
@@ -422,7 +423,7 @@ class _DriverBookingView extends StatelessWidget {
                         : Text(
                             suggestion.secondaryText,
                             style: const TextStyle(
-                              color: Colors.white70,
+                              color: Brand.inkMuted,
                               fontSize: 12.5,
                             ),
                           ),
@@ -439,7 +440,7 @@ class _DriverBookingView extends StatelessWidget {
               icon: const Icon(Icons.map_outlined, size: 18),
               label: const Text("Chọn trên bản đồ"),
               style: TextButton.styleFrom(
-                foregroundColor: theme.colorScheme.secondary,
+                foregroundColor: Brand.navy,
                 padding: EdgeInsets.zero,
               ),
             ),
@@ -452,7 +453,7 @@ class _DriverBookingView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final gold = theme.colorScheme.secondary;
+    final gold = Brand.navy;
     final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
     final isKeyboardVisible = keyboardInset > 0;
 
@@ -470,17 +471,17 @@ class _DriverBookingView extends StatelessWidget {
             appBar: AppBar(
               title: Text(
                 'Tài xế - Đẩy đơn',
-                style: TextStyle(color: theme.colorScheme.secondary),
+                style: TextStyle(color: Brand.navy),
               ),
               centerTitle: true,
-              iconTheme: IconThemeData(color: theme.colorScheme.secondary),
+              iconTheme: IconThemeData(color: Brand.navy),
               actions: [
                 TextButton(
                   onPressed: () => _goNext(context, provider),
                   child: Text(
                     "TIẾP THEO",
                     style: TextStyle(
-                      color: theme.colorScheme.secondary,
+                      color: Brand.navy,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -545,7 +546,7 @@ class _DriverBookingView extends StatelessWidget {
                       children: [
                         TextField(
                           controller: provider.customerNameController,
-                          style: const TextStyle(color: Colors.white),
+                          style: const TextStyle(color: Brand.ink),
                           decoration: _fieldDecoration(
                             context,
                             label: "Tên khách hàng",
@@ -556,7 +557,7 @@ class _DriverBookingView extends StatelessWidget {
                         TextField(
                           controller: provider.phoneController,
                           keyboardType: TextInputType.phone,
-                          style: const TextStyle(color: Colors.white),
+                          style: const TextStyle(color: Brand.ink),
                           decoration: _fieldDecoration(
                             context,
                             label: "SĐT khách",
@@ -567,7 +568,7 @@ class _DriverBookingView extends StatelessWidget {
                         TextField(
                           controller: provider.noteController,
                           maxLines: 3,
-                          style: const TextStyle(color: Colors.white),
+                          style: const TextStyle(color: Brand.ink),
                           decoration: _fieldDecoration(
                             context,
                             label: "Ghi chú",
@@ -587,7 +588,7 @@ class _DriverBookingView extends StatelessWidget {
                         DropdownButtonFormField<int>(
                           initialValue: provider.selectedType,
                           dropdownColor: theme.colorScheme.primary,
-                          style: const TextStyle(color: Colors.white),
+                          style: const TextStyle(color: Brand.ink),
                           decoration: _fieldDecoration(
                             context,
                             label: "Loại chuyến",
@@ -608,7 +609,7 @@ class _DriverBookingView extends StatelessWidget {
                           TextField(
                             controller: provider.quantityController,
                             keyboardType: TextInputType.number,
-                            style: const TextStyle(color: Colors.white),
+                            style: const TextStyle(color: Brand.ink),
                             decoration: _fieldDecoration(
                               context,
                               label: provider.quantityLabel,
@@ -663,14 +664,14 @@ class _DriverBookingView extends StatelessWidget {
                                 return Theme(
                                   data: Theme.of(context).copyWith(
                                     colorScheme: ColorScheme.light(
-                                      primary: theme.colorScheme.secondary,
+                                      primary: Brand.navy,
                                       onPrimary: Colors.black87,
                                       onSurface: Colors.black87,
                                     ),
                                     textButtonTheme: TextButtonThemeData(
                                       style: TextButton.styleFrom(
                                         foregroundColor:
-                                            theme.colorScheme.secondary,
+                                            Brand.navy,
                                         textStyle: const TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 16,
@@ -691,7 +692,7 @@ class _DriverBookingView extends StatelessWidget {
                               controller: TextEditingController(
                                 text: provider.formatDate(provider.pickupDate),
                               ),
-                              style: const TextStyle(color: Colors.white),
+                              style: const TextStyle(color: Brand.ink),
                               decoration: _fieldDecoration(
                                 context,
                                 label: "Ngày đón",
@@ -721,7 +722,7 @@ class _DriverBookingView extends StatelessWidget {
                                 icon: Icons.access_time,
                                 suffixIcon: const Icon(
                                   Icons.unfold_more_rounded,
-                                  color: Colors.white70,
+                                  color: Brand.inkMuted,
                                 ),
                               ),
                             ),
@@ -763,7 +764,7 @@ class _DriverBookingView extends StatelessWidget {
                         TextField(
                           controller: provider.offerPriceController,
                           keyboardType: TextInputType.number,
-                          style: const TextStyle(color: Colors.white),
+                          style: const TextStyle(color: Brand.ink),
                           decoration: _fieldDecoration(
                             context,
                             label: "Giá chào (offerPrice)",
@@ -775,7 +776,7 @@ class _DriverBookingView extends StatelessWidget {
                         TextField(
                           controller: provider.creatorEarnController,
                           keyboardType: TextInputType.number,
-                          style: const TextStyle(color: Colors.white),
+                          style: const TextStyle(color: Brand.ink),
                           decoration: _fieldDecoration(
                             context,
                             label: "Tiền nhận (creatorEarn)",

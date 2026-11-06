@@ -7,6 +7,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'carrier_vehicle_service.dart';
+import '../../ui/ui.dart';
 
 
 String _time(dynamic iso) => iso == null ? '—' : DateFormat('HH:mm').format(DateTime.parse('$iso').toLocal());
@@ -436,7 +437,7 @@ class _CarrierTheme extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final accent = theme.colorScheme.secondary;
+    final accent = Brand.navy;
     return Theme(
       data: theme.copyWith(
         textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(foregroundColor: accent, disabledForegroundColor: Colors.grey)),

@@ -7,6 +7,7 @@ import '../../app_theme.dart';
 import '../../models/driver/ride_detail_model.dart';
 import '../../providers/driver/ride_detail_provider.dart';
 import '../../widgets/driver_ui.dart';
+import '../../ui/ui.dart';
 
 class RideDetailScreen extends StatelessWidget {
   final int rideId;
@@ -52,7 +53,7 @@ class _RideDetailView extends StatelessWidget {
   Color get _rideSourceColor {
     switch (rideSource) {
       case 1:
-        return const Color(0xFF73B7FF);
+        return Brand.info;
       case 2:
         return const Color(0xFFC49BFF);
       default:
@@ -63,11 +64,11 @@ class _RideDetailView extends StatelessWidget {
   Map<String, dynamic> _getStatusInfo(int status) {
     switch (status) {
       case 2:
-        return {"text": "Đã nhận đơn", "color": const Color(0xFF73B7FF)};
+        return {"text": "Đã nhận đơn", "color": Brand.info};
       case 3:
-        return {"text": "Đang di chuyển", "color": const Color(0xFFFFB347)};
+        return {"text": "Đang di chuyển", "color": Brand.warning};
       case 4:
-        return {"text": "Hoàn thành", "color": const Color(0xFF6ED39B)};
+        return {"text": "Hoàn thành", "color": Brand.success};
       case 5:
         return {"text": "Đã hủy", "color": const Color(0xFFFF7B7B)};
       default:
@@ -94,7 +95,7 @@ class _RideDetailView extends StatelessWidget {
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: _buildAppBar(theme, title: "Chi tiết chuyến"),
         body: Center(
-          child: CircularProgressIndicator(color: theme.colorScheme.secondary),
+          child: CircularProgressIndicator(color: Brand.navy),
         ),
       );
     }
@@ -129,7 +130,7 @@ class _RideDetailView extends StatelessWidget {
               height: 220,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: theme.colorScheme.secondary.withValues(alpha: 0.06),
+                color: Brand.navy.withValues(alpha: 0.06),
               ),
             ),
           ),
@@ -166,13 +167,13 @@ class _RideDetailView extends StatelessWidget {
       title: Text(
         title,
         style: TextStyle(
-          color: theme.colorScheme.secondary,
+          color: Brand.navy,
           fontWeight: FontWeight.w800,
         ),
       ),
       backgroundColor: theme.colorScheme.primary,
-      foregroundColor: theme.colorScheme.secondary,
-      iconTheme: IconThemeData(color: theme.colorScheme.secondary),
+      foregroundColor: Brand.navy,
+      iconTheme: IconThemeData(color: Brand.navy),
     );
   }
 
@@ -188,8 +189,8 @@ class _RideDetailView extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.primaryGreen,
-            AppColors.surfaceGreen.withValues(alpha: 0.94),
+            Brand.navy,
+            Brand.b700,
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -198,7 +199,7 @@ class _RideDetailView extends StatelessWidget {
         border: Border.all(color: statusColor.withValues(alpha: 0.28)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.22),
+            color: const Color(0x1A041565),
             blurRadius: 24,
             offset: const Offset(0, 14),
           ),
@@ -231,7 +232,7 @@ class _RideDetailView extends StatelessWidget {
                     Text(
                       "Theo dõi trạng thái, hành trình và thông tin khách hàng trong một màn hình.",
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSubtle,
+                        color: Brand.inkMuted,
                         height: 1.45,
                       ),
                     ),
@@ -304,7 +305,7 @@ class _RideDetailView extends StatelessWidget {
             label: "Thu nhập ròng",
             value: _formatMoney(ride.netIncome),
             icon: Icons.savings_rounded,
-            accentColor: const Color(0xFF6ED39B),
+            accentColor: Brand.success,
           ),
         ),
       ],
@@ -322,14 +323,14 @@ class _RideDetailView extends StatelessWidget {
             theme,
             label: "Giá chuyến",
             value: _formatMoney(ride.price),
-            valueColor: theme.colorScheme.secondary,
+            valueColor: Brand.navy,
           ),
           const SizedBox(height: 14),
           _buildAmountRow(
             theme,
             label: "Thu nhập ròng",
             value: _formatMoney(ride.netIncome),
-            valueColor: const Color(0xFF6ED39B),
+            valueColor: Brand.success,
           ),
         ],
       ),
@@ -345,7 +346,7 @@ class _RideDetailView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: Brand.b50,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
@@ -357,7 +358,7 @@ class _RideDetailView extends StatelessWidget {
             child: Text(
               label,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.white,
+                color: Brand.ink,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -394,13 +395,13 @@ class _RideDetailView extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 28,
-            backgroundColor: theme.colorScheme.secondary.withValues(
+            backgroundColor: Brand.navy.withValues(
               alpha: 0.14,
             ),
             child: Text(
               ride.customerName.isNotEmpty ? ride.customerName[0] : '?',
               style: theme.textTheme.titleLarge?.copyWith(
-                color: theme.colorScheme.secondary,
+                color: Brand.navy,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -413,7 +414,7 @@ class _RideDetailView extends StatelessWidget {
                 Text(
                   ride.customerName,
                   style: theme.textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
+                    color: Brand.ink,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -422,8 +423,8 @@ class _RideDetailView extends StatelessWidget {
                   phone.isEmpty ? "Chưa có số điện thoại" : phone,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: phone.isEmpty
-                        ? const Color(0xFFFFA3A3)
-                        : AppColors.textSubtle,
+                        ? Brand.danger
+                        : Brand.inkMuted,
                   ),
                 ),
               ],
@@ -460,7 +461,7 @@ class _RideDetailView extends StatelessWidget {
           _buildRouteStop(
             theme,
             icon: Icons.trip_origin_rounded,
-            color: const Color(0xFF6ED39B),
+            color: Brand.success,
             label: "Điểm đón",
             title: "${ride.fromProvince} - ${ride.fromDistrict}",
             address: ride.fromAddress,
@@ -469,7 +470,7 @@ class _RideDetailView extends StatelessWidget {
             width: 2,
             height: 28,
             margin: const EdgeInsets.only(left: 11, top: 6, bottom: 6),
-            color: theme.colorScheme.secondary.withValues(alpha: 0.25),
+            color: Brand.navy.withValues(alpha: 0.25),
           ),
           _buildRouteStop(
             theme,
@@ -509,7 +510,7 @@ class _RideDetailView extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.04),
+              color: Brand.b50,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.07),
@@ -529,7 +530,7 @@ class _RideDetailView extends StatelessWidget {
                 Text(
                   title,
                   style: theme.textTheme.titleSmall?.copyWith(
-                    color: Colors.white,
+                    color: Brand.ink,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -537,7 +538,7 @@ class _RideDetailView extends StatelessWidget {
                 Text(
                   address.isEmpty ? "Chưa có địa chỉ chi tiết" : address,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSubtle,
+                    color: Brand.inkMuted,
                     height: 1.4,
                   ),
                 ),
@@ -598,7 +599,7 @@ class _RideDetailView extends StatelessWidget {
       margin: EdgeInsets.only(bottom: isLast ? 0 : 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: Brand.b50,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -609,7 +610,7 @@ class _RideDetailView extends StatelessWidget {
             child: Text(
               label,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSubtle,
+                color: Brand.inkMuted,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -621,7 +622,7 @@ class _RideDetailView extends StatelessWidget {
               value,
               textAlign: TextAlign.right,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.white,
+                color: Brand.ink,
                 fontWeight: FontWeight.w700,
                 height: 1.4,
               ),
@@ -650,15 +651,15 @@ class _RideDetailView extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
         decoration: BoxDecoration(
-          color: AppColors.primaryGreen,
+          color: Brand.navy,
           border: Border(
             top: BorderSide(
-              color: theme.colorScheme.secondary.withValues(alpha: 0.16),
+              color: Brand.navy.withValues(alpha: 0.16),
             ),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.18),
+              color: const Color(0x1A041565),
               blurRadius: 14,
               offset: const Offset(0, -4),
             ),
@@ -691,8 +692,8 @@ class _RideDetailView extends StatelessWidget {
             label: Text(isStart ? "Bắt đầu di chuyển" : "Xác nhận hoàn thành"),
             style: ElevatedButton.styleFrom(
               backgroundColor: isStart
-                  ? const Color(0xFF73B7FF)
-                  : const Color(0xFF6ED39B),
+                  ? Brand.info
+                  : Brand.success,
               foregroundColor: Colors.black87,
               textStyle: const TextStyle(
                 fontSize: 16,

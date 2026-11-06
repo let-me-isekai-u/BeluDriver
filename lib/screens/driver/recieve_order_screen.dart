@@ -10,6 +10,7 @@ import '../../widgets/driver_ui.dart';
 import '../popup_list/insufficient_balance_popup.dart';
 import '../popup_list/has_accepted_popup.dart';
 import '../popup_list/received_success_popup.dart';
+import '../../ui/ui.dart';
 
 class RecieveOrderScreen extends StatelessWidget {
   const RecieveOrderScreen({
@@ -156,7 +157,7 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFFD700),
+              backgroundColor: Brand.lane,
             ),
             child: const Text("Không"),
           ),
@@ -313,7 +314,7 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
+              color: const Color(0x1A041565),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -321,7 +322,7 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
         ),
         child: Row(
           children: [
-            Icon(Icons.swap_vert_rounded, color: theme.colorScheme.secondary),
+            Icon(Icons.swap_vert_rounded, color: Brand.navy),
             const SizedBox(width: 10),
             Expanded(
               child: DropdownButtonHideUnderline(
@@ -380,7 +381,7 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
-                color: theme.colorScheme.secondary,
+                color: Brand.navy,
               ),
             ),
           ),
@@ -448,10 +449,10 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
           padding: const EdgeInsets.all(2),
           child: Container(
             decoration: BoxDecoration(
-              color: AppColors.surfaceGreen.withValues(alpha: 0.42),
+              color: Brand.b50.withValues(alpha: 0.42),
               borderRadius: BorderRadius.circular(22),
               border: Border.all(
-                color: theme.colorScheme.secondary.withValues(alpha: 0.16),
+                color: Brand.navy.withValues(alpha: 0.16),
               ),
             ),
             child: Padding(
@@ -502,7 +503,7 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.12),
+                      color: const Color(0x1A041565),
                       borderRadius: BorderRadius.circular(18),
                     ),
                     child: Column(
@@ -520,7 +521,7 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
                             child: Container(
                               width: 2,
                               height: 22,
-                              color: Colors.white.withValues(alpha: 0.14),
+                              color: Brand.b50,
                             ),
                           ),
                         ),
@@ -571,7 +572,7 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
               child: Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.04),
+                  color: Brand.b50,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(
@@ -580,7 +581,7 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
                     Text(
                       "Giá tiền",
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSubtle,
+                        color: Brand.inkMuted,
                       ),
                     ),
                     const SizedBox(height: 4),

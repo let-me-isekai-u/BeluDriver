@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/routes/register_route_model.dart';
 import '../../providers/routes/register_route_provider.dart';
+import '../../ui/ui.dart';
 
 // ─── Màu sắc dùng chung ─────────────────────────────────────────────────────
 const _kPopupBg = Color(0xFF0D3D22);
@@ -167,7 +168,7 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
               borderRadius: BorderRadius.circular(28),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.45),
+                  color: const Color(0x33041565),
                   blurRadius: 32,
                   offset: const Offset(0, 12),
                 ),
@@ -195,7 +196,7 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
                       child: Text(
                         'Không có dữ liệu tỉnh',
                         style: TextStyle(
-                          color: Colors.white54,
+                          color: Brand.inkMuted,
                           fontSize: 15,
                         ),
                       ),
@@ -253,7 +254,7 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.22),
+                  color: const Color(0x1A041565),
                   borderRadius: BorderRadius.circular(28),
                 ),
                 child: const Center(
@@ -273,7 +274,7 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
       decoration: const BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: Colors.white10, width: 1),
+          bottom: BorderSide(color: Brand.line, width: 1),
         ),
       ),
       child: Row(
@@ -333,7 +334,7 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
           color: isOpen ? _kPopupBgItem : _kPopupBgSoft,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isOpen ? _kGold : Colors.white24,
+            color: isOpen ? _kGold : Brand.inkSubtle,
             width: isOpen ? 1.5 : 1,
           ),
         ),
@@ -341,7 +342,7 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
           children: [
             Icon(
               Icons.add_location_alt_outlined,
-              color: canAddMore ? _kGold : Colors.white30,
+              color: canAddMore ? _kGold : Brand.inkSubtle,
               size: 20,
             ),
             const SizedBox(width: 10),
@@ -353,7 +354,7 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: canAddMore ? _kWhite : Colors.white38,
+                  color: canAddMore ? _kWhite : Brand.inkSubtle,
                 ),
               ),
             ),
@@ -362,7 +363,7 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
                 turns: isOpen ? 0.5 : 0,
                 duration: const Duration(milliseconds: 220),
                 child: const Icon(Icons.keyboard_arrow_down_rounded,
-                    color: Colors.white54, size: 22),
+                    color: Brand.inkMuted, size: 22),
               ),
           ],
         ),
@@ -382,7 +383,7 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
           decoration: BoxDecoration(
             color: _kPopupBgSoft,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white12),
+            border: Border.all(color: Brand.line),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -402,11 +403,11 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
                   decoration: InputDecoration(
                     hintText: 'Tìm kiếm tỉnh...',
                     hintStyle: const TextStyle(
-                      color: Colors.white38,
+                      color: Brand.inkSubtle,
                       fontSize: 14,
                     ),
                     prefixIcon: const Icon(Icons.search_rounded,
-                        color: Colors.white38, size: 20),
+                        color: Brand.inkSubtle, size: 20),
                     suffixIcon: _searchText.isNotEmpty
                         ? GestureDetector(
                       onTap: () {
@@ -414,7 +415,7 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
                         setState(() => _searchText = '');
                       },
                       child: const Icon(Icons.close_rounded,
-                          color: Colors.white38, size: 18),
+                          color: Brand.inkSubtle, size: 18),
                     )
                         : null,
                     filled: true,
@@ -429,7 +430,7 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
                 ),
               ),
               // Divider
-              const Divider(height: 1, color: Colors.white10),
+              const Divider(height: 1, color: Brand.line),
               // List
               ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 220),
@@ -440,7 +441,7 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
                     child: Text(
                       'Không tìm thấy tỉnh phù hợp',
                       style: TextStyle(
-                        color: Colors.white38,
+                        color: Brand.inkSubtle,
                         fontSize: 14,
                       ),
                     ),
@@ -451,7 +452,7 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   itemCount: options.length,
                   separatorBuilder: (_, __) =>
-                  const Divider(height: 1, color: Colors.white10),
+                  const Divider(height: 1, color: Brand.line),
                   itemBuilder: (context, index) {
                     final item = options[index];
                     return _ProvinceListTile(
@@ -505,18 +506,18 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
       decoration: BoxDecoration(
         color: _kPopupBgSoft,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: Brand.line),
       ),
       child: Row(
         children: [
           Icon(Icons.location_off_outlined,
-              color: Colors.white24, size: 18),
+              color: Brand.inkSubtle, size: 18),
           const SizedBox(width: 8),
           const Text(
             'Bạn chưa chọn tỉnh nào',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.white30,
+              color: Brand.inkSubtle,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -531,7 +532,7 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Colors.white10)),
+        border: Border(top: BorderSide(color: Brand.line)),
       ),
       child: Row(
         children: [
@@ -545,13 +546,13 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(120, 52),
               side: BorderSide(
-                color: selectedIds.isEmpty ? Colors.white12 : Colors.white38,
+                color: selectedIds.isEmpty ? Brand.line : Brand.inkSubtle,
               ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(28),
               ),
               foregroundColor:
-              selectedIds.isEmpty ? Colors.white24 : Colors.white,
+              selectedIds.isEmpty ? Brand.inkSubtle : Colors.white,
               textStyle: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
@@ -618,7 +619,7 @@ class _SlotIndicator extends StatelessWidget {
               height: 10,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: active ? _kGold : Colors.white.withOpacity(0.15),
+                color: active ? _kGold : Brand.b50,
                 boxShadow: active
                     ? [
                   BoxShadow(
@@ -637,7 +638,7 @@ class _SlotIndicator extends StatelessWidget {
           '$filled/$max tỉnh',
           style: const TextStyle(
             fontSize: 11,
-            color: Colors.white38,
+            color: Brand.inkSubtle,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -691,7 +692,7 @@ class _ProvinceListTile extends StatelessWidget {
                     'HN ↔ ${item.provinceName}',
                     style: const TextStyle(
                       fontSize: 12,
-                      color: Colors.white38,
+                      color: Brand.inkSubtle,
                       fontWeight: FontWeight.w500,
                     ),
                   ),

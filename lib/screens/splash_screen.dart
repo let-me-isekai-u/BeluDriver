@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/api_service.dart';
 import '../services/kyc_service.dart';
+import '../ui/ui.dart';
 
 void appLog(String tag, String msg) {
   debugPrint('[$tag] $msg');
@@ -328,7 +329,7 @@ class _SplashScreenState extends State<SplashScreen>
                     end: Alignment.bottomCenter,
                     colors: [
                       Colors.transparent,
-                      Colors.black.withOpacity(0.45),
+                      const Color(0x33041565),
                     ],
                   ),
                 ),
@@ -348,7 +349,7 @@ class _SplashScreenState extends State<SplashScreen>
                     Text(
                       'Đang tải...',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.70),
+                        color: Brand.inkMuted,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                         letterSpacing: 0.6,
@@ -378,7 +379,7 @@ class _ShimmerLoadingBar extends StatelessWidget {
         return Container(
           height: 4,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.15),
+            color: Brand.b50,
             borderRadius: BorderRadius.circular(4),
           ),
           child: FractionallySizedBox(
@@ -389,7 +390,7 @@ class _ShimmerLoadingBar extends StatelessWidget {
               child: Stack(
                 children: [
                   Container(
-                    color: Colors.white.withOpacity(0.25),
+                    color: Colors.white,
                   ),
                   FractionallySizedBox(
                     alignment: Alignment(
@@ -402,7 +403,7 @@ class _ShimmerLoadingBar extends StatelessWidget {
                         gradient: LinearGradient(
                           colors: [
                             Colors.transparent,
-                            Colors.white.withOpacity(0.75),
+                            Brand.inkMuted,
                             Colors.transparent,
                           ],
                         ),

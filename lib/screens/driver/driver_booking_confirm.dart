@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/broker_ride_models.dart';
 import '../../services/api_service.dart';
 import '../popup_list/action_success_popup.dart';
+import '../../ui/ui.dart';
 
 class DriverBookingConfirmScreen extends StatefulWidget {
   final CreateBrokerRideRequest request;
@@ -48,7 +49,7 @@ class _DriverBookingConfirmScreenState
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: theme.colorScheme.secondary,
+                color: Brand.navy,
               ),
             ),
           ),
@@ -117,14 +118,14 @@ class _DriverBookingConfirmScreenState
           children: [
             Row(
               children: [
-                Icon(icon, color: Theme.of(context).colorScheme.secondary),
+                Icon(icon, color: Brand.navy),
                 const SizedBox(width: 8),
                 Text(
                   title,
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.secondary,
+                    color: Brand.navy,
                   ),
                 ),
               ],
@@ -242,12 +243,12 @@ class _DriverBookingConfirmScreenState
         title: Text(
           'Xác nhận đẩy đơn',
           style: TextStyle(
-            color: theme.colorScheme.secondary,
+            color: Brand.navy,
             fontWeight: FontWeight.bold,
           ),
         ),
         centerTitle: true,
-        iconTheme: IconThemeData(color: theme.colorScheme.secondary),
+        iconTheme: IconThemeData(color: Brand.navy),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -301,7 +302,7 @@ class _DriverBookingConfirmScreenState
                   "Giá chào:",
                   req.offerPrice,
                   isBold: true,
-                  color: theme.colorScheme.secondary,
+                  color: Brand.navy,
                 ),
                 _buildPriceRow("Tiền nhận:", req.creatorEarn),
               ],
@@ -333,7 +334,7 @@ class _DriverBookingConfirmScreenState
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 50),
                   side: BorderSide(
-                    color: theme.colorScheme.secondary,
+                    color: Brand.navy,
                     width: 2,
                   ),
                   shape: RoundedRectangleBorder(
@@ -345,7 +346,7 @@ class _DriverBookingConfirmScreenState
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.secondary,
+                    color: Brand.navy,
                   ),
                 ),
               ),
@@ -360,7 +361,7 @@ class _DriverBookingConfirmScreenState
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
                   ),
-                  backgroundColor: theme.colorScheme.secondary,
+                  backgroundColor: Brand.navy,
                   foregroundColor: Colors.black87,
                 ),
                 child: _isCreatingRide
@@ -369,7 +370,7 @@ class _DriverBookingConfirmScreenState
                         width: 22,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.black87,
+                          color: Colors.white,
                         ),
                       )
                     : const Text(

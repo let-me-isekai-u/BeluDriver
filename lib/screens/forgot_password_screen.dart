@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import 'driver/driver_login_screen.dart';
+import '../ui/ui.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -73,7 +74,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       final res = await ApiService.sendForgotPasswordOtp(email: email);
 
       if (res.statusCode == 200) {
-        _showSnack("Đã gửi mã xác thực!", color: Theme.of(context).colorScheme.secondary);
+        _showSnack("Đã gửi mã xác thực!", color: Brand.navy);
         _startCountdown();
       } else {
         _showSnack("Gửi mã thất bại");
@@ -98,7 +99,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       );
 
       if (res.statusCode == 200) {
-        _showSnack("Đổi mật khẩu thành công!", color: Theme.of(context).colorScheme.secondary);
+        _showSnack("Đổi mật khẩu thành công!", color: Brand.navy);
 
         Navigator.pushReplacement(
           context,
@@ -133,7 +134,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       ),
       filled: true,
       fillColor: theme.colorScheme.surface.withOpacity(0.65),
-      prefixIcon: Icon(icon, color: theme.colorScheme.secondary),
+      prefixIcon: Icon(icon, color: Brand.navy),
       suffixIcon: suffixIcon,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -145,7 +146,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: theme.colorScheme.secondary, width: 1.8),
+        borderSide: BorderSide(color: Brand.navy, width: 1.8),
       ),
     );
   }
@@ -159,7 +160,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         title: Text(
           "Quên mật khẩu",
           style: theme.appBarTheme.titleTextStyle?.copyWith(
-            color: theme.colorScheme.secondary, // GOLD
+            color: Brand.navy, // GOLD
           ),
         ),
       ),
@@ -305,7 +306,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   child: Text(
                     "Quay về đăng nhập",
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.secondary, // GOLD link
+                      color: Brand.navy, // GOLD link
                       fontWeight: FontWeight.w700,
                     ),
                   ),

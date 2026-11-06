@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../ui/ui.dart';
 
 class KycDepositRequirementPopup extends StatelessWidget {
   final num amount;
@@ -54,7 +55,7 @@ class KycDepositRequirementPopup extends StatelessWidget {
               textAlign: TextAlign.center,
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                color: Colors.white,
               ),
             ),
             const SizedBox(height: 12),
@@ -62,7 +63,7 @@ class KycDepositRequirementPopup extends StatelessWidget {
               textAlign: TextAlign.center,
               text: TextSpan(
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.black87,
+                  color: Colors.white,
                   height: 1.5,
                 ),
                 children: [
@@ -112,7 +113,7 @@ class KycDepositRequirementPopup extends StatelessWidget {
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: theme.colorScheme.secondary,
+                  foregroundColor: Brand.navy,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
