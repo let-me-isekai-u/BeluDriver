@@ -40,15 +40,15 @@ class ApiService {
   };
 
   // Lỗi fallback
-  static http.Response _errorResponse(Object e) {
+  static http.Response _errorResponse(Object e, {String? message}) {
     final body = jsonEncode({
       "success": false,
-      "message": "Lỗi kết nối tới server: $e",
+      "message": message ?? "Lỗi kết nối tới server: $e",
     });
-    return http.Response(
-      body,
+    return http.Response.bytes(
+      utf8.encode(body),
       500,
-      headers: {"Content-Type": "application/json"},
+      headers: {"content-type": "application/json; charset=utf-8"},
     );
   }
 
@@ -73,10 +73,9 @@ class ApiService {
           .post(url, headers: _defaultHeaders(), body: body)
           .timeout(const Duration(seconds: 20));
     } catch (e) {
-      return http.Response(
-        jsonEncode({"message": "Lỗi kết nối mạng: $e"}),
-        500,
-        headers: {"Content-Type": "application/json"},
+      return _errorResponse(
+        e,
+        message: "Không kết nối được máy chủ. Vui lòng kiểm tra mạng và thử lại.",
       );
     }
   }
@@ -423,6 +422,7 @@ class ApiService {
     required String accessToken,
     required int id, // id của đơn
     required int rideSource, // 1 = hệ thống, 2 = đơn đẩy tài xế
+    String? idempotencyKey,
   }) async {
     final url = Uri.parse(
       "$apiOrigin/api/rideapi/accept/$id/$rideSource",
@@ -437,6 +437,7 @@ class ApiService {
             headers: {
               "Authorization": "Bearer $accessToken",
               "Accept": "application/json",
+              if (idempotencyKey != null) "Idempotency-Key": idempotencyKey,
             },
           )
           .timeout(const Duration(seconds: 20));
@@ -1038,6 +1039,7 @@ class ApiService {
   static Future<http.Response> cancelBrokerRide({
     required String accessToken,
     required int rideId,
+    String? idempotencyKey,
   }) async {
     final url = Uri.parse(
       "$apiOrigin/api/rideapi/cancel-broker/$rideId",
@@ -1046,7 +1048,6 @@ class ApiService {
     print("=== CANCEL BROKER RIDE ===");
     print("URL: $url");
     print("RideId: $rideId");
-    print("Token: ${accessToken.substring(0, 20)}...");
 
     try {
       final response = await http
@@ -1055,6 +1056,7 @@ class ApiService {
             headers: {
               "Accept": "application/json",
               "Authorization": "Bearer $accessToken",
+              if (idempotencyKey != null) "Idempotency-Key": idempotencyKey,
             },
           )
           .timeout(const Duration(seconds: 20));

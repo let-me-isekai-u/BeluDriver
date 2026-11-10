@@ -45,7 +45,7 @@ class ApiChatService {
 
   dynamic _decodeBody(http.Response response) {
     if (response.body.isEmpty) return null;
-    return jsonDecode(response.body);
+    return jsonDecode(utf8.decode(response.bodyBytes));
   }
 
   T _unwrapData<T>(http.Response response, T Function(dynamic json) parser) {

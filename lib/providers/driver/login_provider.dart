@@ -41,11 +41,9 @@ class LoginProvider extends ChangeNotifier {
       );
 
       debugPrint('[LOGIN] statusCode = ${res.statusCode}');
-      debugPrint('[LOGIN] body = ${res.body}');
+      final data = jsonDecode(utf8.decode(res.bodyBytes));
 
       if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-
         final accessToken = data["accessToken"] ?? "";
         final refreshToken = data["refreshToken"] ?? "";
         final fullName = data["fullName"] ?? "";
@@ -81,7 +79,6 @@ class LoginProvider extends ChangeNotifier {
           try {
             final kycRes = await KYCService.getKYC(accessToken);
             debugPrint('[LOGIN] preload GET /kyc statusCode = ${kycRes.statusCode}');
-            debugPrint('[LOGIN] preload GET /kyc body = ${kycRes.body}');
 
             if (kycRes.statusCode >= 200 && kycRes.statusCode < 300) {
               await prefs.setString("cachedKycJson", kycRes.body);
@@ -94,12 +91,12 @@ class LoginProvider extends ChangeNotifier {
 
         return null;
       } else {
-        final err = jsonDecode(res.body);
-        return err["message"] ?? "Sai tài khoản hoặc mật khẩu";
+        final message = data is Map ? data["message"] : null;
+        return message is String ? message : "Không thể đăng nhập. Vui lòng thử lại.";
       }
     } catch (e) {
-      debugPrint('[LOGIN] error = $e');
-      return "Lỗi kết nối: $e";
+      debugPrint('[LOGIN] error = ${e.runtimeType}');
+      return "Không thể đăng nhập. Vui lòng thử lại.";
     } finally {
       isLoading = false;
       notifyListeners();

@@ -1,16 +1,17 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/driver_chat_broker_ride_meta_model.dart';
 import '../../models/driver_chat_message_model.dart';
 import '../../providers/chat_provider.dart';
 import '../../services/api_chat_service.dart';
 import '../../services/api_service.dart';
+import '../../services/chat_session.dart';
 import '../driver/driver_booking_screen.dart';
 import '../../ui/ui.dart';
 
@@ -19,15 +20,10 @@ class DriverGroupChatScreen extends StatelessWidget {
 
   final DriverChatGroupDto? initialGroup;
 
-  Future<String?> _readAccessToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('accessToken');
-  }
-
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => ChatProvider(tokenProvider: _readAccessToken),
+      create: (_) => ChatProvider(tokenProvider: ChatSession.accessToken),
       child: _DriverGroupChatView(initialGroup: initialGroup),
     );
   }
@@ -62,6 +58,19 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
   bool _isOpeningCreateRide = false;
   int? _lastRenderedMessageId;
   final Set<int> _processingBrokerRideIds = <int>{};
+  final Map<(int, bool), String> _brokerActionKeys = {};
+
+  String _brokerActionKey(int rideId, {required bool accept}) =>
+      _brokerActionKeys.putIfAbsent((rideId, accept), () {
+        final random = Random.secure();
+        return List.generate(16, (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0')).join();
+      });
+
+  void _allowNewBrokerAction(int rideId, int status, {required bool accept}) {
+    if (status >= 400 && status < 500 && status != 401 && status != 409) {
+      _brokerActionKeys.remove((rideId, accept));
+    }
+  }
 
   @override
   void initState() {
@@ -108,9 +117,9 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
   }
 
   Future<void> _initChatScreen() async {
+    if (!mounted) return;
     final provider = _provider ?? context.read<ChatProvider>();
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('accessToken') ?? '';
+    final token = await ChatSession.accessToken();
 
     int? driverId;
     if (token.isNotEmpty) {
@@ -127,17 +136,13 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
     if (_accessToken.isEmpty) return;
 
     await provider.initChat(
-      accessToken: _accessToken,
       groupId: widget.initialGroup?.id,
       initialGroup: widget.initialGroup,
       autoMarkRead: true,
     );
     if (!mounted || !provider.hasGroup) return;
 
-    await provider.connectRealtime(
-      accessToken: _accessToken,
-      groupId: provider.groupId,
-    );
+    await provider.connectRealtime(groupId: provider.groupId);
 
     if (!mounted) return;
     if (provider.messages.isNotEmpty) {
@@ -308,10 +313,18 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
     });
 
     try {
+      final token = await ChatSession.accessToken();
+      if (!mounted) return;
+      if (token.isEmpty) {
+        messenger.showSnackBar(const SnackBar(content: Text('Vui lòng đăng nhập lại.')));
+        return;
+      }
       final res = await ApiService.cancelBrokerRide(
-        accessToken: _accessToken,
+        accessToken: token,
         rideId: ride.brokerRideId,
+        idempotencyKey: _brokerActionKey(ride.brokerRideId, accept: false),
       );
+      _allowNewBrokerAction(ride.brokerRideId, res.statusCode, accept: false);
 
       if (!mounted) return;
 
@@ -361,11 +374,19 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
     });
 
     try {
+      final token = await ChatSession.accessToken();
+      if (!mounted) return;
+      if (token.isEmpty) {
+        messenger.showSnackBar(const SnackBar(content: Text('Vui lòng đăng nhập lại.')));
+        return;
+      }
       final res = await ApiService.acceptRide(
-        accessToken: _accessToken,
+        accessToken: token,
         id: ride.brokerRideId,
         rideSource: RideSource.brokerRide,
+        idempotencyKey: _brokerActionKey(ride.brokerRideId, accept: true),
       );
+      _allowNewBrokerAction(ride.brokerRideId, res.statusCode, accept: true);
 
       if (!mounted) return;
 
@@ -570,6 +591,12 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
         ],
       ),
       actions: [
+        if (!connected && !provider.isRealtimeConnecting && _accessToken.isNotEmpty)
+          IconButton(
+            tooltip: 'Kết nối lại chat',
+            onPressed: _initChatScreen,
+            icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+          ),
         if (_accessToken.isNotEmpty)
           IconButton(
             tooltip: 'Đẩy đơn vào nhóm',
@@ -601,19 +628,14 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
     if (!provider.hasGroup) {
       return _ErrorState(
         message: provider.error ?? 'Hiện chưa có nhóm chat hoạt động.',
-        onRetry: () =>
-            provider.initChat(accessToken: _accessToken, autoMarkRead: true),
+        onRetry: _initChatScreen,
       );
     }
 
     if (provider.error != null && messages.isEmpty) {
       return _ErrorState(
         message: provider.error!,
-        onRetry: () => provider.initChat(
-          accessToken: _accessToken,
-          groupId: provider.groupId,
-          autoMarkRead: true,
-        ),
+        onRetry: _initChatScreen,
       );
     }
 

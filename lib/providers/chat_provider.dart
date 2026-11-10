@@ -11,9 +11,11 @@ class ChatProvider extends ChangeNotifier {
   static const String _joinGroupMethod = 'JoinDriverGroup';
   static const String _leaveGroupMethod = 'LeaveDriverGroup';
   static const String _newMessageEventName = 'driver-group.message.created';
+  static const String _messageUpdatedEventName = 'driver-group.message.updated';
   static const String _groupChangedEventName = 'driver-group.group.changed';
 
   final SignalRService _signalRService = SignalRService();
+  final Future<String?> Function() _tokenProvider;
   final ApiChatService _chatService;
 
   DriverChatGroupDto? _groupInfo;
@@ -36,11 +38,9 @@ class ChatProvider extends ChangeNotifier {
 
   String? _error;
 
-  bool _hasRegisteredRealtimeListeners = false;
-  bool _hasRegisteredConnectionLifecycleListeners = false;
-
   ChatProvider({required Future<String?> Function() tokenProvider})
-    : _chatService = ApiChatService(tokenProvider: tokenProvider);
+    : _tokenProvider = tokenProvider,
+      _chatService = ApiChatService(tokenProvider: tokenProvider);
 
   int? get groupId => _groupId;
   List<DriverChatMessageModel> get messages => List.unmodifiable(_messages);
@@ -113,6 +113,11 @@ class ChatProvider extends ChangeNotifier {
     DriverChatGroupDto group, {
     required bool explicitSelection,
   }) {
+    if (_groupId != group.id) {
+      _messages = [];
+      _hasMoreMessages = false;
+      _nextBeforeMessageId = null;
+    }
     _groupId = group.id;
     _groupInfo = group;
     _isGroupUnavailable = !group.isActive;
@@ -202,7 +207,6 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<void> initChat({
-    required String accessToken,
     int? groupId,
     DriverChatGroupDto? initialGroup,
     bool autoMarkRead = true,
@@ -283,14 +287,24 @@ class ChatProvider extends ChangeNotifier {
     safeNotify();
 
     try {
+      final before = {for (final message in _messages) message.id: message};
       final page = await _chatService.getDriverGroupMessages(
         groupId: resolvedGroupId,
         take: take,
       );
 
-      _messages = _sortMessagesAscending(page.items.map(_mapMessage).toList());
-      _hasMoreMessages = page.hasMore;
-      _nextBeforeMessageId = page.nextBeforeMessageId;
+      if (_isDisposed || _groupId != resolvedGroupId) return;
+      if (before.isEmpty) {
+        _hasMoreMessages = page.hasMore;
+        _nextBeforeMessageId = page.nextBeforeMessageId;
+      }
+      final merged = {for (final message in _messages) message.id: message};
+      for (final message in page.items.map(_mapMessage)) {
+        if (identical(merged[message.id], before[message.id])) {
+          merged[message.id] = message;
+        }
+      }
+      _messages = _sortMessagesAscending(merged.values.toList());
       _isLoadingMessages = false;
       safeNotify();
 
@@ -341,57 +355,37 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> connectRealtime({
-    required String accessToken,
-    int? groupId,
-  }) async {
+  Future<void> connectRealtime({int? groupId}) async {
+    if (_isDisposed || _isRealtimeConnected || _isRealtimeConnecting) return;
     if (groupId != null) {
       _groupId = groupId;
       _hasExplicitGroupSelection = true;
-    } else {
-      _groupId = _groupId;
-    }
-    final resolvedGroupId = _groupId ?? await ensurePrimaryGroup();
-
-    if (resolvedGroupId == null) {
-      _error = 'Hiện chưa có nhóm chat hoạt động.';
-      safeNotify();
-      return;
-    }
-
-    if (_isRealtimeConnected || _isRealtimeConnecting) {
-      return;
     }
 
     _isRealtimeConnecting = true;
     safeNotify();
 
     try {
+      final resolvedGroupId = _groupId ?? await ensurePrimaryGroup();
+      if (_isDisposed || resolvedGroupId == null) return;
+
       await _signalRService.connect(
         hubUrl: _chatHubUrl,
-        accessToken: accessToken,
+        accessTokenFactory: () async => await _tokenProvider() ?? '',
+        configure: () {
+          _registerConnectionLifecycleListeners();
+          _registerRealtimeListeners();
+        },
       );
-
-      if (!_hasRegisteredConnectionLifecycleListeners) {
-        _registerConnectionLifecycleListeners();
-        _hasRegisteredConnectionLifecycleListeners = true;
-      }
-
-      if (!_hasRegisteredRealtimeListeners) {
-        _registerRealtimeListeners();
-        _hasRegisteredRealtimeListeners = true;
-      }
-
+      if (_isDisposed) return;
       await _signalRService.invoke(_joinGroupMethod, args: [resolvedGroupId]);
-
       _isRealtimeConnected = true;
-      _isRealtimeConnecting = false;
-      safeNotify();
+      await loadMessages(autoMarkRead: true);
     } catch (e) {
       _isRealtimeConnected = false;
+      _log('connectRealtime failed: ${e.runtimeType}');
+    } finally {
       _isRealtimeConnecting = false;
-      _error = 'Không thể kết nối chat realtime.';
-      _log('connectRealtime error: $e');
       safeNotify();
     }
   }
@@ -416,7 +410,7 @@ class ChatProvider extends ChangeNotifier {
 
         await _refreshGroupState();
         if (_groupId != null) {
-          await loadMessages(groupId: _groupId!, autoMarkRead: false);
+          await loadMessages(autoMarkRead: true);
         }
       } catch (e) {
         _isRealtimeConnected = false;
@@ -430,6 +424,7 @@ class ChatProvider extends ChangeNotifier {
       _isRealtimeConnected = false;
       _isRealtimeConnecting = false;
       safeNotify();
+      Future<void>.delayed(const Duration(seconds: 1), connectRealtime);
     });
   }
 
@@ -463,85 +458,70 @@ class ChatProvider extends ChangeNotifier {
   }
 
   void _registerRealtimeListeners() {
-    _signalRService.off(_newMessageEventName);
-    _signalRService.off(_groupChangedEventName);
-
-    _signalRService.on(_newMessageEventName, (arguments) async {
-      if (_isDisposed || arguments == null || arguments.isEmpty) {
-        return;
-      }
-
-      try {
-        final raw = arguments.first;
-        DriverChatMessageModel? message;
-
-        if (raw is Map) {
-          message = DriverChatMessageModel.fromJson(
-            Map<String, dynamic>.from(raw),
-          );
-        } else if (raw is String) {
-          final decoded = jsonDecode(raw);
-          if (decoded is Map) {
-            message = DriverChatMessageModel.fromJson(
-              Map<String, dynamic>.from(decoded),
-            );
-          }
-        }
-
-        if (message == null) {
-          return;
-        }
-
-        addIncomingMessage(message);
-
-        if (message.groupId == _groupId) {
-          await markAsRead(silent: true);
-        }
-      } catch (e) {
-        _log('parse realtime message error: $e');
-      }
-    });
-
+    _signalRService.on(
+      _newMessageEventName,
+      (arguments) => _onMessage(arguments),
+    );
+    _signalRService.on(
+      _messageUpdatedEventName,
+      (arguments) => _onMessage(arguments, update: true),
+    );
     _signalRService.on(_groupChangedEventName, (arguments) async {
-      if (_isDisposed) return;
-
-      final changedGroupId = _extractEventGroupId(arguments);
-      if (changedGroupId != null &&
-          _groupId != null &&
-          changedGroupId != _groupId) {
-        return;
-      }
-
+      if (_isDisposed || _extractEventGroupId(arguments) != _groupId) return;
       try {
         await _refreshGroupState();
-        if (_groupId != null) {
-          await loadMessages(groupId: _groupId!, autoMarkRead: false);
-        }
       } catch (e) {
-        _log('group changed refresh error: $e');
+        _log('group state refresh failed: ${e.runtimeType}');
       }
     });
   }
 
-  Future<void> disconnectRealtime() async {
+  Future<void> _onMessage(
+    List<Object?>? arguments, {
+    bool update = false,
+  }) async {
+    if (_isDisposed || arguments == null || arguments.isEmpty) {
+      return;
+    }
+
     try {
-      if (_groupId != null && _signalRService.isConnected) {
-        try {
-          await _signalRService.invoke(_leaveGroupMethod, args: [_groupId!]);
-        } catch (e) {
-          _log('leave group error: $e');
+      final raw = arguments.first;
+      DriverChatMessageModel? message;
+
+      if (raw is Map) {
+        message = DriverChatMessageModel.fromJson(
+          Map<String, dynamic>.from(raw),
+        );
+      } else if (raw is String) {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map) {
+          message = DriverChatMessageModel.fromJson(
+            Map<String, dynamic>.from(decoded),
+          );
         }
       }
 
-      _signalRService.off(_newMessageEventName);
-      _signalRService.off(_groupChangedEventName);
-      await _signalRService.disconnect();
+      if (message == null || message.id <= 0 || message.groupId != _groupId)
+        return;
+      if (update) {
+        final index = _messages.indexWhere((item) => item.id == message!.id);
+        if (index < 0) return;
+        _messages = [..._messages]..[index] = message;
+        safeNotify();
+      } else if (!_messages.any((item) => item.id == message!.id)) {
+        addIncomingMessage(message);
+        await markAsRead(silent: true);
+      }
     } catch (e) {
-      _log('disconnectRealtime error: $e');
+      _log('Invalid chat event: ${e.runtimeType}');
     }
+  }
 
-    _hasRegisteredRealtimeListeners = false;
-    _hasRegisteredConnectionLifecycleListeners = false;
+  Future<void> disconnectRealtime() async {
+    _signalRService.off(_newMessageEventName);
+    _signalRService.off(_messageUpdatedEventName);
+    _signalRService.off(_groupChangedEventName);
+    await _signalRService.disconnect();
     _isRealtimeConnected = false;
     _isRealtimeConnecting = false;
     safeNotify();
