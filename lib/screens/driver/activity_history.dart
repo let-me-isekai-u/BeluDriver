@@ -146,7 +146,7 @@ class _ActivityViewState extends State<_ActivityView>
       } else {
         messenger.showSnackBar(
           SnackBar(
-            content: const Text("Huỷ đơn thất bại."),
+            content: Text(provider.actionError ?? 'Không thể hủy chuyến.'),
             backgroundColor: theme.colorScheme.error,
           ),
         );
@@ -202,7 +202,7 @@ class _ActivityViewState extends State<_ActivityView>
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text("Không thể xuất phát, vui lòng thử lại."),
+          content: Text(provider.actionError ?? 'Không thể bắt đầu chuyến đi.'),
           backgroundColor: theme.colorScheme.error,
         ),
       );
@@ -234,7 +234,7 @@ class _ActivityViewState extends State<_ActivityView>
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text("Không thể cập nhật trạng thái."),
+          content: Text(provider.actionError ?? 'Không thể hoàn thành chuyến đi.'),
           backgroundColor: theme.colorScheme.error,
         ),
       );

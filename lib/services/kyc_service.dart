@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'api_response.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -28,20 +29,7 @@ class KYCService {
   // -----------------------------------------------------------
   // ERROR HANDLER
   // -----------------------------------------------------------
-  static http.Response _errorResponse(Object e) {
-    final body = jsonEncode({
-      "success": false,
-      "message": "Lỗi kết nối tới server: $e",
-    });
-
-    debugPrint('[KYC_SERVICE] _errorResponse: $body');
-
-    return http.Response(
-      body,
-      500,
-      headers: {"Content-Type": "application/json"},
-    );
-  }
+  static http.Response _errorResponse(Object e) => connectionFailure(e);
 
   // -----------------------------------------------------------
   // GET KYC

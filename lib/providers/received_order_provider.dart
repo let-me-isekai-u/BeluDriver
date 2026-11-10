@@ -10,6 +10,7 @@ import '../models/paged_response_model.dart';
 import '../models/waiting_ride_model.dart';
 import '../models/driver/broker_rides_model.dart';
 import '../services/v2/api_service.dart';
+import '../services/api_response.dart';
 
 enum WaitingRideSortOption { createdAtDesc, pickupTimeAsc }
 
@@ -407,13 +408,7 @@ class RecieveOrderProvider extends ChangeNotifier {
     final int code = res.statusCode;
     final bool httpOk = code >= 200 && code < 300;
 
-    Map<String, dynamic>? body;
-    if (res.body.isNotEmpty) {
-      try {
-        final decoded = jsonDecode(res.body);
-        if (decoded is Map<String, dynamic>) body = decoded;
-      } catch (_) {}
-    }
+    final body = responseJson(res);
 
     if (httpOk) {
       if (body != null && body['success'] == false) {
@@ -440,34 +435,14 @@ class RecieveOrderProvider extends ChangeNotifier {
       };
     }
 
-    // Phân loại lỗi từ response body / status code
-    String reason = 'error';
-    String message = "Có lỗi xảy ra, vui lòng thử lại.";
-
-    try {
-      final body = jsonDecode(res.body);
-      final serverMessage = (body['message'] ?? body['error'] ?? '')
-          .toString()
-          .toLowerCase();
-
-      if (res.statusCode == 400 &&
-          (serverMessage.contains('balance') ||
-              serverMessage.contains('số dư') ||
-              serverMessage.contains('insufficient') ||
-              serverMessage.contains('ký quỹ') ||
-              serverMessage.contains('wallet'))) {
-        reason = 'insufficient_balance';
-        message = body['message'] ?? "Số dư trong ví không đủ để nhận đơn.";
-      } else if (res.statusCode == 409 ||
-          serverMessage.contains('already') ||
-          serverMessage.contains('đã được nhận') ||
-          serverMessage.contains('accepted')) {
-        reason = 'already_accepted';
-        message = body['message'] ?? "Đơn đã được tài xế khác nhận.";
-      } else {
-        message = body['message'] ?? message;
-      }
-    } catch (_) {}
+    final message = apiErrorMessage(res, 'Không thể nhận chuyến. Vui lòng thử lại.');
+    final errorCode = body?['code'];
+    final reason = switch (errorCode) {
+      'insufficient_wallet_balance' => 'insufficient_balance',
+      'ride_not_available' => 'already_accepted',
+      null when res.statusCode == 400 && message.toLowerCase().contains('số dư') => 'insufficient_balance',
+      _ => 'error',
+    };
 
     pagingController.refresh();
     return {'success': false, 'reason': reason, 'message': message};
@@ -500,7 +475,7 @@ class RecieveOrderProvider extends ChangeNotifier {
     } else {
       return {
         'success': false,
-        'message': 'Huỷ đơn thất bại (${res.statusCode})',
+        'message': apiErrorMessage(res, 'Không thể hủy chuyến.'),
       };
     }
   }

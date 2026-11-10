@@ -6,8 +6,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/driver/broker_rides_model.dart';
 import '../../models/driver/ride_model.dart';
 import '../../services/api_service.dart';
+import '../../services/api_response.dart';
 
 class ActivityHistoryProvider extends ChangeNotifier {
+  String? actionError;
   List<RideModel> ongoingRides = [];
   List<RideModel> historyRides = [];
   List<BrokerRideItem> brokerRides = [];
@@ -157,6 +159,7 @@ class ActivityHistoryProvider extends ChangeNotifier {
   }
 
   Future<bool> cancelBrokerRide(BrokerRideItem ride) async {
+    actionError = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
     final token = await _getToken();
     if (token.isEmpty) return false;
 
@@ -166,14 +169,17 @@ class ActivityHistoryProvider extends ChangeNotifier {
     );
 
     if (res.statusCode == 200) {
+      actionError = null;
       await fetchBrokerRides();
       return true;
     }
 
+    actionError = apiErrorMessage(res, 'Không thể hủy chuyến.');
     return false;
   }
 
   Future<bool> startRide(RideModel ride) async {
+    actionError = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
     final token = await _getToken();
     if (token.isEmpty) return false;
 
@@ -183,10 +189,13 @@ class ActivityHistoryProvider extends ChangeNotifier {
       rideSource: ride.rideSource,
     );
 
-    return res.statusCode >= 200 && res.statusCode < 300;
+    final ok = res.statusCode >= 200 && res.statusCode < 300;
+    actionError = ok ? null : apiErrorMessage(res, 'Không thể bắt đầu chuyến đi.');
+    return ok;
   }
 
   Future<bool> completeRide(RideModel ride) async {
+    actionError = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
     final token = await _getToken();
     if (token.isEmpty) return false;
 
@@ -197,11 +206,13 @@ class ActivityHistoryProvider extends ChangeNotifier {
     );
 
     if (res.statusCode >= 200 && res.statusCode < 300) {
+      actionError = null;
       await fetchOngoingRides();
       await fetchHistoryRides();
       return true;
     }
 
+    actionError = apiErrorMessage(res, 'Không thể hoàn thành chuyến đi.');
     return false;
   }
 

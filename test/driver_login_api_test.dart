@@ -29,7 +29,8 @@ void main() {
         requestedUrl,
         Uri.parse('$apiOrigin/api/accountdriverapi/driver/login'),
       );
-      expect(response.statusCode, 500);
+      expect(response.statusCode, 503);
+      expect(jsonDecode(response.body)['code'], 'connection_failed');
       expect(
         jsonDecode(response.body)['message'],
         'Không kết nối được máy chủ. Vui lòng kiểm tra mạng và thử lại.',

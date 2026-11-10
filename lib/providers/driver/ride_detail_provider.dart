@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/driver/ride_detail_model.dart';
 import '../../services/api_service.dart';
+import '../../services/api_response.dart';
 
 class RideDetailProvider extends ChangeNotifier {
   RideDetailProvider({
@@ -16,6 +17,7 @@ class RideDetailProvider extends ChangeNotifier {
   final int rideSource;
 
   RideDetailModel? ride;
+  String? actionError;
   bool isLoading = true;
 
   Future<String> _getToken() async {
@@ -52,6 +54,7 @@ class RideDetailProvider extends ChangeNotifier {
   }
 
   Future<bool> startRide() async {
+    actionError = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
     final token = await _getToken();
     if (token.isEmpty) return false;
 
@@ -62,13 +65,16 @@ class RideDetailProvider extends ChangeNotifier {
     );
 
     if (res.statusCode == 200) {
+      actionError = null;
       await fetchRideDetail();
       return true;
     }
+    actionError = apiErrorMessage(res, 'Không thể bắt đầu chuyến đi.');
     return false;
   }
 
   Future<bool> completeRide() async {
+    actionError = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
     final token = await _getToken();
     if (token.isEmpty) return false;
 
@@ -79,9 +85,11 @@ class RideDetailProvider extends ChangeNotifier {
     );
 
     if (res.statusCode == 200) {
+      actionError = null;
       await fetchRideDetail();
       return true;
     }
+    actionError = apiErrorMessage(res, 'Không thể hoàn thành chuyến đi.');
     return false;
   }
 }

@@ -2,7 +2,9 @@
 import 'package:flutter/material.dart';
 
 class HasAcceptedPopup extends StatelessWidget {
-  const HasAcceptedPopup({super.key});
+  const HasAcceptedPopup({super.key, this.message});
+
+  final String? message;
 
   @override
   Widget build(BuildContext context) {
@@ -14,8 +16,8 @@ class HasAcceptedPopup extends StatelessWidget {
           Text('Thông báo'),
         ],
       ),
-      content: const Text(
-        'Đơn hàng này đã có tài xế khác nhận, bạn không thể thực hiện thao tác này nữa. Xin cám ơn!',
+      content: Text(
+        message ?? 'Đơn hàng này đã có tài xế khác nhận, bạn không thể thực hiện thao tác này nữa. Xin cám ơn!',
       ),
       actions: [
         TextButton(

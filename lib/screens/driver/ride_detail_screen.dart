@@ -506,7 +506,7 @@ class _RideDetailView extends StatelessWidget {
                 context,
                 ok
                     ? (isStart ? 'Đã bắt đầu chuyến đi' : 'Đã hoàn thành chuyến đi')
-                    : (isStart ? 'Không thể bắt đầu chuyến đi' : 'Không thể hoàn thành chuyến đi'),
+                    : (provider.actionError ?? 'Không thể cập nhật chuyến đi.'),
                 ok ? Brand.success : Brand.danger,
               );
             },

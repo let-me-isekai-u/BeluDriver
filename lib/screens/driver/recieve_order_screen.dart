@@ -114,7 +114,7 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
           context: context,
           barrierDismissible: false,
           useRootNavigator: true,
-          builder: (_) => const InsufficientBalancePopup(),
+          builder: (_) => InsufficientBalancePopup(message: result['message'] as String?),
         );
         break;
 
@@ -123,7 +123,7 @@ class _RecieveOrderViewState extends State<_RecieveOrderView> {
           context: context,
           barrierDismissible: false,
           useRootNavigator: true,
-          builder: (_) => const HasAcceptedPopup(),
+          builder: (_) => HasAcceptedPopup(message: result['message'] as String?),
         );
         break;
 

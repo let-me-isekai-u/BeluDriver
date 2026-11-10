@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -10,6 +11,7 @@ import '../../models/driver_chat_broker_ride_meta_model.dart';
 import '../../models/driver_chat_message_model.dart';
 import '../../providers/chat_provider.dart';
 import '../../services/api_chat_service.dart';
+import '../../services/api_response.dart';
 import '../../services/api_service.dart';
 import '../../services/chat_session.dart';
 import '../driver/driver_booking_screen.dart';
@@ -66,8 +68,11 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
         return List.generate(16, (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0')).join();
       });
 
-  void _allowNewBrokerAction(int rideId, int status, {required bool accept}) {
-    if (status >= 400 && status < 500 && status != 401 && status != 409) {
+  void _allowNewBrokerAction(int rideId, http.Response response, {required bool accept}) {
+    final status = response.statusCode;
+    final code = responseJson(response)?['code'];
+    if (status < 500 && status != 401 && code != 'operation_pending' &&
+        (status != 409 || code != null)) {
       _brokerActionKeys.remove((rideId, accept));
     }
   }
@@ -324,7 +329,7 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
         rideId: ride.brokerRideId,
         idempotencyKey: _brokerActionKey(ride.brokerRideId, accept: false),
       );
-      _allowNewBrokerAction(ride.brokerRideId, res.statusCode, accept: false);
+      _allowNewBrokerAction(ride.brokerRideId, res, accept: false);
 
       if (!mounted) return;
 
@@ -339,7 +344,7 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
       } else {
         messenger.showSnackBar(
           SnackBar(
-            content: Text('Huỷ đơn thất bại (${res.statusCode}).'),
+            content: Text(apiErrorMessage(res, 'Không thể hủy chuyến.')),
             backgroundColor: theme.colorScheme.error,
           ),
         );
@@ -386,7 +391,7 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
         rideSource: RideSource.brokerRide,
         idempotencyKey: _brokerActionKey(ride.brokerRideId, accept: true),
       );
-      _allowNewBrokerAction(ride.brokerRideId, res.statusCode, accept: true);
+      _allowNewBrokerAction(ride.brokerRideId, res, accept: true);
 
       if (!mounted) return;
 
@@ -401,7 +406,7 @@ class _DriverGroupChatViewState extends State<_DriverGroupChatView> {
       } else {
         messenger.showSnackBar(
           SnackBar(
-            content: const Text('Đơn đã được nhận hoặc không thể nhận.'),
+            content: Text(apiErrorMessage(res, 'Không thể nhận chuyến.')),
             backgroundColor: theme.colorScheme.error,
           ),
         );

@@ -2,7 +2,9 @@
 import 'package:flutter/material.dart';
 
 class InsufficientBalancePopup extends StatelessWidget {
-  const InsufficientBalancePopup({super.key});
+  const InsufficientBalancePopup({super.key, this.message});
+
+  final String? message;
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +46,7 @@ class InsufficientBalancePopup extends StatelessWidget {
 
             // Nội dung
             Text(
-              'Số dư trong ví của bạn hiện không đủ để nhận đơn này. Vui lòng nạp thêm tiền và thử lại.',
+              message ?? 'Số dư trong ví của bạn hiện không đủ để nhận đơn này. Vui lòng nạp thêm tiền và thử lại.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.65),

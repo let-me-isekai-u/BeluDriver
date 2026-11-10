@@ -1,6 +1,7 @@
 // Tài liệu cho file api này:
 // https://docs.google.com/document/d/1MD5Tx42I-CpFgTNwrrwUhB8FsdQFhiiqAN_Xy0kUfAc/edit?tab=t.d9q2g56xpd8j
 import 'dart:convert';
+import 'api_response.dart';
 import 'package:beludriver_app/models/broker_ride_models.dart';
 import 'package:beludriver_app/models/driver_onboarding_status_dto.dart';
 import 'package:beludriver_app/models/location_models.dart';
@@ -40,17 +41,8 @@ class ApiService {
   };
 
   // Lỗi fallback
-  static http.Response _errorResponse(Object e, {String? message}) {
-    final body = jsonEncode({
-      "success": false,
-      "message": message ?? "Lỗi kết nối tới server: $e",
-    });
-    return http.Response.bytes(
-      utf8.encode(body),
-      500,
-      headers: {"content-type": "application/json; charset=utf-8"},
-    );
-  }
+  static http.Response _errorResponse(Object e, {String? message}) =>
+      connectionFailure(e, message: message);
 
   // -----------------------------------------------------------
   // 1️⃣ LOGIN
@@ -423,33 +415,13 @@ class ApiService {
     required int id, // id của đơn
     required int rideSource, // 1 = hệ thống, 2 = đơn đẩy tài xế
     String? idempotencyKey,
-  }) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/rideapi/accept/$id/$rideSource",
+  }) {
+    return sendFinancialCommand(
+      'POST',
+      Uri.parse("$apiOrigin/api/rideapi/accept/$id/$rideSource"),
+      accessToken,
+      idempotencyKey: idempotencyKey,
     );
-
-    print("🔵 [API] ACCEPT RIDE → $url");
-
-    try {
-      final res = await http
-          .post(
-            url,
-            headers: {
-              "Authorization": "Bearer $accessToken",
-              "Accept": "application/json",
-              if (idempotencyKey != null) "Idempotency-Key": idempotencyKey,
-            },
-          )
-          .timeout(const Duration(seconds: 20));
-
-      print("📥 [API] STATUS: ${res.statusCode}");
-      print("📥 [API] BODY: ${res.body}");
-
-      return res;
-    } catch (e) {
-      print("❌ [API] ACCEPT RIDE ERROR: $e");
-      return _errorResponse(e);
-    }
   }
 
   //lịch sử thay đổi số dư ví của tài xế GET
@@ -677,26 +649,12 @@ class ApiService {
     required String accessToken,
     required int rideId,
     required int rideSource, // 👈 thêm
-  }) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/driverapi/start/$rideId/$rideSource",
+  }) {
+    return sendFinancialCommand(
+      'PUT',
+      Uri.parse("$apiOrigin/api/driverapi/start/$rideId/$rideSource"),
+      accessToken,
     );
-
-    try {
-      final res = await http
-          .put(
-            url,
-            headers: {
-              "Authorization": "Bearer $accessToken",
-              "Accept": "application/json",
-            },
-          )
-          .timeout(const Duration(seconds: 20));
-
-      return res;
-    } catch (e) {
-      return _errorResponse(e);
-    }
   }
 
   // Hoàn thành chuyến đi
@@ -704,26 +662,12 @@ class ApiService {
     required String accessToken,
     required int rideId,
     required int rideSource, // 👈 thêm
-  }) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/driverapi/complete/$rideId/$rideSource",
+  }) {
+    return sendFinancialCommand(
+      'PUT',
+      Uri.parse("$apiOrigin/api/driverapi/complete/$rideId/$rideSource"),
+      accessToken,
     );
-
-    try {
-      final res = await http
-          .put(
-            url,
-            headers: {
-              "Authorization": "Bearer $accessToken",
-              "Accept": "application/json",
-            },
-          )
-          .timeout(const Duration(seconds: 20));
-
-      return res;
-    } catch (e) {
-      return _errorResponse(e);
-    }
   }
 
   // Lấy danh sách chuyến đang đi (status = 3)
@@ -796,24 +740,19 @@ class ApiService {
     required String bankName,
     required String accountNumber,
     required String accountName,
-  }) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/withdrawalapi/create",
-    );
-
-    return http.post(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $accessToken",
-      },
-      body: jsonEncode({
-        "amount": amount,
-        "bankCode": bankCode,
-        "bankName": bankName,
-        "accountNumber": accountNumber,
-        "accountName": accountName,
-      }),
+  }) {
+    final body = jsonEncode({
+      "amount": amount,
+      "bankCode": bankCode,
+      "bankName": bankName,
+      "accountNumber": accountNumber,
+      "accountName": accountName,
+    });
+    return sendFinancialCommand(
+      'POST',
+      Uri.parse("$apiOrigin/api/withdrawalapi/create"),
+      accessToken,
+      body: body,
     );
   }
 
@@ -1040,36 +979,13 @@ class ApiService {
     required String accessToken,
     required int rideId,
     String? idempotencyKey,
-  }) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/rideapi/cancel-broker/$rideId",
+  }) {
+    return sendFinancialCommand(
+      'PUT',
+      Uri.parse("$apiOrigin/api/rideapi/cancel-broker/$rideId"),
+      accessToken,
+      idempotencyKey: idempotencyKey,
     );
-
-    print("=== CANCEL BROKER RIDE ===");
-    print("URL: $url");
-    print("RideId: $rideId");
-
-    try {
-      final response = await http
-          .put(
-            url,
-            headers: {
-              "Accept": "application/json",
-              "Authorization": "Bearer $accessToken",
-              if (idempotencyKey != null) "Idempotency-Key": idempotencyKey,
-            },
-          )
-          .timeout(const Duration(seconds: 20));
-
-      print("StatusCode: ${response.statusCode}");
-      print("ResponseBody: ${response.body}");
-      print("=== END CANCEL ===");
-
-      return response;
-    } catch (e) {
-      print("ERROR CANCEL BROKER: $e");
-      return _errorResponse(e);
-    }
   }
 
   // -----------------------------------------------------------

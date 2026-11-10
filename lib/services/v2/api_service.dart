@@ -1,6 +1,7 @@
 // Tài liệu cho file api này:
 // https://docs.google.com/document/d/1MD5Tx42I-CpFgTNwrrwUhB8FsdQFhiiqAN_Xy0kUfAc/edit?tab=t.d9q2g56xpd8j
 import 'dart:convert';
+import '../api_response.dart';
 import 'package:beludriver_app/models/broker_ride_models.dart';
 import 'package:beludriver_app/models/driver_onboarding_status_dto.dart';
 import 'package:flutter/foundation.dart';
@@ -39,17 +40,7 @@ class ApiService {
   };
 
   // Lỗi fallback
-  static http.Response _errorResponse(Object e) {
-    final body = jsonEncode({
-      "success": false,
-      "message": "Lỗi kết nối tới server: $e",
-    });
-    return http.Response(
-      body,
-      500,
-      headers: {"Content-Type": "application/json"},
-    );
-  }
+  static http.Response _errorResponse(Object e) => connectionFailure(e);
 
   // -----------------------------------------------------------
   // 1️⃣ LOGIN
@@ -72,11 +63,7 @@ class ApiService {
           .post(url, headers: _defaultHeaders(), body: body)
           .timeout(const Duration(seconds: 20));
     } catch (e) {
-      return http.Response(
-        jsonEncode({"message": "Lỗi kết nối mạng: $e"}),
-        500,
-        headers: {"Content-Type": "application/json"},
-      );
+      return _errorResponse(e);
     }
   }
 
@@ -424,32 +411,12 @@ class ApiService {
     required String accessToken,
     required int id, // id của đơn
     required int rideSource, // 1 = hệ thống, 2 = đơn đẩy tài xế
-  }) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/rideapi/accept/$id/$rideSource",
+  }) {
+    return sendFinancialCommand(
+      'POST',
+      Uri.parse("$apiOrigin/api/rideapi/accept/$id/$rideSource"),
+      accessToken,
     );
-
-    print("🔵 [API] ACCEPT RIDE → $url");
-
-    try {
-      final res = await http
-          .post(
-            url,
-            headers: {
-              "Authorization": "Bearer $accessToken",
-              "Accept": "application/json",
-            },
-          )
-          .timeout(const Duration(seconds: 20));
-
-      print("📥 [API] STATUS: ${res.statusCode}");
-      print("📥 [API] BODY: ${res.body}");
-
-      return res;
-    } catch (e) {
-      print("❌ [API] ACCEPT RIDE ERROR: $e");
-      return _errorResponse(e);
-    }
   }
 
   //lịch sử thay đổi số dư ví của tài xế GET
@@ -642,26 +609,12 @@ class ApiService {
     required String accessToken,
     required int rideId,
     required int rideSource, // 👈 thêm
-  }) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/driverapi/start/$rideId/$rideSource",
+  }) {
+    return sendFinancialCommand(
+      'PUT',
+      Uri.parse("$apiOrigin/api/driverapi/start/$rideId/$rideSource"),
+      accessToken,
     );
-
-    try {
-      final res = await http
-          .put(
-            url,
-            headers: {
-              "Authorization": "Bearer $accessToken",
-              "Accept": "application/json",
-            },
-          )
-          .timeout(const Duration(seconds: 20));
-
-      return res;
-    } catch (e) {
-      return _errorResponse(e);
-    }
   }
 
   // Hoàn thành chuyến đi
@@ -669,26 +622,12 @@ class ApiService {
     required String accessToken,
     required int rideId,
     required int rideSource, // 👈 thêm
-  }) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/driverapi/complete/$rideId/$rideSource",
+  }) {
+    return sendFinancialCommand(
+      'PUT',
+      Uri.parse("$apiOrigin/api/driverapi/complete/$rideId/$rideSource"),
+      accessToken,
     );
-
-    try {
-      final res = await http
-          .put(
-            url,
-            headers: {
-              "Authorization": "Bearer $accessToken",
-              "Accept": "application/json",
-            },
-          )
-          .timeout(const Duration(seconds: 20));
-
-      return res;
-    } catch (e) {
-      return _errorResponse(e);
-    }
   }
 
   // Lấy danh sách chuyến đang đi (status = 3)
@@ -761,24 +700,19 @@ class ApiService {
     required String bankName,
     required String accountNumber,
     required String accountName,
-  }) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/withdrawalapi/create",
-    );
-
-    return http.post(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $accessToken",
-      },
-      body: jsonEncode({
-        "amount": amount,
-        "bankCode": bankCode,
-        "bankName": bankName,
-        "accountNumber": accountNumber,
-        "accountName": accountName,
-      }),
+  }) {
+    final body = jsonEncode({
+      "amount": amount,
+      "bankCode": bankCode,
+      "bankName": bankName,
+      "accountNumber": accountNumber,
+      "accountName": accountName,
+    });
+    return sendFinancialCommand(
+      'POST',
+      Uri.parse("$apiOrigin/api/withdrawalapi/create"),
+      accessToken,
+      body: body,
     );
   }
 
@@ -1004,36 +938,12 @@ class ApiService {
   static Future<http.Response> cancelBrokerRide({
     required String accessToken,
     required int rideId,
-  }) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/rideapi/cancel-broker/$rideId",
+  }) {
+    return sendFinancialCommand(
+      'PUT',
+      Uri.parse("$apiOrigin/api/rideapi/cancel-broker/$rideId"),
+      accessToken,
     );
-
-    print("=== CANCEL BROKER RIDE ===");
-    print("URL: $url");
-    print("RideId: $rideId");
-    print("Token: ${accessToken.substring(0, 20)}...");
-
-    try {
-      final response = await http
-          .put(
-            url,
-            headers: {
-              "Accept": "application/json",
-              "Authorization": "Bearer $accessToken",
-            },
-          )
-          .timeout(const Duration(seconds: 20));
-
-      print("StatusCode: ${response.statusCode}");
-      print("ResponseBody: ${response.body}");
-      print("=== END CANCEL ===");
-
-      return response;
-    } catch (e) {
-      print("ERROR CANCEL BROKER: $e");
-      return _errorResponse(e);
-    }
   }
 
   // -----------------------------------------------------------
