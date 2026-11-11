@@ -33,7 +33,7 @@ Lưu ý môi trường:
   - `android/app/google-services.json`
   - `ios/GoogleService-Info.plist`
 - App đang gọi API trực tiếp vào domain production:
-  - `https://xeghepdongduong.com`
+  - `https://datxedongduong.com`
 - Có gọi thêm API ngân hàng:
   - `https://api.vietqr.io/v2/banks`
 
@@ -302,7 +302,7 @@ Environment notes:
   - `android/app/google-services.json`
   - `ios/GoogleService-Info.plist`
 - The app currently calls production APIs directly:
-  - `https://xeghepdongduong.com`
+  - `https://datxedongduong.com`
 - Bank list is fetched from:
   - `https://api.vietqr.io/v2/banks`
 
