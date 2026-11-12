@@ -1,5 +1,7 @@
 # beludriver_app
 
+Chia sẻ GPS cho bản đồ điều hành: đọc [luồng, contract và kiểm thử](docs/driver-location.md) trước khi sửa tracker hoặc logout. Cần backend migration 014; mặc định không chia sẻ, người dùng tự bật tại Trang chủ.
+
 A new Flutter project.
 
 ## Getting Started

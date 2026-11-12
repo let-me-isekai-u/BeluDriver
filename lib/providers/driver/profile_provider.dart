@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../../features/driver_location/driver_gps_tracker.dart';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -53,6 +54,7 @@ class ProfileProvider extends ChangeNotifier {
   }
 
   Future<bool> deleteAccount() async {
+    await DriverGpsTracker.instance.stop();
     final prefs = await SharedPreferences.getInstance();
     final accessToken = prefs.getString('accessToken');
 
@@ -78,6 +80,7 @@ class ProfileProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    await DriverGpsTracker.instance.stop();
     final prefs = await SharedPreferences.getInstance();
     final accessToken = prefs.getString('accessToken');
 

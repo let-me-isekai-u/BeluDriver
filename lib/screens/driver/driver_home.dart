@@ -1,4 +1,6 @@
 import 'dart:async';
+import '../../features/driver_location/driver_gps_tracker.dart';
+import '../../features/driver_location/driver_location_tile.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -7,7 +9,6 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../app_theme.dart';
 import '../../models/driver/driver_profile_model.dart';
 import '../../providers/home_provider.dart';
 import '../../providers/driver/deposit_provider.dart';
@@ -107,6 +108,18 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
   static const String _depositPopupShownKey =
       'hasShownKycDepositRequirementPopup';
   static const num _requiredDepositAmount = 100000;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(DriverGpsTracker.instance.restore());
+  }
+
+  @override
+  void dispose() {
+    unawaited(DriverGpsTracker.instance.stop(disableServer: false));
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -336,7 +349,7 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
             )
           : null,
       body: _currentIndex == 2
-          ? screens[_currentIndex]
+          ? Column(children: [const DriverLocationTile(), Expanded(child: screens[_currentIndex])])
           : AnnotatedRegion<SystemUiOverlayStyle>(value: SystemUiOverlayStyle.dark, child: screens[_currentIndex]),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
