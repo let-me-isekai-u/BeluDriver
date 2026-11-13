@@ -98,12 +98,15 @@ class _DriverBookingView extends StatelessWidget {
                               ),
                             ),
                           ),
-                          Text(
-                            "Chọn giờ đón",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Brand.navy,
+                          Expanded(
+                            child: Text(
+                              "Chọn giờ đón",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Brand.navy,
+                              ),
                             ),
                           ),
                           TextButton(
@@ -412,7 +415,7 @@ class _DriverBookingView extends StatelessWidget {
                     title: Text(
                       suggestion.primaryText,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: Brand.ink,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -556,6 +559,7 @@ class _DriverBookingView extends StatelessWidget {
                             context,
                             label: "SĐT khách",
                             icon: Icons.phone,
+                            helperText: "Nhập đúng 10 chữ số",
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -581,7 +585,7 @@ class _DriverBookingView extends StatelessWidget {
                       children: [
                         DropdownButtonFormField<int>(
                           initialValue: provider.selectedType,
-                          dropdownColor: theme.colorScheme.primary,
+                          dropdownColor: Brand.surface,
                           style: const TextStyle(color: Brand.ink),
                           decoration: _fieldDecoration(
                             context,
@@ -657,9 +661,18 @@ class _DriverBookingView extends StatelessWidget {
                               builder: (context, child) {
                                 return Theme(
                                   data: Theme.of(context).copyWith(
+                                    datePickerTheme: const DatePickerThemeData(
+                                      backgroundColor: Brand.surface,
+                                      headerBackgroundColor: Brand.navy,
+                                      headerForegroundColor: Colors.white,
+                                      headerHeadlineStyle: TextStyle(
+                                        fontSize: 28,
+                                        height: 1.2,
+                                      ),
+                                    ),
                                     colorScheme: ColorScheme.light(
                                       primary: Brand.navy,
-                                      onPrimary: Colors.black87,
+                                      onPrimary: Colors.white,
                                       onSurface: Colors.black87,
                                     ),
                                     textButtonTheme: TextButtonThemeData(
@@ -683,9 +696,8 @@ class _DriverBookingView extends StatelessWidget {
                           },
                           child: AbsorbPointer(
                             child: TextField(
-                              controller: TextEditingController(
-                                text: provider.formatDate(provider.pickupDate),
-                              ),
+                              controller: provider.pickupDateController,
+                              readOnly: true,
                               style: const TextStyle(color: Brand.ink),
                               decoration: _fieldDecoration(
                                 context,
@@ -700,12 +712,10 @@ class _DriverBookingView extends StatelessWidget {
                           onTap: () => _pickTimeDialog(context, provider),
                           child: AbsorbPointer(
                             child: TextField(
-                              controller: TextEditingController(
-                                text: provider.formatTime(provider.pickupTime),
-                              ),
+                              controller: provider.pickupTimeController,
                               readOnly: true,
                               style: const TextStyle(
-                                color: Colors.white,
+                                color: Brand.ink,
                                 fontSize: 18,
                               ),
                               textAlign: TextAlign.center,

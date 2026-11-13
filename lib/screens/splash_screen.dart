@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:beludriver_app/services/token_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -160,9 +161,24 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _checkAuth() async {
+    try {
+      await _restoreSession();
+    } on TokenStorageException {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Không thể truy cập bộ nhớ bảo mật. Vui lòng thử lại.'),
+          duration: const Duration(days: 1),
+          action: SnackBarAction(label: 'Thử lại', onPressed: _checkAuth),
+        ),
+      );
+    }
+  }
+
+  Future<void> _restoreSession() async {
     final prefs = await SharedPreferences.getInstance();
-    final accessToken = prefs.getString("accessToken");
-    final refreshToken = prefs.getString("refreshToken");
+    final accessToken = (await TokenStorage.instance.readAccessToken());
+    final refreshToken = (await TokenStorage.instance.readRefreshToken());
 
     appLog('AUTH', '--- Starting Token Check ---');
     appLog('AUTH', 'Access Token Exists: ${accessToken != null}');
@@ -190,11 +206,13 @@ class _SplashScreenState extends State<SplashScreen>
 
         if (res.statusCode == 401) {
           appLog('AUTH', 'Access Token EXPIRED -> Try Refresh.');
-          await prefs.remove("accessToken");
+          await TokenStorage.instance.deleteAccessToken();
         }
+      } on TokenStorageException {
+        rethrow;
       } catch (e) {
-        appLog('AUTH', 'Verify token ERROR: $e');
-        await prefs.remove("accessToken");
+        appLog('AUTH', 'Verify token ERROR');
+        await TokenStorage.instance.deleteAccessToken();
       }
     }
 
@@ -218,8 +236,10 @@ class _SplashScreenState extends State<SplashScreen>
         final newRefreshToken = data["refreshToken"];
 
         if (newAccessToken != null && newRefreshToken != null) {
-          await prefs.setString("accessToken", newAccessToken);
-          await prefs.setString("refreshToken", newRefreshToken);
+          await TokenStorage.instance.writeTokens(
+            accessToken: newAccessToken,
+            refreshToken: newRefreshToken,
+          );
 
           try {
             final profileRes = await ApiService.getDriverProfile(
@@ -233,7 +253,7 @@ class _SplashScreenState extends State<SplashScreen>
               );
             }
           } catch (e) {
-            appLog('AUTH', 'Get profile after refresh ERROR: $e');
+            appLog('AUTH', 'Get profile after refresh ERROR');
           }
 
           appLog(
@@ -252,29 +272,25 @@ class _SplashScreenState extends State<SplashScreen>
           return;
         }
       } else {
-        String message = "Unknown Error";
-        try {
-          final errorBody = jsonDecode(res.body);
-          message = errorBody["message"] ?? message;
-        } catch (_) {}
         appLog(
           'AUTH',
-          'Refresh FAILED (${res.statusCode}): $message. Clearing tokens -> Go to Login.',
+          'Refresh FAILED (${res.statusCode}). Clearing tokens -> Go to Login.',
         );
         await _goToLoginAndClear(prefs);
       }
+    } on TokenStorageException {
+      rethrow;
     } catch (e) {
       appLog(
         'AUTH',
-        'Refresh ERROR (Network/Parsing): $e. Clearing tokens -> Go to Login.',
+        'Refresh ERROR (Network/Parsing). Clearing tokens -> Go to Login.',
       );
       await _goToLoginAndClear(prefs);
     }
   }
 
   Future<void> _goToLoginAndClear(SharedPreferences prefs) async {
-    await prefs.remove("accessToken");
-    await prefs.remove("refreshToken");
+    await TokenStorage.instance.clear();
     await prefs.remove("shouldShowRegisterRoutePopup");
     await prefs.remove("shouldShowKycPopup");
     await prefs.remove("cachedKycJson");

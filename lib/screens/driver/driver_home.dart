@@ -1,17 +1,19 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:beludriver_app/services/token_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../app_theme.dart';
 import '../../models/driver/driver_profile_model.dart';
 import '../../providers/home_provider.dart';
 import '../../providers/driver/deposit_provider.dart';
 import '../../services/api_service.dart';
+import '../../services/api_response.dart';
+import '../../validation/withdrawal_validation.dart';
 import '../../widgets/driver_ui.dart';
 import '../chat_to_order/chat_group_list_screen.dart';
 import '../kyc/kyc_deposit_requirement_popup.dart';
@@ -294,10 +296,90 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
   }
 
 
+  BottomNavigationBarItem _buildNavigationItem(
+    int index,
+    IconData icon,
+    String label, {
+    bool showKycAlert = false,
+  }) {
+    final selected = _currentIndex == index;
+    final duration = MediaQuery.of(context).disableAnimations
+        ? Duration.zero
+        : const Duration(milliseconds: 200);
+
+    return BottomNavigationBarItem(
+      label: label,
+      icon: Padding(
+        padding: const EdgeInsets.only(bottom: 4),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            AnimatedContainer(
+              duration: duration,
+              curve: Curves.easeOutCubic,
+              width: 52,
+              height: 40,
+              decoration: BoxDecoration(
+                color: selected ? Brand.navy : Colors.transparent,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: selected
+                    ? const [
+                        BoxShadow(
+                          color: Color(0x33041565),
+                          blurRadius: 10,
+                          offset: Offset(0, 3),
+                        ),
+                      ]
+                    : const [],
+              ),
+              child: AnimatedScale(
+                scale: selected ? 1.08 : 1,
+                duration: duration,
+                curve: Curves.easeOutCubic,
+                child: Icon(
+                  icon,
+                  size: 25,
+                  color: selected ? Colors.white : Brand.inkSubtle,
+                ),
+              ),
+            ),
+            if (showKycAlert)
+              Positioned(
+                top: -2,
+                right: -1,
+                child: Semantics(
+                  label: 'Hồ sơ cần hoàn thiện',
+                  child: Container(
+                    width: 18,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color: Brand.danger,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        '!',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final goldColor = Brand.navy;
     final homeProvider = context.watch<HomeProvider>();
     final bottomNavigationIndex = _currentIndex;
 
@@ -350,87 +432,25 @@ class _DriverHomeViewState extends State<_DriverHomeView> {
           type: BottomNavigationBarType.fixed,
           backgroundColor: Colors.white,
           elevation: 0,
-          selectedItemColor: goldColor,
-          unselectedItemColor: Brand.inkMuted,
+          selectedItemColor: Brand.navy,
+          unselectedItemColor: Brand.inkSubtle,
+          selectedFontSize: 12,
+          unselectedFontSize: 11,
           selectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            fontSize: 12,
           ),
           unselectedLabelStyle: const TextStyle(
             fontWeight: FontWeight.w500,
             fontSize: 11,
           ),
           items: [
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.assignment_turned_in_rounded),
-              label: 'Nhận đơn',
-            ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.upload_file_rounded),
-              label: 'Đẩy đơn',
-            ),
-            BottomNavigationBarItem(
-              icon: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: _currentIndex == 2 ? goldColor : Brand.b50,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    if (_currentIndex == 2)
-                      BoxShadow(
-                        color: goldColor.withValues(alpha: 0.4),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                  ],
-                ),
-                child: Icon(
-                  Icons.home_rounded,
-                  size: 30,
-                  color: _currentIndex == 2
-                      ? Colors.white
-                      : Brand.navy,
-                ),
-              ),
-              label: 'Trang chủ',
-            ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.access_time_rounded),
-              label: 'Hoạt động',
-            ),
-            BottomNavigationBarItem(
-              icon: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  const Icon(Icons.person_rounded),
-                  if (homeProvider.kycStatus != 2)
-                    Positioned(
-                      top: -4,
-                      right: -6,
-                      child: Container(
-                        width: 16,
-                        height: 16,
-                        decoration: const BoxDecoration(
-                          color: Brand.danger,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Center(
-                          child: Text(
-                            '!',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              height: 1,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              label: 'Cá nhân',
-            ),
+            _buildNavigationItem(0, Icons.assignment_turned_in_rounded, 'Nhận đơn'),
+            _buildNavigationItem(1, Icons.upload_file_rounded, 'Đẩy đơn'),
+            _buildNavigationItem(2, Icons.home_rounded, 'Trang chủ'),
+            _buildNavigationItem(3, Icons.access_time_rounded, 'Hoạt động'),
+            _buildNavigationItem(4, Icons.person_rounded, 'Cá nhân',
+                showKycAlert: homeProvider.kycStatus != 2),
           ],
         ),
       ),
@@ -873,8 +893,7 @@ class _HomeDashboard extends StatelessWidget {
                             return;
                           }
 
-                          final prefs = await SharedPreferences.getInstance();
-                          final token = prefs.getString('accessToken') ?? '';
+                          final token = (await TokenStorage.instance.readAccessToken()) ?? '';
 
                           if (token.isEmpty) {
                             scaffoldMessenger.showSnackBar(
@@ -1081,8 +1100,7 @@ class _HomeDashboard extends StatelessWidget {
                       child: ElevatedButton(
                         onPressed: () async {
                           countdownTimer?.cancel();
-                          final prefs = await SharedPreferences.getInstance();
-                          final token = prefs.getString('accessToken') ?? '';
+                          final token = (await TokenStorage.instance.readAccessToken()) ?? '';
                           if (!dialogCtx.mounted) return;
 
                           String message;
@@ -1216,6 +1234,15 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
   List<dynamic> _filteredBanks = [];
 
   bool _isSubmitting = false;
+  String? _validationError;
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _accountNumberController.dispose();
+    _accountNameController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -1228,7 +1255,7 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
       final res = await ApiService.getBanks();
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
-        if (body["code"] == "00") {
+        if (body["code"] == "00" && mounted) {
           setState(() {
             _banks = body["data"];
             _filteredBanks = body["data"];
@@ -1312,21 +1339,26 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
   }
 
   Future<void> _confirmWithdraw() async {
-    final amountText = _amountController.text.replaceAll(',', '');
-    final amount = int.tryParse(amountText) ?? 0;
-
-    if (amount <= 0 || amount > widget.currentWallet) return;
-    if (_selectedBankCode == null) return;
-
-    _submitWithdraw(amount);
+    if (_isSubmitting) return;
+    final error = validateWithdrawal(
+      amountText: _amountController.text,
+      currentWallet: widget.currentWallet,
+      bankCode: _selectedBankCode,
+      bankName: _selectedBankName,
+      accountNumber: _accountNumberController.text.trim(),
+      accountName: _accountNameController.text,
+    );
+    setState(() => _validationError = error);
+    if (error != null) return;
+    final amount = int.parse(_amountController.text.replaceAll(',', '').trim());
+    await _submitWithdraw(amount);
   }
 
   Future<void> _submitWithdraw(int amount) async {
     setState(() => _isSubmitting = true);
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('accessToken') ?? '';
+      final token = (await TokenStorage.instance.readAccessToken()) ?? '';
 
       if (token.isEmpty) {
         if (!mounted) return;
@@ -1342,8 +1374,8 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
         amount: amount,
         bankCode: _selectedBankCode!,
         bankName: _selectedBankName!,
-        accountNumber: _accountNumberController.text,
-        accountName: _accountNameController.text.toUpperCase(),
+        accountNumber: _accountNumberController.text.trim(),
+        accountName: _accountNameController.text.trim().toUpperCase(),
       );
 
       if (!mounted) return;
@@ -1353,13 +1385,14 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
         return;
       }
 
-      String message = "Không thể gửi yêu cầu rút tiền.";
-      try {
-        final body = jsonDecode(res.body);
-        message = body['message']?.toString() ?? message;
-      } catch (_) {}
-
-      await WithdrawRequestFailedPopup.show(context, message: message);
+      await WithdrawRequestFailedPopup.show(
+        context,
+        message: apiErrorMessage(res, 'Không thể gửi yêu cầu rút tiền.'),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _validationError =
+          'Chưa xác nhận được kết quả rút tiền. Vui lòng kiểm tra lịch sử trước khi thử lại.');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -1526,6 +1559,14 @@ class _WithdrawDialogContentState extends State<WithdrawDialogContent> {
               ),
             ),
           ),
+          if (_validationError != null) ...[
+            const SizedBox(height: 12),
+            Semantics(
+              liveRegion: true,
+              child: Text(_validationError!,
+                style: const TextStyle(color: Brand.danger, fontWeight: FontWeight.w600)),
+            ),
+          ],
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,

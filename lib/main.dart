@@ -1,3 +1,4 @@
+import 'services/token_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Bổ sung import
 import 'screens/driver/driver_home.dart';
@@ -25,9 +26,13 @@ void main() async { // THÊM TỪ KHÓA ASYNC
   await FirebaseNotificationService.init();
 
 
-  // 2. Khởi tạo Shared Preferences để đảm bảo có thể đọc token ngay lập tức
-  // Đây là bước quan trọng để fix lỗi tiềm ẩn khi đọc token trên Splash Screen
+  // Non-sensitive preferences remain here; credentials use TokenStorage.
   await SharedPreferences.getInstance();
+  try {
+    await TokenStorage.instance.readVehicleSession();
+  } on TokenStorageException {
+    // Keep the stored session; opening vehicle mode can retry later.
+  }
 
   runApp(const BelucarApp());
 }

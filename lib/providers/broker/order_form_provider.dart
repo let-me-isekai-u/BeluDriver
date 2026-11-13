@@ -39,6 +39,9 @@ class OrderFormProvider extends ChangeNotifier {
   TrackAsiaAutocompleteSuggestion? selectedFromSuggestion;
   TrackAsiaAutocompleteSuggestion? selectedToSuggestion;
 
+  final pickupDateController = TextEditingController();
+  final pickupTimeController = TextEditingController();
+
   DateTime? pickupDate;
   TimeOfDay? pickupTime;
 
@@ -406,11 +409,13 @@ class OrderFormProvider extends ChangeNotifier {
 
   void setPickupDate(DateTime? value) {
     pickupDate = value;
+    pickupDateController.text = formatDate(value);
     notifyListeners();
   }
 
   void setPickupTime(TimeOfDay? value) {
     pickupTime = value;
+    pickupTimeController.text = formatTime(value);
     notifyListeners();
   }
 
@@ -421,6 +426,10 @@ class OrderFormProvider extends ChangeNotifier {
 
     if (phoneController.text.trim().isEmpty) {
       return "Vui lòng nhập số điện thoại khách";
+    }
+
+    if (!RegExp(r'^[0-9]{10}$').hasMatch(phoneController.text.trim())) {
+      return "Số điện thoại khách phải gồm đúng 10 chữ số";
     }
 
     if (requiresPassengerQuantity) {
@@ -489,6 +498,8 @@ class OrderFormProvider extends ChangeNotifier {
     _toDebounce?.cancel();
     offerPriceController.removeListener(_handleOfferPriceChanged);
     creatorEarnController.removeListener(_handleCreatorEarnChanged);
+    pickupDateController.dispose();
+    pickupTimeController.dispose();
     phoneController.dispose();
     customerNameController.dispose();
     noteController.dispose();

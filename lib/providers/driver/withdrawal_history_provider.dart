@@ -1,7 +1,7 @@
 import 'dart:convert';
 
+import 'package:beludriver_app/services/token_storage.dart';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/driver/withdrawal_history_model.dart';
 import '../../services/api_service.dart';
@@ -17,8 +17,7 @@ class WithdrawalHistoryProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('accessToken') ?? '';
+      final token = (await TokenStorage.instance.readAccessToken()) ?? '';
 
       final res = await ApiService.getWithdrawalHistory(accessToken: token);
 

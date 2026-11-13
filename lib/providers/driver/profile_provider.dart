@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:beludriver_app/services/token_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -18,8 +19,7 @@ class ProfileProvider extends ChangeNotifier {
       loading = true;
       notifyListeners();
 
-      final prefs = await SharedPreferences.getInstance();
-      final accessToken = prefs.getString('accessToken');
+      final accessToken = (await TokenStorage.instance.readAccessToken());
 
       if (accessToken == null || accessToken.isEmpty) {
         loading = false;
@@ -54,7 +54,7 @@ class ProfileProvider extends ChangeNotifier {
 
   Future<bool> deleteAccount() async {
     final prefs = await SharedPreferences.getInstance();
-    final accessToken = prefs.getString('accessToken');
+    final accessToken = (await TokenStorage.instance.readAccessToken());
 
     if (accessToken == null || accessToken.isEmpty) {
       return false;
@@ -64,6 +64,7 @@ class ProfileProvider extends ChangeNotifier {
       final res = await ApiService.deleteAccount(accessToken: accessToken);
 
       if (res.statusCode == 200) {
+        await TokenStorage.instance.clearAll();
         await prefs.clear();
         profile = null;
         onboardingStatus = null;
@@ -79,12 +80,13 @@ class ProfileProvider extends ChangeNotifier {
 
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
-    final accessToken = prefs.getString('accessToken');
+    final accessToken = (await TokenStorage.instance.readAccessToken());
 
     if (accessToken != null && accessToken.isNotEmpty) {
       await ApiService.Driverlogout(accessToken);
     }
 
+    await TokenStorage.instance.clearAll();
     await prefs.clear();
     profile = null;
     onboardingStatus = null;

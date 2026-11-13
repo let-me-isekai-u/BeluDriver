@@ -1,7 +1,7 @@
 import 'dart:convert';
 
+import 'package:beludriver_app/services/token_storage.dart';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/driver/broker_rides_model.dart';
 import '../../models/driver/ride_model.dart';
@@ -22,8 +22,7 @@ class ActivityHistoryProvider extends ChangeNotifier {
   bool isHistoryLoaded = false;
 
   Future<String> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('accessToken') ?? '';
+    return (await TokenStorage.instance.readAccessToken()) ?? '';
   }
 
   void preloadTabData(int initialTabIndex) {

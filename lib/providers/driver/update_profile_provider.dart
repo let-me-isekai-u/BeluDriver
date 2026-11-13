@@ -1,8 +1,8 @@
 import 'dart:convert';
 
+import 'package:beludriver_app/services/token_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/api_service.dart';
 
@@ -28,8 +28,7 @@ class UpdateProfileProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final accessToken = prefs.getString('accessToken');
+      final accessToken = (await TokenStorage.instance.readAccessToken());
 
       if (accessToken == null || accessToken.isEmpty) {
         return 'Phiên đăng nhập đã hết hạn';

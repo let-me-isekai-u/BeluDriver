@@ -1,6 +1,6 @@
+import 'package:beludriver_app/services/token_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/routes/register_route_model.dart';
 import '../../providers/routes/register_route_provider.dart';
@@ -67,15 +67,13 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
   }
 
   Future<void> _loadData() async {
-    final prefs = await SharedPreferences.getInstance();
-    final accessToken = prefs.getString("accessToken") ?? "";
+    final accessToken = (await TokenStorage.instance.readAccessToken()) ?? "";
     if (accessToken.isEmpty || !mounted) return;
     await context.read<RegisterRouteProvider>().initRegisterRoute(accessToken);
   }
 
   Future<void> _submit() async {
-    final prefs = await SharedPreferences.getInstance();
-    final accessToken = prefs.getString("accessToken") ?? "";
+    final accessToken = (await TokenStorage.instance.readAccessToken()) ?? "";
 
     if (accessToken.isEmpty) {
       _showSnack('Không tìm thấy access token');

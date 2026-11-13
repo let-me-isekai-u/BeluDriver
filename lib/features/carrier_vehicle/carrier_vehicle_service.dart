@@ -1,6 +1,6 @@
 // Chế độ "Xe nhà xe" (module Nhà xe — Xe limousine / Xe khách).
 // Tài xế quét mã QR cố định dán trên xe là vào ngay (không mật khẩu/OTP). Phiên xe tách hẳn khỏi
-// tài khoản tài xế xe ghép: access token 15 phút + session token để làm mới, lưu trong SharedPreferences.
+// tài khoản tài xế xe ghép: access token 15 phút + session token để làm mới, lưu trong Secure Storage.
 // Contract: docs/api/carrier-module-api.md (mục 3) của backend.
 import 'dart:async';
 import 'dart:convert';
@@ -8,7 +8,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import '../../services/token_storage.dart';
 
 import '../../config/api_config.dart';
 
@@ -48,14 +48,12 @@ class CarrierVehicleSession {
 
 class CarrierVehicleService {
   static const String baseUrl = '$apiOrigin/api/carrier-vehicle';
-  static const String _prefsKey = 'carrier_vehicle_session_v1';
   static CarrierVehicleSession? _session;
 
   static CarrierVehicleSession? get session => _session;
 
   static Future<CarrierVehicleSession?> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_prefsKey);
+    final raw = await TokenStorage.instance.readVehicleSession();
     if (raw == null) return null;
     try {
       final s = CarrierVehicleSession.fromJson(jsonDecode(raw) as Map<String, dynamic>);
@@ -64,6 +62,8 @@ class CarrierVehicleService {
         return null;
       }
       return _session = s;
+    } on TokenStorageException {
+      rethrow;
     } catch (_) {
       await _clear();
       return null;
@@ -71,14 +71,12 @@ class CarrierVehicleService {
   }
 
   static Future<void> _save() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (_session != null) await prefs.setString(_prefsKey, jsonEncode(_session!.toJson()));
+    if (_session != null) await TokenStorage.instance.writeVehicleSession(jsonEncode(_session!.toJson()));
   }
 
   static Future<void> _clear() async {
+    await TokenStorage.instance.clearVehicleSession();
     _session = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_prefsKey);
   }
 
   static dynamic _decode(http.Response r) {
@@ -131,8 +129,10 @@ class CarrierVehicleService {
         await _save();
         return true;
       }
-    } catch (e) {
-      debugPrint('carrier refresh failed: $e');
+    } on TokenStorageException {
+      rethrow;
+    } catch (_) {
+      debugPrint('carrier refresh failed');
     }
     return false;
   }

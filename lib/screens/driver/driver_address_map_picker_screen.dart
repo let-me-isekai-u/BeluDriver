@@ -8,6 +8,7 @@ import 'package:latlong2/latlong.dart' as latlng;
 import '../../models/location_models.dart';
 import '../../services/api_service.dart';
 import '../../ui/ui.dart';
+import '../../widgets/driver_map_layer.dart';
 
 class DriverAddressMapPickerScreen extends StatefulWidget {
   final String title;
@@ -26,8 +27,6 @@ class DriverAddressMapPickerScreen extends StatefulWidget {
 
 class _DriverAddressMapPickerScreenState
     extends State<DriverAddressMapPickerScreen> {
-  static const String _streetTileUrl =
-      'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
   static const latlng.LatLng _defaultCenter = latlng.LatLng(
     21.028511,
     105.804817,
@@ -311,13 +310,7 @@ class _DriverAddressMapPickerScreenState
                 _schedulePreviewResolve();
               },
             ),
-            children: [
-              TileLayer(
-                urlTemplate: _streetTileUrl,
-                userAgentPackageName: 'com.belu.driver',
-                maxZoom: 19,
-              ),
-            ],
+            children: const [DriverMapLayer()],
           ),
           IgnorePointer(
             child: Center(
@@ -344,7 +337,7 @@ class _DriverAddressMapPickerScreenState
                       "Kéo bản đồ để đặt ghim",
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
-                        color: Colors.white,
+                        color: Brand.ink,
                       ),
                     ),
                   ),
@@ -388,7 +381,7 @@ class _DriverAddressMapPickerScreenState
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Brand.ink,
+                  color: Brand.surface,
                   borderRadius: BorderRadius.circular(22),
                   boxShadow: const [
                     BoxShadow(
@@ -418,7 +411,7 @@ class _DriverAddressMapPickerScreenState
                             height: 18,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.white,
+                              color: Brand.navy,
                             ),
                           ),
                           SizedBox(width: 10),
@@ -446,7 +439,7 @@ class _DriverAddressMapPickerScreenState
                       Text(
                         _buildLocationSubtitle(_resolvedLocation!),
                         style: const TextStyle(
-                          color: Color(0xFFE7D8B0),
+                          color: Brand.inkMuted,
                           fontWeight: FontWeight.w600,
                         ),
                       ),

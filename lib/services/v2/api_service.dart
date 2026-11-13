@@ -87,6 +87,123 @@ class ApiService {
   // -----------------------------------------------------------
   // 3️⃣ ĐĂNG KÝ (FORM-DATA + FILE)
   // -----------------------------------------------------------
+  static int _registerDebugSequence = 0;
+
+  static String _registrationDebugBody(
+    http.Response response,
+    List<String> privateValues,
+  ) {
+    final body = responseJson(response);
+    if (body == null) return '[Non-JSON response; body omitted]';
+    final sensitiveKey = RegExp(
+      r'password|token|secret|authorization|cookie|email|phone|name|license|otp|challenge',
+      caseSensitive: false,
+    );
+    final secrets = [...privateValues];
+    void collectSecrets(dynamic value) {
+      if (value is Map) {
+        for (final entry in value.entries) {
+          if (sensitiveKey.hasMatch(entry.key.toString()) &&
+              entry.value is String) {
+            secrets.add(entry.value as String);
+          } else {
+            collectSecrets(entry.value);
+          }
+        }
+      } else if (value is List) {
+        for (final item in value) {
+          collectSecrets(item);
+        }
+      }
+    }
+
+    collectSecrets(body);
+
+    // Only log diagnostic fields, never account data or returned credentials.
+    final diagnostics = <String, dynamic>{
+      for (final key in [
+        'success',
+        'status',
+        'code',
+        'message',
+        'title',
+        'errors',
+        'traceId',
+      ])
+        if (body.containsKey(key)) key: body[key],
+    };
+    dynamic redact(dynamic value) {
+      if (value is Map) {
+        return value.map(
+          (key, item) => MapEntry(
+            key.toString(),
+            sensitiveKey.hasMatch(key.toString()) ? '[REDACTED]' : redact(item),
+          ),
+        );
+      }
+      if (value is List) return value.map(redact).toList();
+      if (value is! String) return value;
+      var text = value;
+      for (final privateValue in secrets.where((item) => item.isNotEmpty)) {
+        text = text.replaceAll(privateValue, '[REDACTED]');
+      }
+      return text
+          .replaceAll(RegExp(r'[^\s@]+@[^\s@]+\.[^\s@]+'), '[EMAIL]')
+          .replaceAll(RegExp(r'\b\d[\d\s().-]{8,}\d\b'), '[PHONE]')
+          .replaceAll(
+            RegExp(r'Bearer\s+\S+', caseSensitive: false),
+            'Bearer [REDACTED]',
+          );
+    }
+
+    final text = jsonEncode(redact(diagnostics));
+    return text.length > 6000 ? '${text.substring(0, 6000)} [TRUNCATED]' : text;
+  }
+
+  static Future<http.Response> requestRegistrationChallenge({
+    required String email,
+    required String phone,
+  }) async {
+    final url = Uri.parse('$apiOrigin/api/identity/challenges');
+    final stopwatch = Stopwatch()..start();
+    if (kDebugMode) {
+      debugPrint(
+        '[REGISTER_CHALLENGE] REQUEST POST $url ownerType=2 purpose=register '
+        'emailPresent=${email.isNotEmpty} phonePresent=${phone.isNotEmpty}',
+      );
+    }
+    try {
+      final response = await http
+          .post(
+            url,
+            headers: _defaultHeaders(),
+            body: jsonEncode({
+              'ownerType': 2,
+              'purpose': 'register',
+              'email': email,
+              'phone': phone,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+      if (kDebugMode) {
+        final challenge = responseJson(response)?['challengeId'];
+        debugPrint(
+          '[REGISTER_CHALLENGE] RESPONSE status=${response.statusCode} '
+          'elapsedMs=${stopwatch.elapsedMilliseconds} '
+          'diagnostics=${_registrationDebugBody(response, [email, phone, if (challenge is String) challenge])}',
+        );
+      }
+      return response;
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('[REGISTER_CHALLENGE] ERROR type=${error.runtimeType}');
+      }
+      return _errorResponse(error);
+    } finally {
+      stopwatch.stop();
+    }
+  }
+
   static Future<http.Response> driverRegister({
     required String fullName,
     required String phone,
@@ -94,8 +211,14 @@ class ApiService {
     required String password,
     required String licenseNumber,
     required int region,
+    required String challengeId,
+    required String otp,
   }) async {
     final url = Uri.parse("$_baseUrl/driver-register-ver2");
+    final stopwatch = Stopwatch()..start();
+    final logTag = kDebugMode
+        ? '[REGISTER_API #${++_registerDebugSequence}]'
+        : '';
 
     try {
       final request = http.MultipartRequest("POST", url);
@@ -106,11 +229,39 @@ class ApiService {
       request.fields["password"] = password;
       request.fields["licenseNumber"] = licenseNumber;
       request.fields["region"] = region.toString();
+      request.fields["challengeId"] = challengeId;
+      request.fields["otp"] = otp;
 
-      final resStream = await request.send();
-      return await http.Response.fromStream(resStream);
-    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('$logTag REQUEST POST $url');
+        debugPrint(
+          '$logTag multipart fields=${jsonEncode({for (final entry in request.fields.entries) entry.key: entry.key == 'region' ? entry.value : '[REDACTED; present=${entry.value.isNotEmpty}]'})} files=${request.files.length}',
+        );
+      }
+
+      final response = await request
+          .send()
+          .then(http.Response.fromStream)
+          .timeout(const Duration(seconds: 30));
+      if (kDebugMode) {
+        debugPrint(
+          '$logTag RESPONSE status=${response.statusCode} elapsedMs=${stopwatch.elapsedMilliseconds} bytes=${response.bodyBytes.length} contentType=${response.headers['content-type']}',
+        );
+        debugPrint(
+          '$logTag diagnostics=${_registrationDebugBody(response, [password, email, phone, fullName, licenseNumber, challengeId, otp])}',
+        );
+      }
+      return response;
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        debugPrint(
+          '$logTag ERROR type=${e.runtimeType} elapsedMs=${stopwatch.elapsedMilliseconds} fallbackStatus=503/504',
+        );
+        debugPrintStack(label: '$logTag stack', stackTrace: stackTrace);
+      }
       return _errorResponse(e);
+    } finally {
+      stopwatch.stop();
     }
   }
 

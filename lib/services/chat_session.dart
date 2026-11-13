@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:shared_preferences/shared_preferences.dart';
+import 'token_storage.dart';
 
 import 'api_service.dart';
 
@@ -9,23 +9,23 @@ class ChatSession {
   static String? _attemptedRefresh;
 
   static Future<String> accessToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('accessToken') ?? '';
+    final storage = TokenStorage.instance;
+    final token = (await storage.readAccessToken()) ?? '';
     if (token.isEmpty || !_expiresSoon(token)) return token;
 
     final pending = _refreshInFlight;
     if (pending != null) {
       await pending;
-      final latest = prefs.getString('accessToken') ?? '';
+      final latest = (await storage.readAccessToken()) ?? '';
       return _expiresSoon(latest) ? '' : latest;
     }
-    final refresh = prefs.getString('refreshToken');
+    final refresh = await storage.readRefreshToken();
     if (refresh == null || refresh.isEmpty || refresh == _attemptedRefresh) {
       return '';
     }
 
     _attemptedRefresh = refresh;
-    final renewal = _renew(prefs, token, refresh);
+    final renewal = _renew(storage, token, refresh);
     _refreshInFlight = renewal;
     try {
       return await renewal;
@@ -35,7 +35,7 @@ class ChatSession {
   }
 
   static Future<String> _renew(
-    SharedPreferences prefs,
+    TokenStorage storage,
     String token,
     String refresh,
   ) async {
@@ -50,15 +50,12 @@ class ChatSession {
           access.isEmpty ||
           nextRefresh is! String ||
           nextRefresh.isEmpty ||
-          prefs.getString('accessToken') != token ||
-          prefs.getString('refreshToken') != refresh) {
+          await storage.readAccessToken() != token ||
+          await storage.readRefreshToken() != refresh) {
         return '';
       }
-      if (!await prefs.setString('refreshToken', nextRefresh)) return '';
-      if (prefs.getString('accessToken') != token ||
-          prefs.getString('refreshToken') != nextRefresh)
-        return '';
-      return await prefs.setString('accessToken', access) ? access : '';
+      await storage.writeTokens(accessToken: access, refreshToken: nextRefresh);
+      return access;
     } catch (_) {
       return '';
     }

@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:beludriver_app/services/token_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app_theme.dart';
 import '../../models/driver/driver_profile_model.dart';
@@ -22,6 +22,8 @@ import 'driver_login_screen.dart';
 import 'driver_update_profile_screen.dart';
 import 'wallet_history_screen.dart';
 import '../../ui/ui.dart';
+
+enum _DriverSettingsAction { changeRoute, editProfile, changePassword, deleteAccount }
 
 class DriverProfileScreen extends StatelessWidget {
   const DriverProfileScreen({super.key});
@@ -92,7 +94,6 @@ class _DriverProfileView extends StatefulWidget {
 }
 
 class _DriverProfileViewState extends State<_DriverProfileView> {
-  bool _isFinanceExpanded = false;
   bool _isOnboardingExpanded = false;
   bool _isSelectedProvincesExpanded = false;
   bool _isRoutesExpanded = false;
@@ -116,7 +117,7 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const DriverLoginScreen()),
-      (_) => false,
+          (_) => false,
     );
   }
 
@@ -145,9 +146,13 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
   }
 
   Future<void> _handleLogout(ProfileProvider provider) async {
-    await provider.logout();
-    if (!mounted) return;
-    _goToLogin();
+    try {
+      await provider.logout();
+      if (!mounted) return;
+      _goToLogin();
+    } on TokenStorageException catch (e) {
+      if (mounted) _showError(e.toString());
+    }
   }
 
   Future<void> _handleOpenZalo(ProfileProvider provider) async {
@@ -220,6 +225,10 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
     return '${NumberFormat('#,###', 'vi_VN').format(amount.round())} đ';
   }
 
+  // ---------------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -241,143 +250,136 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
               ),
             ),
             iconTheme: IconThemeData(color: Brand.navy),
+            centerTitle: true,
             actions: [
-              Padding(
-                padding: const EdgeInsets.only(right: 10),
-                child: IconButton(
-                  tooltip: 'Xoá tài khoản',
-                  onPressed: profile == null
-                      ? null
-                      : () => _showDeleteDialog(context, theme, provider),
-                  icon: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Brand.danger.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: Brand.danger.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.delete_outline_rounded,
-                      color: Brand.danger,
-                    ),
-                  ),
-                ),
-              ),
+              if (profile != null && !provider.loading)
+                _buildSettingsMenu(theme, provider, profile),
+              const SizedBox(width: 6),
             ],
           ),
           body: provider.loading
               ? Center(
-                  child: CircularProgressIndicator(
-                    color: Brand.navy,
-                  ),
-                )
+            child: CircularProgressIndicator(
+              color: Brand.navy,
+            ),
+          )
               : profile == null
               ? const DriverEmptyState(
-                  icon: Icons.person_off_rounded,
-                  title: 'Không có dữ liệu hồ sơ',
-                  message:
-                      'Thử tải lại hoặc đăng nhập lại.',
-                )
-              : Stack(
-                  children: [
-                    RefreshIndicator(
-                      onRefresh: provider.loadProfile,
-                      child: ListView(
-                        physics: const ClampingScrollPhysics(
-                          parent: AlwaysScrollableScrollPhysics(),
-                        ),
-                        padding: EdgeInsets.fromLTRB(
-                          16,
-                          16,
-                          16,
-                          bottomSafe + 28,
-                        ),
-                        children: [
-                          _buildHero(theme, profile, onboarding),
-                          const SizedBox(height: 16),
-                          _buildWalletCard(theme, profile),
-                          const SizedBox(height: 16),
-                          _buildFinanceSection(
-                            context,
-                            theme,
-                            provider,
-                            profile,
-                          ),
-                          const SizedBox(height: 16),
-                          _buildOnboardingSection(theme, onboarding),
-                          const SizedBox(height: 16),
-                          _buildSelectedProvincesSection(theme, profile),
-                          const SizedBox(height: 16),
-                          _buildRoutesSection(theme, profile),
-                          const SizedBox(height: 16),
-                          _buildActionsSection(
-                            context,
-                            theme,
-                            provider,
-                            profile,
-                          ),
-                          const SizedBox(height: 16),
-                          _buildDetailsSection(theme, profile),
-                          const SizedBox(height: 16),
-                          _buildDangerZone(theme, provider),
-                        ],
-                      ),
-                    ),
-                  ],
+            icon: Icons.person_off_rounded,
+            title: 'Không có dữ liệu hồ sơ',
+            message:
+            'Thử tải lại hoặc đăng nhập lại.',
+          )
+              : RefreshIndicator(
+            onRefresh: provider.loadProfile,
+            color: Brand.navy,
+            child: ListView(
+              physics: const ClampingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
+              ),
+              padding: EdgeInsets.fromLTRB(
+                16,
+                12,
+                16,
+                bottomSafe + 24,
+              ),
+              children: [
+                _FadeSlideIn(
+                  index: 0,
+                  child: _buildHero(
+                    context,
+                    theme,
+                    provider,
+                    profile,
+                    onboarding,
+                  ),
                 ),
+                const SizedBox(height: 12),
+                _FadeSlideIn(
+                  index: 1,
+                  child: _buildQuickActions(context, provider),
+                ),
+                const SizedBox(height: 12),
+                _FadeSlideIn(
+                  index: 2,
+                  child: _buildInfoCard(theme, profile, onboarding),
+                ),
+                const SizedBox(height: 16),
+                _FadeSlideIn(
+                  index: 3,
+                  child: _buildLogoutButton(provider),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Thẻ đầu trang (gọn): danh tính + trạng thái + số dư + Nạp/Rút
+  // ---------------------------------------------------------------------------
+
   Widget _buildHero(
-    ThemeData theme,
-    DriverProfileModel profile,
-    DriverOnboardingStatusDto? onboarding,
-  ) {
+      BuildContext context,
+      ThemeData theme,
+      ProfileProvider provider,
+      DriverProfileModel profile,
+      DriverOnboardingStatusDto? onboarding,
+      ) {
     final canReceive = onboarding?.canReceiveRide ?? false;
     final statusLabel = onboarding == null
         ? 'Đang đồng bộ'
         : _mapKycStatusLabel(onboarding.kycStatusText);
+    final hasAvatar = profile.avatarUrl.isNotEmpty;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Brand.navy,
-            Brand.b700,
-          ],
+          colors: [Brand.navy, Brand.b700],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: Brand.navy.withValues(alpha: 0.16),
-        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Brand.navy.withValues(alpha: 0.20),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 38,
-                backgroundColor: Colors.white,
-                backgroundImage: profile.avatarUrl.isNotEmpty
-                    ? NetworkImage(profile.avatarUrl)
-                    : null,
-                child: profile.avatarUrl.isEmpty
-                    ? Icon(
-                        Icons.person_rounded,
-                        size: 42,
-                        color: Brand.navy,
-                      )
-                    : null,
+              Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    width: 1.5,
+                  ),
+                ),
+                child: CircleAvatar(
+                  radius: 26,
+                  backgroundColor: Colors.white,
+                  backgroundImage:
+                  hasAvatar ? NetworkImage(profile.avatarUrl) : null,
+                  child: hasAvatar
+                      ? null
+                      : Icon(
+                    Icons.person_rounded,
+                    size: 28,
+                    color: Brand.navy,
+                  ),
+                ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -386,108 +388,143 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                       profile.fullName.isEmpty
                           ? "Chưa cập nhật tên"
                           : profile.fullName,
-                      style: theme.textTheme.headlineSmall?.copyWith(
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 24,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                        height: 1.2,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      profile.phone,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Brand.b200,
-                        fontSize: 15,
-                      ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.phone_outlined,
+                          size: 14,
+                          color: Brand.b200,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            profile.phone,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Brand.b200,
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Wrap(
-            spacing: 10,
-            runSpacing: 10,
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              DriverPill(
+              _HeroChip(
                 label: statusLabel,
                 icon: Icons.verified_user_rounded,
-                color: Colors.white,
+                iconColor: Colors.white,
               ),
-              DriverPill(
+              _HeroChip(
                 label: canReceive
                     ? "Có thể nhận chuyến"
                     : "Chưa sẵn sàng nhận chuyến",
                 icon: canReceive
                     ? Icons.check_circle_rounded
                     : Icons.timelapse_rounded,
-                color: canReceive ? const Color(0xFF4ADE80) : Brand.lane,
+                iconColor: canReceive ? const Color(0xFF4ADE80) : Brand.lane,
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(
+                            Icons.account_balance_wallet_outlined,
+                            size: 14,
+                            color: Brand.b200,
+                          ),
+                          SizedBox(width: 5),
+                          Text(
+                            'Số dư ví',
+                            style: TextStyle(
+                              color: Brand.b200,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          _formatWallet(profile.wallet),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _HeroAction(
+                  icon: Icons.add_card_rounded,
+                  label: 'Nạp tiền',
+                  onTap: () => _showDepositDialog(context, theme, provider),
+                ),
+                const SizedBox(width: 4),
+                _HeroAction(
+                  icon: Icons.payments_outlined,
+                  label: 'Rút tiền',
+                  onTap: () => _showWithdrawDialog(context, provider, profile),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildWalletCard(ThemeData theme, DriverProfileModel profile) {
-    return DriverSectionCard(
-      title: "Tổng quan tài khoản",
-      icon: Icons.account_balance_wallet_rounded,
-      child: Row(
-        children: [
-          Expanded(
-            child: DriverStatTile(
-              label: "Số dư ví",
-              value: _formatWallet(profile.wallet),
-              icon: Icons.savings_rounded,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: DriverStatTile(
-              label: "Tỉnh đã chọn",
-              value: profile.selectedProvinces.length.toString(),
-              icon: Icons.map_rounded,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: DriverStatTile(
-              label: "Tuyến đăng ký",
-              value: profile.routes.length.toString(),
-              icon: Icons.alt_route_rounded,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // ---------------------------------------------------------------------------
+  // Lối tắt: Lịch sử tài chính + Liên hệ hỗ trợ
+  // ---------------------------------------------------------------------------
 
-  Widget _buildFinanceSection(
-    BuildContext context,
-    ThemeData theme,
-    ProfileProvider provider,
-    DriverProfileModel profile,
-  ) {
-    return _buildExpandableSection(
-      theme: theme,
-      title: "Tài chính",
-      subtitle: "Lịch sử ví, nạp và rút tiền.",
-      icon: Icons.account_balance_wallet_outlined,
-      expanded: _isFinanceExpanded,
-      onTap: () {
-        setState(() {
-          _isFinanceExpanded = !_isFinanceExpanded;
-        });
-      },
-      child: Column(
-        children: [
-          _buildActionTile(
-            theme,
+  Widget _buildQuickActions(BuildContext context, ProfileProvider provider) {
+    return Row(
+      children: [
+        Expanded(
+          child: _QuickTile(
             icon: Icons.history_rounded,
-            title: "Lịch sử tài chính",
-            subtitle: "Xem toàn bộ giao dịch ví",
+            label: 'Lịch sử tài chính',
             onTap: () {
               Navigator.push(
                 context,
@@ -495,31 +532,149 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
               );
             },
           ),
-          _buildActionTile(
-            theme,
-            icon: Icons.account_balance_wallet_rounded,
-            title: "Nạp tiền",
-            subtitle: "Tạo yêu cầu nạp tiền vào ví",
-            onTap: () => _showDepositDialog(context, theme, provider),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _QuickTile(
+            icon: Icons.headset_mic_rounded,
+            label: 'Liên hệ hỗ trợ',
+            onTap: () => _showSupportDialog(context, provider),
           ),
-          _buildActionTile(
-            theme,
-            icon: Icons.payments_outlined,
-            title: "Yêu cầu rút tiền",
-            subtitle: "Gửi yêu cầu rút tiền từ ví tài xế",
-            onTap: () => _showWithdrawDialog(context, provider, profile),
-            isLast: true,
+        ),
+      ],
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Thẻ thông tin: biển số, email và các mục mở rộng
+  // ---------------------------------------------------------------------------
+
+  Widget _buildInfoCard(
+      ThemeData theme,
+      DriverProfileModel profile,
+      DriverOnboardingStatusDto? onboarding,
+      ) {
+    const divider = Divider(
+      height: 1,
+      thickness: 1,
+      indent: 62,
+      endIndent: 16,
+      color: Brand.lineSoft,
+    );
+
+    return Material(
+      color: Colors.white,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: const BorderSide(color: Brand.line),
+      ),
+      child: Column(
+        children: [
+          _buildInfoLine(
+            icon: Icons.directions_car_outlined,
+            label: 'Biển số xe',
+            value: profile.licenseNumber.isEmpty
+                ? 'Chưa cập nhật'
+                : profile.licenseNumber,
+          ),
+          divider,
+          _buildInfoLine(
+            icon: Icons.email_outlined,
+            label: 'Email',
+            value: profile.email.isEmpty ? 'Chưa cập nhật' : profile.email,
+          ),
+          const Divider(height: 1, thickness: 1, color: Brand.line),
+          _buildOnboardingSection(theme, onboarding),
+          divider,
+          _buildSelectedProvincesSection(theme, profile),
+          divider,
+          _buildRoutesSection(theme, profile),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoLine({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: Brand.b50,
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(icon, color: Brand.navy, size: 19),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Brand.inkMuted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: Brand.ink,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
+  Widget _buildLogoutButton(ProfileProvider provider) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () => _handleLogout(provider),
+        icon: const Icon(Icons.logout_rounded),
+        label: const Text("Đăng xuất tài khoản"),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Brand.danger,
+          side: const BorderSide(color: Brand.danger),
+          padding: const EdgeInsets.symmetric(vertical: 15),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          textStyle: const TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 15,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Nạp tiền / QR / Rút tiền
+  // ---------------------------------------------------------------------------
+
   void _showDepositDialog(
-    BuildContext parentContext,
-    ThemeData theme,
-    ProfileProvider provider,
-  ) {
+      BuildContext parentContext,
+      ThemeData theme,
+      ProfileProvider provider,
+      ) {
     final TextEditingController amountController = TextEditingController();
     final depositProvider = parentContext.read<DepositProvider>();
     final scaffoldMessenger = ScaffoldMessenger.of(parentContext);
@@ -674,77 +829,76 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                   onPressed: isSubmitting
                       ? null
                       : () async {
-                          final amount = int.tryParse(
-                            amountController.text.replaceAll(',', '').trim(),
-                          );
+                    final amount = int.tryParse(
+                      amountController.text.replaceAll(',', '').trim(),
+                    );
 
-                          if (amount == null || amount <= 0) {
-                            scaffoldMessenger.showSnackBar(
-                              const SnackBar(
-                                content: Text("Vui lòng nhập số tiền hợp lệ"),
-                              ),
-                            );
-                            return;
-                          }
+                    if (amount == null || amount <= 0) {
+                      scaffoldMessenger.showSnackBar(
+                        const SnackBar(
+                          content: Text("Vui lòng nhập số tiền hợp lệ"),
+                        ),
+                      );
+                      return;
+                    }
 
-                          final prefs = await SharedPreferences.getInstance();
-                          final token = prefs.getString('accessToken') ?? '';
+                    final token = (await TokenStorage.instance.readAccessToken()) ?? '';
 
-                          if (token.isEmpty) {
-                            scaffoldMessenger.showSnackBar(
-                              const SnackBar(
-                                content: Text("Không tìm thấy access token"),
-                              ),
-                            );
-                            return;
-                          }
+                    if (token.isEmpty) {
+                      scaffoldMessenger.showSnackBar(
+                        const SnackBar(
+                          content: Text("Không tìm thấy access token"),
+                        ),
+                      );
+                      return;
+                    }
 
-                          setState(() => isSubmitting = true);
+                    setState(() => isSubmitting = true);
 
-                          final ok = await depositProvider.createDepositRequest(
-                            accessToken: token,
-                            amount: amount,
-                          );
+                    final ok = await depositProvider.createDepositRequest(
+                      accessToken: token,
+                      amount: amount,
+                    );
 
-                          if (!parentContext.mounted) return;
+                    if (!parentContext.mounted) return;
 
-                          setState(() => isSubmitting = false);
+                    setState(() => isSubmitting = false);
 
-                          if (!ok) {
-                            scaffoldMessenger.showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  depositProvider.errorMessage ??
-                                      "Không thể tạo yêu cầu nạp tiền",
-                                ),
-                              ),
-                            );
-                            return;
-                          }
+                    if (!ok) {
+                      scaffoldMessenger.showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            depositProvider.errorMessage ??
+                                "Không thể tạo yêu cầu nạp tiền",
+                          ),
+                        ),
+                      );
+                      return;
+                    }
 
-                          final content = depositProvider.depositContent;
-                          if (content == null || content.isEmpty) {
-                            scaffoldMessenger.showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  "Không nhận được nội dung chuyển khoản",
-                                ),
-                              ),
-                            );
-                            return;
-                          }
+                    final content = depositProvider.depositContent;
+                    if (content == null || content.isEmpty) {
+                      scaffoldMessenger.showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            "Không nhận được nội dung chuyển khoản",
+                          ),
+                        ),
+                      );
+                      return;
+                    }
 
-                          Navigator.pop(dialogContext);
+                    Navigator.pop(dialogContext);
 
-                          _showQRDialog(
-                            parentContext,
-                            theme,
-                            amount,
-                            content,
-                            provider,
-                            depositProvider,
-                          );
-                        },
+                    _showQRDialog(
+                      parentContext,
+                      theme,
+                      amount,
+                      content,
+                      provider,
+                      depositProvider,
+                    );
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Brand.navy,
                     foregroundColor: Colors.white,
@@ -754,10 +908,10 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                   ),
                   child: isSubmitting
                       ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                       : const Text("Tạo yêu cầu"),
                 ),
               ),
@@ -769,13 +923,13 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
   }
 
   void _showQRDialog(
-    BuildContext parentContext,
-    ThemeData theme,
-    int amount,
-    String content,
-    ProfileProvider provider,
-    DepositProvider depositProvider,
-  ) async {
+      BuildContext parentContext,
+      ThemeData theme,
+      int amount,
+      String content,
+      ProfileProvider provider,
+      DepositProvider depositProvider,
+      ) async {
     if (!mounted || !parentContext.mounted) return;
 
     final qrUrl =
@@ -897,8 +1051,8 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                       child: ElevatedButton(
                         onPressed: () async {
                           countdownTimer?.cancel();
-                          final prefs = await SharedPreferences.getInstance();
-                          final token = prefs.getString('accessToken') ?? '';
+
+                          final token = (await TokenStorage.instance.readAccessToken()) ?? '';
                           if (!dialogCtx.mounted) return;
 
                           String message;
@@ -911,13 +1065,13 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
                           } else {
                             final ok = await depositProvider
                                 .cancelDepositRequest(
-                                  accessToken: token,
-                                  depositId: depositProvider.depositId!,
-                                );
+                              accessToken: token,
+                              depositId: depositProvider.depositId!,
+                            );
                             message = ok
                                 ? "Huỷ yêu cầu nạp tiền thành công"
                                 : (depositProvider.errorMessage ??
-                                      "Không thể huỷ yêu cầu nạp tiền");
+                                "Không thể huỷ yêu cầu nạp tiền");
                             color = ok ? Colors.green : Colors.orange;
                           }
 
@@ -954,10 +1108,10 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
   }
 
   void _showWithdrawDialog(
-    BuildContext context,
-    ProfileProvider provider,
-    DriverProfileModel profile,
-  ) {
+      BuildContext context,
+      ProfileProvider provider,
+      DriverProfileModel profile,
+      ) {
     final theme = Theme.of(context);
     showDialog(
       context: context,
@@ -1007,14 +1161,17 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
     });
   }
 
+  // ---------------------------------------------------------------------------
+  // Các mục mở rộng: trạng thái, khu vực, tuyến
+  // ---------------------------------------------------------------------------
+
   Widget _buildOnboardingSection(
-    ThemeData theme,
-    DriverOnboardingStatusDto? onboarding,
-  ) {
-    return _buildExpandableSection(
+      ThemeData theme,
+      DriverOnboardingStatusDto? onboarding,
+      ) {
+    return _buildExpandableTile(
       theme: theme,
       title: "Trạng thái tài khoản",
-      subtitle: "KYC, tuyến và bước tiếp theo.",
       icon: Icons.shield_rounded,
       expanded: _isOnboardingExpanded,
       onTap: () {
@@ -1024,63 +1181,62 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
       },
       child: onboarding == null
           ? Text(
-              "Không có dữ liệu trạng thái tài khoản.",
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: Brand.inkMuted,
-              ),
-            )
+        "Không có dữ liệu trạng thái tài khoản.",
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: Brand.inkMuted,
+        ),
+      )
           : Column(
-              children: [
-                _buildInfoCardRow(
-                  theme,
-                  "Trạng thái KYC",
-                  _mapKycStatusLabel(onboarding.kycStatusText),
-                  valueColor: _kycStatusColor(onboarding.kycStatus),
-                ),
-                _buildInfoCardRow(
-                  theme,
-                  "Đã đăng ký tuyến",
-                  onboarding.hasRegisteredRoute ? "Đã đăng ký" : "Chưa đăng ký",
-                ),
-                _buildInfoCardRow(
-                  theme,
-                  "Số tỉnh đã chọn",
-                  onboarding.selectedProvinceCount.toString(),
-                ),
-                _buildInfoCardRow(
-                  theme,
-                  "Có thể nhận chuyến",
-                  _boolToVietnamese(onboarding.canReceiveRide),
-                ),
-                _buildInfoCardRow(
-                  theme,
-                  "Hành động ưu tiên",
-                  _mapNextStepLabel(onboarding.nextStep),
-                ),
-                if ((onboarding.kycRejectReason ?? '').isNotEmpty)
-                  _buildInfoCardRow(
-                    theme,
-                    "Lý do từ chối KYC",
-                    onboarding.kycRejectReason!,
-                    isLast: true,
-                    valueColor: Brand.danger,
-                  )
-                else
-                  const SizedBox.shrink(),
-              ],
+        children: [
+          _buildInfoCardRow(
+            theme,
+            "Trạng thái KYC",
+            _mapKycStatusLabel(onboarding.kycStatusText),
+            valueColor: _kycStatusColor(onboarding.kycStatus),
+          ),
+          _buildInfoCardRow(
+            theme,
+            "Đã đăng ký tuyến",
+            onboarding.hasRegisteredRoute ? "Đã đăng ký" : "Chưa đăng ký",
+          ),
+          _buildInfoCardRow(
+            theme,
+            "Số tỉnh đã chọn",
+            onboarding.selectedProvinceCount.toString(),
+          ),
+          _buildInfoCardRow(
+            theme,
+            "Có thể nhận chuyến",
+            _boolToVietnamese(onboarding.canReceiveRide),
+          ),
+          _buildInfoCardRow(
+            theme,
+            "Hành động ưu tiên",
+            _mapNextStepLabel(onboarding.nextStep),
+            isLast: (onboarding.kycRejectReason ?? '').isEmpty,
+          ),
+          if ((onboarding.kycRejectReason ?? '').isNotEmpty)
+            _buildInfoCardRow(
+              theme,
+              "Lý do từ chối KYC",
+              onboarding.kycRejectReason!,
+              isLast: true,
+              valueColor: Brand.danger,
             ),
+        ],
+      ),
     );
   }
 
   Widget _buildSelectedProvincesSection(
-    ThemeData theme,
-    DriverProfileModel profile,
-  ) {
-    return _buildExpandableSection(
+      ThemeData theme,
+      DriverProfileModel profile,
+      ) {
+    return _buildExpandableTile(
       theme: theme,
       title: "Khu vực hoạt động",
-      subtitle: "Tỉnh bạn nhận chuyến.",
       icon: Icons.map_outlined,
+      count: profile.selectedProvinces.length,
       expanded: _isSelectedProvincesExpanded,
       onTap: () {
         setState(() {
@@ -1089,32 +1245,32 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
       },
       child: profile.selectedProvinces.isEmpty
           ? const DriverEmptyState(
-              icon: Icons.place_outlined,
-              title: "Chưa chọn tỉnh hoạt động",
-              message:
-                  "Cập nhật khu vực để nhận nhiều chuyến hơn.",
-            )
+        icon: Icons.place_outlined,
+        title: "Chưa chọn tỉnh hoạt động",
+        message:
+        "Cập nhật khu vực để nhận nhiều chuyến hơn.",
+      )
           : Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: profile.selectedProvinces
-                  .map(
-                    (item) => DriverPill(
-                      label: item.provinceName,
-                      icon: Icons.location_city_rounded,
-                    ),
-                  )
-                  .toList(),
-            ),
+        spacing: 8,
+        runSpacing: 8,
+        children: profile.selectedProvinces
+            .map(
+              (item) => DriverPill(
+            label: item.provinceName,
+            icon: Icons.location_city_rounded,
+          ),
+        )
+            .toList(),
+      ),
     );
   }
 
   Widget _buildRoutesSection(ThemeData theme, DriverProfileModel profile) {
-    return _buildExpandableSection(
+    return _buildExpandableTile(
       theme: theme,
       title: "Tuyến đã đăng ký",
-      subtitle: "Tuyến đang áp dụng.",
       icon: Icons.route_rounded,
+      count: profile.routes.length,
       expanded: _isRoutesExpanded,
       onTap: () {
         setState(() {
@@ -1123,267 +1279,243 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
       },
       child: profile.routes.isEmpty
           ? const DriverEmptyState(
-              icon: Icons.alt_route_rounded,
-              title: "Chưa có tuyến nào",
-              message:
-                  "Đăng ký tuyến để nhận chuyến phù hợp.",
-            )
+        icon: Icons.alt_route_rounded,
+        title: "Chưa có tuyến nào",
+        message:
+        "Đăng ký tuyến để nhận chuyến phù hợp.",
+      )
           : Column(
-              children: profile.routes
-                  .map(
-                    (route) => Padding(
-                      padding: EdgeInsets.only(
-                        bottom: route == profile.routes.last ? 0 : 12,
-                      ),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Brand.b50,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: Brand.navy.withValues(
-                              alpha: 0.08,
-                            ),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              route.name,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                color: Brand.ink,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Mã tuyến: ${route.code}',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: Brand.inkMuted,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              '${route.fromProvinceName} → ${route.toProvinceName}',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: Brand.navy,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(),
+        children: profile.routes
+            .map(
+              (route) => Padding(
+            padding: EdgeInsets.only(
+              bottom: route == profile.routes.last ? 0 : 10,
             ),
-    );
-  }
-
-  Widget _buildActionsSection(
-    BuildContext context,
-    ThemeData theme,
-    ProfileProvider provider,
-    DriverProfileModel profile,
-  ) {
-    return DriverSectionCard(
-      title: "Tiện ích tài khoản",
-      icon: Icons.grid_view_rounded,
-      child: Column(
-        children: [
-          _buildActionTile(
-            theme,
-            icon: Icons.alt_route_rounded,
-            title: "Thay đổi tuyến hoạt động",
-            subtitle: "Cập nhật tuyến đang đăng ký",
-            onTap: () => _handleChangeRoute(provider),
-          ),
-          _buildActionTile(
-            theme,
-            icon: Icons.edit_note_rounded,
-            title: "Cập nhật thông tin tài xế",
-            subtitle: "Sửa tên, email, biển số và ảnh đại diện",
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => DriverUpdateProfileScreen(profile: profile),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Brand.b50,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Brand.navy.withValues(
+                    alpha: 0.08,
+                  ),
                 ),
-              ).then((updated) {
-                if (updated == true) {
-                  provider.loadProfile();
-                }
-              });
-            },
-          ),
-          _buildActionTile(
-            theme,
-            icon: Icons.lock_reset_rounded,
-            title: "Đổi mật khẩu",
-            subtitle: "Tăng độ an toàn cho tài khoản",
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
-              );
-            },
-          ),
-          _buildActionTile(
-            theme,
-            icon: Icons.headset_mic_rounded,
-            title: "Liên hệ hỗ trợ",
-            subtitle: "Gọi điện hoặc nhắn Zalo cho trung tâm hỗ trợ",
-            onTap: () => _showSupportDialog(context, provider),
-            isLast: true,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailsSection(ThemeData theme, DriverProfileModel profile) {
-    return DriverSectionCard(
-      title: "Thông tin cơ bản",
-      icon: Icons.info_outline_rounded,
-      child: Column(
-        children: [
-          _buildInfoCardRow(
-            theme,
-            "Biển số xe",
-            profile.licenseNumber.isEmpty
-                ? "Chưa cập nhật"
-                : profile.licenseNumber,
-          ),
-          _buildInfoCardRow(
-            theme,
-            "Email",
-            profile.email.isEmpty ? "Chưa cập nhật" : profile.email,
-            isLast: true,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDangerZone(ThemeData theme, ProfileProvider provider) {
-    return DriverSectionCard(
-      title: "Bảo mật tài khoản",
-      icon: Icons.logout_rounded,
-      child: SizedBox(
-        width: double.infinity,
-        child: OutlinedButton.icon(
-          onPressed: () => _handleLogout(provider),
-          icon: const Icon(Icons.logout_rounded),
-          label: const Text("Đăng xuất tài khoản"),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Brand.danger,
-            side: const BorderSide(color: Brand.danger),
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-            textStyle: const TextStyle(
-              fontWeight: FontWeight.w900,
-              fontSize: 15,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    route.name,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: Brand.ink,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Mã tuyến: ${route.code}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Brand.inkMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${route.fromProvinceName} → ${route.toProvinceName}',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: Brand.navy,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
+        )
+            .toList(),
       ),
     );
   }
 
-  Widget _buildExpandableSection({
+  /// Một mục mở rộng nằm trong thẻ thông tin (không có khung riêng).
+  Widget _buildExpandableTile({
     required ThemeData theme,
     required String title,
-    required String subtitle,
     required IconData icon,
     required bool expanded,
     required VoidCallback onTap,
     required Widget child,
+    int? count,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: Brand.cardShadow,
-      ),
-      child: Column(
-        children: [
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(24),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: Brand.b50,
-                        borderRadius: BorderRadius.circular(14),
+    return Column(
+      children: [
+        InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 11, 12, 11),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: Brand.b50,
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Icon(icon, color: Brand.navy, size: 19),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Brand.ink,
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
-                      child: Icon(icon, color: Brand.navy),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: Brand.ink,
-                              fontWeight: FontWeight.w700,
+                      if (count != null) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Brand.b50,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: Brand.line),
+                          ),
+                          child: Text(
+                            count.toString(),
+                            style: TextStyle(
+                              color: Brand.navy,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12,
                             ),
                           ),
-
-                        ],
-                      ),
-                    ),
-                    AnimatedRotation(
-                      turns: expanded ? 0.5 : 0,
-                      duration: const Duration(milliseconds: 220),
-                      child: Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        color: Brand.navy,
-                        size: 28,
-                      ),
-                    ),
-                  ],
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
+                AnimatedRotation(
+                  turns: expanded ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  child: Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: Brand.navy,
+                    size: 26,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        AnimatedCrossFade(
+          firstChild: const SizedBox(width: double.infinity),
+          secondChild: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+            child: child,
+          ),
+          crossFadeState: expanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 240),
+          sizeCurve: Curves.easeOutCubic,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSettingsMenu(
+      ThemeData theme,
+      ProfileProvider provider,
+      DriverProfileModel profile,
+      ) {
+    PopupMenuItem<_DriverSettingsAction> item(
+        _DriverSettingsAction action,
+        IconData icon,
+        String label, {
+          bool destructive = false,
+        }) {
+      final color = destructive ? Brand.danger : Brand.navy;
+      return PopupMenuItem(
+        value: action,
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(label, style: TextStyle(color: color)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return PopupMenuButton<_DriverSettingsAction>(
+      tooltip: 'Cài đặt',
+      icon: Icon(Icons.settings_rounded, color: Brand.navy),
+      position: PopupMenuPosition.under,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      onSelected: (action) async {
+        switch (action) {
+          case _DriverSettingsAction.changeRoute:
+            await _handleChangeRoute(provider);
+            break;
+          case _DriverSettingsAction.editProfile:
+            final updated = await Navigator.push<bool>(
+              context,
+              MaterialPageRoute(
+                builder: (_) => DriverUpdateProfileScreen(profile: profile),
               ),
-            ),
-          ),
-          AnimatedCrossFade(
-            firstChild: const SizedBox.shrink(),
-            secondChild: Padding(
-              padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
-              child: child,
-            ),
-            crossFadeState: expanded
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
-            duration: const Duration(milliseconds: 240),
-          ),
-        ],
-      ),
+            );
+            if (mounted && updated == true) await provider.loadProfile();
+            break;
+          case _DriverSettingsAction.changePassword:
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
+            );
+            break;
+          case _DriverSettingsAction.deleteAccount:
+            _showDeleteDialog(context, theme, provider);
+            break;
+        }
+      },
+      itemBuilder: (_) => [
+        item(_DriverSettingsAction.changeRoute, Icons.alt_route_rounded,
+            'Thay đổi tuyến hoạt động'),
+        item(_DriverSettingsAction.editProfile, Icons.edit_note_rounded,
+            'Cập nhật thông tin tài xế'),
+        item(_DriverSettingsAction.changePassword, Icons.lock_reset_rounded,
+            'Đổi mật khẩu'),
+        const PopupMenuDivider(),
+        item(_DriverSettingsAction.deleteAccount, Icons.delete_outline_rounded,
+            'Xoá tài khoản', destructive: true),
+      ],
     );
   }
 
   Widget _buildInfoCardRow(
-    ThemeData theme,
-    String title,
-    String value, {
-    Color? valueColor,
-    bool isLast = false,
-  }) {
+      ThemeData theme,
+      String title,
+      String value, {
+        Color? valueColor,
+        bool isLast = false,
+      }) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
         border: isLast ? null : const Border(bottom: BorderSide(color: Brand.lineSoft)),
       ),
@@ -1418,31 +1550,9 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
     );
   }
 
-  Widget _buildActionTile(
-    ThemeData theme, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-    bool isLast = false,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          border: isLast ? null : const Border(bottom: BorderSide(color: Brand.lineSoft)),
-        ),
-        child: Row(children: [
-          IconTile(icon, size: 40),
-          const SizedBox(width: 14),
-          Expanded(child: Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600))),
-          const Icon(Icons.chevron_right_rounded, color: Brand.inkSubtle),
-        ]),
-      ),
-    );
-  }
+  // ---------------------------------------------------------------------------
+  // Hỗ trợ / Xoá tài khoản
+  // ---------------------------------------------------------------------------
 
   void _showSupportDialog(BuildContext context, ProfileProvider provider) {
     final theme = Theme.of(context);
@@ -1531,12 +1641,12 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
   }
 
   Widget _buildSupportAction(
-    ThemeData theme, {
-    required Widget leading,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
+      ThemeData theme, {
+        required Widget leading,
+        required String title,
+        required String subtitle,
+        required VoidCallback onTap,
+      }) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -1587,10 +1697,10 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
   }
 
   void _showDeleteDialog(
-    BuildContext context,
-    ThemeData theme,
-    ProfileProvider provider,
-  ) {
+      BuildContext context,
+      ThemeData theme,
+      ProfileProvider provider,
+      ) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -1628,6 +1738,204 @@ class _DriverProfileViewState extends State<_DriverProfileView> {
     );
   }
 }
+
+// =============================================================================
+// Widget nhỏ dùng trong màn hình
+// =============================================================================
+
+/// Nhãn trạng thái nhỏ gọn trong thẻ đầu trang.
+class _HeroChip extends StatelessWidget {
+  const _HeroChip({
+    required this.label,
+    required this.icon,
+    required this.iconColor,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: iconColor),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Nút nhanh (icon + nhãn) cạnh số dư: Nạp tiền / Rút tiền.
+class _HeroAction extends StatelessWidget {
+  const _HeroAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: SizedBox(
+          width: 56,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: Icon(icon, color: Colors.white, size: 21),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Ô lối tắt gọn: icon + tên.
+class _QuickTile extends StatelessWidget {
+  const _QuickTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: Brand.line),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          height: 60,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Brand.b50,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, color: Brand.navy, size: 20),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Brand.ink,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      height: 1.25,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Hiệu ứng xuất hiện (fade + trượt lên) cho các khối nội dung.
+class _FadeSlideIn extends StatelessWidget {
+  const _FadeSlideIn({required this.index, required this.child});
+
+  final int index;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduce = MediaQuery.of(context).disableAnimations;
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: reduce
+          ? Duration.zero
+          : Duration(milliseconds: 360 + index * 80),
+      curve: Curves.easeOutCubic,
+      child: child,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 16 * (1 - value)),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+}
+
+// =============================================================================
+// Nội dung dialog rút tiền
+// =============================================================================
 
 class ProfileWithdrawDialogContent extends StatefulWidget {
   final double currentWallet;
@@ -1713,8 +2021,8 @@ class _ProfileWithdrawDialogContentState
                         _filteredBanks = _banks.where((bank) {
                           final q = value.toLowerCase();
                           return bank['name'].toString().toLowerCase().contains(
-                                q,
-                              ) ||
+                            q,
+                          ) ||
                               bank['shortName']
                                   .toString()
                                   .toLowerCase()
@@ -1767,8 +2075,7 @@ class _ProfileWithdrawDialogContentState
     setState(() => _isSubmitting = true);
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('accessToken') ?? '';
+      final token = (await TokenStorage.instance.readAccessToken()) ?? '';
 
       if (token.isEmpty) {
         if (!mounted) return;
@@ -1983,13 +2290,13 @@ class _ProfileWithdrawDialogContentState
               ),
               child: _isSubmitting
                   ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
                   : const Text("Gửi yêu cầu rút tiền"),
             ),
           ),

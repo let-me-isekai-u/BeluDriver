@@ -73,6 +73,10 @@ class _DriverChatGroupListView extends StatelessWidget {
     return Scaffold(
       backgroundColor: bgCanvas,
       appBar: AppBar(
+        leading: BackButton(
+          color: Colors.white,
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
         elevation: 0,
         centerTitle: false,
         flexibleSpace: Container(

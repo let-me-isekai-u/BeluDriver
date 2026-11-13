@@ -8,6 +8,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../ui/ui.dart';
+import '../../services/token_storage.dart';
 import 'carrier_vehicle_service.dart';
 
 String _time(dynamic iso) => iso == null ? '—' : DateFormat('HH:mm').format(DateTime.parse('$iso').toLocal());
@@ -23,11 +24,15 @@ void _toast(BuildContext context, String message) => ScaffoldMessenger.of(contex
 
 /// Mở chế độ xe nhà xe: còn phiên thì vào thẳng danh sách chuyến, không thì mở màn quét QR.
 Future<void> openCarrierVehicleMode(BuildContext context) async {
-  final session = await CarrierVehicleService.load();
-  if (!context.mounted) return;
-  Navigator.of(context).push(MaterialPageRoute(
-    builder: (_) => session != null ? const CarrierVehicleHomeScreen() : const CarrierQrScanScreen(),
-  ));
+  try {
+    final session = await CarrierVehicleService.load();
+    if (!context.mounted) return;
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => session != null ? const CarrierVehicleHomeScreen() : const CarrierQrScanScreen(),
+    ));
+  } on TokenStorageException catch (e) {
+    if (context.mounted) _toast(context, e.toString());
+  }
 }
 
 void _backToScan(BuildContext context, String message) {
@@ -217,8 +222,12 @@ class _CarrierVehicleHomeScreenState extends State<CarrierVehicleHomeScreen> {
   }
 
   Future<void> _logout() async {
-    await CarrierVehicleService.logout();
-    if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+    try {
+      await CarrierVehicleService.logout();
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+    } on TokenStorageException catch (e) {
+      if (mounted) _toast(context, e.toString());
+    }
   }
 
   @override

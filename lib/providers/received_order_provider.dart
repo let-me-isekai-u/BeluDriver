@@ -1,9 +1,9 @@
 import 'dart:convert';
 
+import 'package:beludriver_app/services/token_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/broker_ride_models.dart';
 import '../models/paged_response_model.dart';
@@ -129,8 +129,7 @@ class RecieveOrderProvider extends ChangeNotifier {
   }
 
   Future<String> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('accessToken') ?? '';
+    return (await TokenStorage.instance.readAccessToken()) ?? '';
   }
 
   String rideSourceText(int rideSource) {

@@ -1,6 +1,6 @@
+import 'package:beludriver_app/services/token_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/broker_ride_models.dart';
 import '../../services/api_service.dart';
@@ -60,7 +60,7 @@ class _DriverBookingConfirmScreenState
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-                color: Colors.white,
+                color: Brand.ink,
               ),
             ),
           ),
@@ -85,7 +85,7 @@ class _DriverBookingConfirmScreenState
             style: TextStyle(
               fontSize: 15,
               fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-              color: Colors.white,
+              color: Brand.ink,
             ),
           ),
           Text(
@@ -93,7 +93,7 @@ class _DriverBookingConfirmScreenState
             style: TextStyle(
               fontSize: 15,
               fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-              color: color ?? Colors.white,
+              color: color ?? Brand.ink,
             ),
           ),
         ],
@@ -107,6 +107,7 @@ class _DriverBookingConfirmScreenState
     required List<Widget> children,
   }) {
     return Card(
+      color: Brand.surface,
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       margin: EdgeInsets.zero,
@@ -160,8 +161,7 @@ class _DriverBookingConfirmScreenState
   Future<void> _handleCreateBrokerRide() async {
     setState(() => _isCreatingRide = true);
 
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("accessToken");
+    final token = (await TokenStorage.instance.readAccessToken());
 
     if (token == null || token.isEmpty) {
       if (mounted) {
