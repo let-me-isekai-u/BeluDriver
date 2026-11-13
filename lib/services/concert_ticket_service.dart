@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'driver_auth_client.dart';
 
 import 'package:http/http.dart' as http;
 
@@ -18,7 +19,7 @@ class ConcertTicketService {
     required String accessToken,
     required String qrPayload,
   }) async {
-    final client = _client ?? http.Client();
+    final client = DriverAuthClient(inner: _client);
     final uri = Uri.parse('$_baseUrl$_checkInPath');
     try {
       final response = await client

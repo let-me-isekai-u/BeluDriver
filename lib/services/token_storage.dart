@@ -45,6 +45,11 @@ class TokenStorage {
   Future<String?> readRefreshToken() =>
       _serialized(() async => (await _readSession()).refreshToken);
 
+  Future<(String?, String?)> readTokens() => _serialized(() async {
+    final session = await _readSession();
+    return (session.accessToken, session.refreshToken);
+  });
+
   /// Store the pair in a single Keychain/Keystore-backed value so rotation
   /// cannot leave an access token paired with an older refresh token.
   Future<void> writeTokens({
@@ -61,6 +66,37 @@ class TokenStorage {
     final session = await _readSession();
     await _writeVerified(_Session(null, session.refreshToken));
     await _removeLegacy();
+  });
+
+  /// Compare and rotate in the same queue as login/logout and migration.
+  /// An old HTTP response must never restore a session after logout/login.
+  Future<bool> rotateIfCurrent({
+    required String? expectedAccess,
+    required String? expectedRefresh,
+    required String accessToken,
+    required String refreshToken,
+  }) => _serialized(() async {
+    final current = await _readSession();
+    if (current.accessToken != expectedAccess ||
+        current.refreshToken != expectedRefresh) return false;
+    if (_token(accessToken) == null || _token(refreshToken) == null) {
+      throw const TokenStorageException();
+    }
+    await _writeVerified(_Session(accessToken, refreshToken));
+    await _removeLegacy();
+    return true;
+  });
+
+  Future<bool> clearIfCurrent({
+    required String? expectedAccess,
+    required String? expectedRefresh,
+  }) => _serialized(() async {
+    final current = await _readSession();
+    if (current.accessToken != expectedAccess ||
+        current.refreshToken != expectedRefresh) return false;
+    await _writeVerified(const _Session(null, null));
+    await _removeLegacy(required: true);
+    return true;
   });
 
   Future<void> clear() => _serialized(() async {

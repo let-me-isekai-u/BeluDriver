@@ -1,6 +1,7 @@
 // Tài liệu cho file api này:
 // https://docs.google.com/document/d/1MD5Tx42I-CpFgTNwrrwUhB8FsdQFhiiqAN_Xy0kUfAc/edit?tab=t.d9q2g56xpd8j
 import 'dart:convert';
+import 'driver_auth_client.dart';
 import 'api_response.dart';
 import 'package:beludriver_app/models/broker_ride_models.dart';
 import 'package:beludriver_app/models/driver_onboarding_status_dto.dart';
@@ -10,14 +11,14 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 
 class ApiService {
+  static final http.Client _http = DriverAuthClient();
   static dynamic safeDecode(String? body) {
     if (body == null || body.isEmpty) return {};
 
     try {
       return jsonDecode(body);
     } catch (e) {
-      print("⚠️ safeDecode() JSON lỗi: $e");
-      print("⚠️ raw body: $body");
+      debugPrint("Không đọc được phản hồi JSON từ máy chủ.");
       return {};
     }
   }
@@ -61,7 +62,7 @@ class ApiService {
         "deviceToken": deviceToken,
       });
 
-      return await http
+      return await _http
           .post(url, headers: _defaultHeaders(), body: body)
           .timeout(const Duration(seconds: 20));
     } catch (e) {
@@ -81,7 +82,7 @@ class ApiService {
     );
 
     try {
-      return await http
+      return await _http
           .post(url, headers: _authHeaders(accessToken))
           .timeout(const Duration(seconds: 20));
     } catch (e) {
@@ -110,7 +111,7 @@ class ApiService {
       request.fields["password"] = password;
       request.fields["licenseNumber"] = licenseNumber;
 
-      final resStream = await request.send();
+      final resStream = await _http.send(request);
       return await http.Response.fromStream(resStream);
     } catch (e) {
       return _errorResponse(e);
@@ -128,7 +129,7 @@ class ApiService {
     try {
       final body = jsonEncode({"refreshToken": refreshToken});
 
-      return await http
+      return await _http
           .post(url, headers: _defaultHeaders(), body: body)
           .timeout(const Duration(seconds: 20));
     } catch (e) {
@@ -166,7 +167,7 @@ class ApiService {
         );
       }
 
-      final responseStream = await request.send();
+      final responseStream = await _http.send(request);
       return await http.Response.fromStream(responseStream);
     } catch (e) {
       return _errorResponse(e);
@@ -184,7 +185,7 @@ class ApiService {
     try {
       final body = jsonEncode({"email": email});
 
-      return await http
+      return await _http
           .post(url, headers: _defaultHeaders(), body: body)
           .timeout(const Duration(seconds: 20));
     } catch (e) {
@@ -209,7 +210,7 @@ class ApiService {
         "newPassword": newPassword,
       });
 
-      return await http
+      return await _http
           .post(url, headers: _defaultHeaders(), body: body)
           .timeout(const Duration(seconds: 20));
     } catch (e) {
@@ -224,7 +225,7 @@ class ApiService {
     final url = Uri.parse("$_baseUrl/profile");
 
     try {
-      return await http
+      return await _http
           .get(url, headers: _authHeaders(accessToken))
           .timeout(const Duration(seconds: 20));
     } catch (e) {
@@ -243,8 +244,6 @@ class ApiService {
     );
 
     print("🔵 [API] CALL CHANGE PASSWORD → $url");
-    print("📌 oldPassword: $oldPassword");
-    print("📌 newPassword: $newPassword");
 
     try {
       final body = jsonEncode({
@@ -252,7 +251,7 @@ class ApiService {
         "newPassword": newPassword,
       });
 
-      final res = await http
+      final res = await _http
           .post(
             url,
             headers: {
@@ -265,7 +264,6 @@ class ApiService {
           .timeout(const Duration(seconds: 20));
 
       print("📥 [API] Status: ${res.statusCode}");
-      print("📥 [API] Body: ${res.body}");
 
       return res;
     } catch (e) {
@@ -285,7 +283,7 @@ class ApiService {
     print("🔵 [API] CALL DELETE ACCOUNT → $url");
 
     try {
-      final res = await http
+      final res = await _http
           .post(
             url,
             headers: {
@@ -296,7 +294,6 @@ class ApiService {
           .timeout(const Duration(seconds: 30));
 
       print("📥 [API] Status: ${res.statusCode}");
-      print("📥 [API] Body: ${res.body}");
 
       return res;
     } catch (e) {
@@ -321,7 +318,7 @@ class ApiService {
     try {
       final body = jsonEncode({"amount": amount, "content": content});
 
-      final res = await http
+      final res = await _http
           .post(
             url,
             headers: {
@@ -334,7 +331,6 @@ class ApiService {
           .timeout(const Duration(seconds: 20));
 
       print("📥 [API] STATUS: ${res.statusCode}");
-      print("📥 [API] BODY: ${res.body}");
 
       return res;
     } catch (e) {
@@ -357,7 +353,7 @@ class ApiService {
     print("🔵 [API] GET WAITING RIDES PAGED → $url");
 
     try {
-      final res = await http
+      final res = await _http
           .get(
             url,
             headers: {
@@ -368,7 +364,6 @@ class ApiService {
           .timeout(const Duration(seconds: 20));
 
       print("📥 [API] STATUS: ${res.statusCode}");
-      print("📥 [API] BODY: ${res.body}");
 
       return res;
     } catch (e) {
@@ -388,7 +383,7 @@ class ApiService {
     print("🔵 [API] GET WAITING RIDES → $url");
 
     try {
-      final res = await http
+      final res = await _http
           .get(
             url,
             headers: {
@@ -399,7 +394,6 @@ class ApiService {
           .timeout(const Duration(seconds: 20));
 
       print("📥 [API] STATUS: ${res.statusCode}");
-      print("📥 [API] BODY: ${res.body}");
 
       return res;
     } catch (e) {
@@ -433,7 +427,7 @@ class ApiService {
     print("🔵 [API] WALLET HISTORY → $url");
 
     try {
-      final res = await http
+      final res = await _http
           .get(
             url,
             headers: {
@@ -444,7 +438,6 @@ class ApiService {
           .timeout(const Duration(seconds: 20));
 
       print("📥 [API] STATUS: ${res.statusCode}");
-      print("📥 [API] BODY: ${res.body}");
 
       return res;
     } catch (e) {
@@ -458,7 +451,7 @@ class ApiService {
     final url = Uri.parse("$apiOrigin/api/provinceapi/active");
 
     try {
-      final response = await http.get(url).timeout(const Duration(seconds: 15));
+      final response = await _http.get(url).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -482,7 +475,7 @@ class ApiService {
     );
 
     try {
-      final response = await http.get(url).timeout(const Duration(seconds: 15));
+      final response = await _http.get(url).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -517,7 +510,7 @@ class ApiService {
         );
 
     try {
-      return await http
+      return await _http
           .get(url, headers: {"Accept": "application/json"})
           .timeout(const Duration(seconds: 20));
     } catch (e) {
@@ -533,7 +526,7 @@ class ApiService {
     ).replace(queryParameters: {"placeId": placeId});
 
     try {
-      return await http
+      return await _http
           .get(url, headers: {"Accept": "application/json"})
           .timeout(const Duration(seconds: 20));
     } catch (e) {
@@ -550,7 +543,7 @@ class ApiService {
     ).replace(queryParameters: {"lat": lat.toString(), "lng": lng.toString()});
 
     try {
-      return await http
+      return await _http
           .get(url, headers: {"Accept": "application/json"})
           .timeout(const Duration(seconds: 20));
     } catch (e) {
@@ -568,7 +561,7 @@ class ApiService {
 
     try {
       final body = jsonEncode({"lat": lat, "lng": lng});
-      return await http
+      return await _http
           .post(url, headers: _defaultHeaders(), body: body)
           .timeout(const Duration(seconds: 30));
     } catch (e) {
@@ -604,12 +597,11 @@ class ApiService {
       debugPrint("➡️ [resolveRoutePreview] POST $url");
       debugPrint("➡️ [resolveRoutePreview] body: $body");
 
-      final res = await http
+      final res = await _http
           .post(url, headers: _defaultHeaders(), body: body)
           .timeout(const Duration(seconds: 30));
 
       debugPrint("⬅️ [resolveRoutePreview] status: ${res.statusCode}");
-      debugPrint("⬅️ [resolveRoutePreview] body: ${res.body}");
 
       return res;
     } catch (e) {
@@ -628,7 +620,7 @@ class ApiService {
     );
 
     try {
-      final res = await http
+      final res = await _http
           .get(
             url,
             headers: {
@@ -645,16 +637,72 @@ class ApiService {
   }
 
   // Bắt đầu chuyến đi
+  /// The accepted/processing endpoints already supply the current driver's
+  /// assigned rides to ActivityHistoryProvider. A broker's created-rides list
+  /// grants visibility, never execution rights. Do not infer ownership from
+  /// rideSource (which identifies the ride version) or from status alone.
+  static Future<bool> canExecuteRide({
+    required String accessToken,
+    required int rideId,
+    required int rideSource,
+    required int status,
+  }) async {
+    if (accessToken.isEmpty || rideId <= 0 ||
+        (rideSource != 1 && rideSource != 2) ||
+        (status != 2 && status != 3)) return false;
+    final response = status == 2
+        ? await getAcceptedRides(accessToken: accessToken)
+        : await getProcessingRides(accessToken: accessToken);
+    final payload = responseJson(response);
+    final data = payload?['data'];
+    if (response.statusCode != 200 || payload?['success'] != true || data is! List) {
+      return false;
+    }
+    return data.whereType<Map>().any((item) =>
+        int.tryParse('${item['rideId'] ?? item['id']}') == rideId &&
+        int.tryParse('${item['rideSource'] ?? 1}') == rideSource &&
+        int.tryParse('${item['status']}') == status);
+  }
+
+  static final Set<(int, int)> _rideActions = {};
+
+  static Future<http.Response> _executeRide({
+    required String accessToken,
+    required int rideId,
+    required int rideSource,
+    required bool start,
+  }) async {
+    final key = (rideSource, rideId);
+    if (!_rideActions.add(key)) {
+      return http.Response.bytes(utf8.encode(jsonEncode({'success': false,
+        'message': 'Thao tác đang được xử lý. Vui lòng chờ.'})), 409,
+        headers: {'content-type': 'application/json; charset=utf-8'});
+    }
+    try {
+      // Recheck on every action, including direct calls from activity cards.
+      if (!await canExecuteRide(accessToken: accessToken, rideId: rideId,
+          rideSource: rideSource, status: start ? 2 : 3)) {
+        return http.Response.bytes(utf8.encode(jsonEncode({'success': false,
+          'message': 'Chưa xác nhận được quyền thực hiện hoặc trạng thái chuyến. Vui lòng tải lại.'})),
+          403, headers: {'content-type': 'application/json; charset=utf-8'});
+      }
+      return await sendFinancialCommand(
+        'PUT',
+        Uri.parse('$apiOrigin/api/driverapi/${start ? 'start' : 'complete'}/$rideId/$rideSource'),
+        accessToken,
+      );
+    } finally {
+      _rideActions.remove(key);
+    }
+  }
+
   static Future<http.Response> startRide({
     required String accessToken,
     required int rideId,
     required int rideSource, // 👈 thêm
   }) {
-    return sendFinancialCommand(
-      'PUT',
-      Uri.parse("$apiOrigin/api/driverapi/start/$rideId/$rideSource"),
-      accessToken,
-    );
+    return _executeRide(accessToken: accessToken, rideId: rideId,
+        rideSource: rideSource, start: true);
   }
 
   // Hoàn thành chuyến đi
@@ -663,11 +711,8 @@ class ApiService {
     required int rideId,
     required int rideSource, // 👈 thêm
   }) {
-    return sendFinancialCommand(
-      'PUT',
-      Uri.parse("$apiOrigin/api/driverapi/complete/$rideId/$rideSource"),
-      accessToken,
-    );
+    return _executeRide(accessToken: accessToken, rideId: rideId,
+        rideSource: rideSource, start: false);
   }
 
   // Lấy danh sách chuyến đang đi (status = 3)
@@ -681,7 +726,7 @@ class ApiService {
     print("🔵 [API] GET PROCESSING RIDES → $url");
 
     try {
-      final res = await http
+      final res = await _http
           .get(
             url,
             headers: {
@@ -692,7 +737,6 @@ class ApiService {
           .timeout(const Duration(seconds: 20));
 
       print("📥 [API] STATUS: ${res.statusCode}");
-      print("📥 [API] BODY: ${res.body}");
 
       return res;
     } catch (e) {
@@ -712,7 +756,7 @@ class ApiService {
     print("🔵 [API] GET RIDE HISTORY → $url");
 
     try {
-      final res = await http
+      final res = await _http
           .get(
             url,
             headers: {
@@ -723,7 +767,6 @@ class ApiService {
           .timeout(const Duration(seconds: 20));
 
       print("📥 [API] STATUS: ${res.statusCode}");
-      print("📥 [API] BODY: ${res.body}");
 
       return res;
     } catch (e) {
@@ -765,7 +808,7 @@ class ApiService {
     );
 
     try {
-      return await http
+      return await _http
           .post(
             url,
             headers: {
@@ -784,7 +827,7 @@ class ApiService {
   static Future<http.Response> getBanks() async {
     final url = Uri.parse("https://api.vietqr.io/v2/banks");
     try {
-      return await http
+      return await _http
           .get(
             url,
             headers: {
@@ -809,7 +852,7 @@ class ApiService {
     print("🔵 [API] SEARCH RIDE BY DISTRICT → $url");
 
     try {
-      final res = await http
+      final res = await _http
           .get(
             url,
             headers: {
@@ -820,7 +863,6 @@ class ApiService {
           .timeout(const Duration(seconds: 20));
 
       print("📥 [API] STATUS: ${res.statusCode}");
-      print("📥 [API] BODY: ${res.body}");
 
       return res;
     } catch (e) {
@@ -837,7 +879,7 @@ class ApiService {
       "$apiOrigin/api/rideapi/ride-count-by-province",
     );
 
-    return await http.get(
+    return await _http.get(
       url,
       headers: {
         'Content-Type': 'application/json',
@@ -857,7 +899,7 @@ class ApiService {
     print("🔵 [API] GET RIDE COUNT BY DISTRICT → $url");
 
     try {
-      final res = await http
+      final res = await _http
           .get(
             url,
             headers: {
@@ -868,7 +910,6 @@ class ApiService {
           .timeout(const Duration(seconds: 20));
 
       print("📥 [API] STATUS: ${res.statusCode}");
-      print("📥 [API] BODY: ${res.body}");
 
       return res;
     } catch (e) {
@@ -925,7 +966,7 @@ class ApiService {
       );
       debugPrint("➡️ [createBrokerRide] body: $body");
 
-      final res = await http
+      final res = await _http
           .post(
             url,
             headers: {
@@ -938,8 +979,6 @@ class ApiService {
           .timeout(const Duration(seconds: 30));
 
       debugPrint("⬅️ [createBrokerRide] status: ${res.statusCode}");
-      debugPrint("⬅️ [createBrokerRide] response headers: ${res.headers}");
-      debugPrint("⬅️ [createBrokerRide] response body: ${res.body}");
 
       return res;
     } catch (e, st) {
@@ -960,7 +999,7 @@ class ApiService {
     );
 
     try {
-      return await http
+      return await _http
           .get(
             url,
             headers: {
@@ -997,18 +1036,15 @@ class ApiService {
     try {
       final url = Uri.parse("$_baseUrl/onboarding-status");
 
-      final response = await http.get(url, headers: _authHeaders(accessToken));
+      final response = await _http.get(url, headers: _authHeaders(accessToken));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return DriverOnboardingStatusDto.fromJson(data);
       } else {
-        print("get Onboarding Status failed: ${response.body}");
         return null;
       }
     } catch (e) {
-      final error = _errorResponse(e);
-      print("get Onboarding Status error: ${error.body}");
       return null;
     }
   }
@@ -1024,7 +1060,7 @@ class ApiService {
     print("➡️ amount: $amount");
 
     try {
-      final res = await http
+      final res = await _http
           .post(
             url,
             headers: {
@@ -1037,7 +1073,6 @@ class ApiService {
           .timeout(const Duration(seconds: 20));
 
       print("📥 [API] STATUS: ${res.statusCode}");
-      print("📥 [API] BODY: ${res.body}");
 
       return res;
     } catch (e) {
@@ -1059,7 +1094,7 @@ class ApiService {
     print("➡️ depositId: $depositId");
 
     try {
-      final res = await http
+      final res = await _http
           .put(
             url,
             headers: {
@@ -1070,7 +1105,6 @@ class ApiService {
           .timeout(const Duration(seconds: 20));
 
       print("📥 [API] STATUS: ${res.statusCode}");
-      print("📥 [API] BODY: ${res.body}");
 
       return res;
     } catch (e) {

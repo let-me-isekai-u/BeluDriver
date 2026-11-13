@@ -49,6 +49,7 @@ class CarrierVehicleSession {
 class CarrierVehicleService {
   static const String baseUrl = '$apiOrigin/api/carrier-vehicle';
   static CarrierVehicleSession? _session;
+  static Future<bool>? _refreshInFlight;
 
   static CarrierVehicleSession? get session => _session;
 
@@ -115,6 +116,18 @@ class CarrierVehicleService {
   }
 
   static Future<bool> _refresh() async {
+    final pending = _refreshInFlight;
+    if (pending != null) return pending;
+    final flight = _renewSession();
+    _refreshInFlight = flight;
+    try {
+      return await flight;
+    } finally {
+      if (identical(_refreshInFlight, flight)) _refreshInFlight = null;
+    }
+  }
+
+  static Future<bool> _renewSession() async {
     final s = _session;
     if (s == null) return false;
     try {
@@ -124,27 +137,39 @@ class CarrierVehicleService {
               body: jsonEncode({'sessionToken': s.sessionToken}))
           .timeout(const Duration(seconds: 20));
       final body = _decode(r);
+      if (!identical(_session, s)) {
+        throw CarrierVehicleException('Phiên xe đã thay đổi. Vui lòng tải lại.');
+      }
+      if (r.statusCode == 401 || r.statusCode == 403) return false;
       if (r.statusCode == 200 && body is Map && body['data'] is Map) {
-        s.accessToken = (body['data'] as Map)['accessToken'] as String;
+        final access = (body['data'] as Map)['accessToken'];
+        if (access is! String || access.trim().isEmpty || !identical(_session, s)) {
+          throw CarrierVehicleException('Chưa thể làm mới phiên xe. Vui lòng thử lại.');
+        }
+        s.accessToken = access;
         await _save();
         return true;
       }
+      throw CarrierVehicleException(_message(body, r.statusCode));
     } on TokenStorageException {
+      rethrow;
+    } on CarrierVehicleException {
       rethrow;
     } catch (_) {
       debugPrint('carrier refresh failed');
+      throw CarrierVehicleException('Chưa thể làm mới phiên xe. Vui lòng kiểm tra kết nối và thử lại.');
     }
-    return false;
   }
 
   static Future<dynamic> _call(String method, String path, {Object? body}) async {
     if (_session == null && await load() == null) {
       throw CarrierVehicleException('Phiên xe đã kết thúc. Vui lòng quét lại mã QR trên xe.', sessionEnded: true);
     }
+    final activeSession = _session!;
     Future<http.Response> send() {
       final req = http.Request(method, Uri.parse('$baseUrl$path'))
         ..headers['Accept'] = 'application/json'
-        ..headers['Authorization'] = 'Bearer ${_session!.accessToken}';
+        ..headers['Authorization'] = 'Bearer ${activeSession.accessToken}';
       if (body != null) {
         req.headers['Content-Type'] = 'application/json';
         req.body = jsonEncode(body);
@@ -154,7 +179,14 @@ class CarrierVehicleService {
 
     var r = await send();
     if (r.statusCode == 401) {
-      if (!await _refresh()) {
+      if (!identical(_session, activeSession)) {
+        throw CarrierVehicleException('Phiên xe đã thay đổi. Vui lòng tải lại.');
+      }
+      final renewed = await _refresh();
+      if (!identical(_session, activeSession)) {
+        throw CarrierVehicleException('Phiên xe đã thay đổi. Vui lòng tải lại.');
+      }
+      if (!renewed) {
         await _clear();
         throw CarrierVehicleException('Phiên xe đã kết thúc hoặc mã QR đã được cấp lại. Vui lòng quét lại mã QR trên xe.', sessionEnded: true);
       }

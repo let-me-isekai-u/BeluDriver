@@ -6,8 +6,8 @@ import '../../providers/driver/wallet_history_provider.dart';
 import '../../ui/ui.dart';
 
 // Màu chữ cho tiền vào / tiền ra: đủ đậm để đọc rõ trên nền trắng.
-const Color _kIncome = Color(0xFF15803D);
-const Color _kExpense = Color(0xFFB91C1C);
+const Color _kIncome = Brand.success;
+const Color _kExpense = Brand.danger;
 
 class WalletHistoryScreen extends StatelessWidget {
   const WalletHistoryScreen({super.key});

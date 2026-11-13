@@ -218,7 +218,7 @@ class _WithdrawalHistoryView extends StatelessWidget {
           Text(
             "Tiến độ xử lý từng yêu cầu.",
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: Brand.inkMuted,
+              color: Brand.b200,
               height: 1.45,
             ),
           ),
@@ -279,7 +279,7 @@ class _WithdrawalHistoryView extends StatelessWidget {
                     Text(
                       _formatCurrency(item.amount),
                       style: theme.textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
+                        color: Brand.ink,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -345,7 +345,7 @@ class _WithdrawalHistoryView extends StatelessWidget {
             value,
             textAlign: TextAlign.right,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: valueColor ?? Colors.white,
+              color: valueColor ?? Brand.ink,
               fontWeight: FontWeight.w700,
               height: 1.4,
             ),

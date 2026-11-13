@@ -117,9 +117,9 @@ class _RideDetailView extends StatelessWidget {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: _buildAppBar(theme, title: "Mã đơn ${ride.code}"),
-      bottomNavigationBar: ride.status >= 4
-          ? null
-          : _buildBottomActions(context, ride.status),
+      bottomNavigationBar: provider.canStart || provider.canComplete
+          ? _buildBottomActions(context, ride.status)
+          : null,
       body: Stack(
         children: [
           RefreshIndicator(

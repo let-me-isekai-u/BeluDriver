@@ -73,7 +73,7 @@ class FirebaseNotificationService {
   static Future<String?> getDeviceToken() async {
     try {
       final String? token = await _messaging.getToken();
-      print('[FCM] Token: $token');
+      print('[FCM] Device token available');
       return token;
     } catch (e) {
       print('[FCM] Failed to get token: $e');

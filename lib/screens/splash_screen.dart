@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/api_service.dart';
+import '../services/session_auth.dart';
 import '../services/kyc_service.dart';
 import '../ui/ui.dart';
 
@@ -177,132 +178,42 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _restoreSession() async {
     final prefs = await SharedPreferences.getInstance();
-    final accessToken = (await TokenStorage.instance.readAccessToken());
-    final refreshToken = (await TokenStorage.instance.readRefreshToken());
-
-    appLog('AUTH', '--- Starting Token Check ---');
-    appLog('AUTH', 'Access Token Exists: ${accessToken != null}');
-    appLog('AUTH', 'Refresh Token Exists: ${refreshToken != null}');
-
-    await Future.delayed(const Duration(milliseconds: 1500));
-
-    if (accessToken != null) {
-      appLog('AUTH', 'Found Access Token -> Verifying...');
-
-      try {
-        final res = await ApiService.getDriverProfile(accessToken: accessToken);
-
-        if (res.statusCode == 200) {
-          await _saveOnboardingState(
-            prefs: prefs,
-            accessToken: accessToken,
-          );
-
-          appLog('AUTH', 'Access Token VALID -> Go to Home.');
-          await _ensureMinDisplay();
-          _goToHome();
-          return;
-        }
-
-        if (res.statusCode == 401) {
-          appLog('AUTH', 'Access Token EXPIRED -> Try Refresh.');
-          await TokenStorage.instance.deleteAccessToken();
-        }
-      } on TokenStorageException {
-        rethrow;
-      } catch (e) {
-        appLog('AUTH', 'Verify token ERROR');
-        await TokenStorage.instance.deleteAccessToken();
-      }
-    }
-
-    if (refreshToken == null) {
-      appLog('AUTH', 'No tokens found -> Go to Login.');
+    final tokens = await TokenStorage.instance.readTokens();
+    var token = tokens.$1;
+    final refresh = tokens.$2;
+    if (token == null && refresh == null) {
       await _ensureMinDisplay();
       _goToLogin();
       return;
     }
-
-    appLog('AUTH', 'Access Token missing, attempting Refresh Token...');
-
     try {
-      final res = await ApiService.refreshToken(refreshToken: refreshToken);
-      appLog('AUTH', 'Refresh API Status: ${res.statusCode}');
-
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-
-        final newAccessToken = data["accessToken"];
-        final newRefreshToken = data["refreshToken"];
-
-        if (newAccessToken != null && newRefreshToken != null) {
-          await TokenStorage.instance.writeTokens(
-            accessToken: newAccessToken,
-            refreshToken: newRefreshToken,
-          );
-
-          try {
-            final profileRes = await ApiService.getDriverProfile(
-              accessToken: newAccessToken,
-            );
-
-            if (profileRes.statusCode == 200) {
-              await _saveOnboardingState(
-                prefs: prefs,
-                accessToken: newAccessToken,
-              );
-            }
-          } catch (e) {
-            appLog('AUTH', 'Get profile after refresh ERROR');
-          }
-
-          appLog(
-            'AUTH',
-            'Refresh SUCCESS -> New tokens saved -> Go to Home.',
-          );
-          await _ensureMinDisplay();
-          _goToHome();
-          return;
-        } else {
-          appLog(
-            'AUTH',
-            'Refresh 200 but missing new tokens in body. Clearing tokens -> Go to Login.',
-          );
-          await _goToLoginAndClear(prefs);
-          return;
-        }
-      } else {
-        appLog(
-          'AUTH',
-          'Refresh FAILED (${res.statusCode}). Clearing tokens -> Go to Login.',
-        );
-        await _goToLoginAndClear(prefs);
+      token ??= await SessionAuth.refresh(null);
+      if (token == null) {
+        if (mounted) _goToLogin();
+        return;
       }
+      final response = await ApiService.getDriverProfile(accessToken: token);
+      if (!mounted) return;
+      if (response.statusCode == 401) return; // Central expiry handler navigates.
+      if (response.statusCode != 200) throw const SessionRenewalException();
+      final current = await TokenStorage.instance.readAccessToken();
+      if (current == null) return;
+      await _saveOnboardingState(prefs: prefs, accessToken: current);
+      await _ensureMinDisplay();
+      if (mounted && await SessionAuth.tokenFor(current) != null) _goToHome();
     } on TokenStorageException {
       rethrow;
-    } catch (e) {
-      appLog(
-        'AUTH',
-        'Refresh ERROR (Network/Parsing). Clearing tokens -> Go to Login.',
+    } catch (_) {
+      if (!mounted) return;
+      // An outage or malformed server response does not revoke the session.
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Chưa thể tải phiên đăng nhập. Vui lòng kiểm tra kết nối và thử lại.'),
+          duration: const Duration(days: 1),
+          action: SnackBarAction(label: 'Thử lại', onPressed: _checkAuth),
+        ),
       );
-      await _goToLoginAndClear(prefs);
     }
-  }
-
-  Future<void> _goToLoginAndClear(SharedPreferences prefs) async {
-    await TokenStorage.instance.clear();
-    await prefs.remove("shouldShowRegisterRoutePopup");
-    await prefs.remove("shouldShowKycPopup");
-    await prefs.remove("cachedKycJson");
-    await prefs.remove("kycPendingReview");
-    await prefs.remove("loginKycStatus");
-    await prefs.remove("loginKycStatusText");
-    await prefs.remove("loginKycRejectReason");
-    await prefs.remove("loginNextStep");
-    await prefs.remove("loginHasRegisteredRoute");
-    await prefs.remove("loginSelectedProvinceCount");
-    await prefs.remove("loginCanReceiveRide");
-    _goToLogin();
   }
 
   void _goToLogin() {

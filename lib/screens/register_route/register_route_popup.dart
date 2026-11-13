@@ -7,15 +7,15 @@ import '../../providers/routes/register_route_provider.dart';
 import '../../ui/ui.dart';
 
 // ─── Màu sắc dùng chung ─────────────────────────────────────────────────────
-const _kPopupBg = Color(0xFF0D3D22);
-const _kPopupBgSoft = Color(0xFF164D2E);
-const _kPopupBgItem = Color(0xFF1A5C36);
-const _kGold = Color(0xFFFBBF24);
-const _kGoldLight = Color(0xFFFDE68A);
-const _kGreen100 = Color(0xFFD1FAE5);
-const _kGreen700 = Color(0xFF065F46);
-const _kGreen400 = Color(0xFF34D399);
-const _kWhite = Colors.white;
+const _kPopupBg = Brand.surface;
+const _kPopupBgSoft = Brand.canvas;
+const _kPopupBgItem = Brand.b50;
+const _kGold = Brand.navy;
+const _kGoldLight = Brand.navy;
+const _kGreen100 = Brand.inkMuted;
+const _kGreen700 = Brand.navy;
+const _kGreen400 = Brand.b200;
+const _kWhite = Brand.ink;
 
 class RegisterRoutePopup extends StatefulWidget {
   const RegisterRoutePopup({super.key});
@@ -80,6 +80,7 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
       return;
     }
 
+    if (!mounted) return;
     final provider = context.read<RegisterRouteProvider>();
     if (provider.selectedProvinceIds.isEmpty) {
       _showSnack('Vui lòng chọn ít nhất 1 tỉnh');
@@ -296,7 +297,7 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
                   'Tạo tuyến 2 chiều Hà Nội ↔ Tỉnh',
                   style: TextStyle(
                     fontSize: 13,
-                    color: _kGreen100.withOpacity(0.7),
+                    color: Brand.inkMuted,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -306,6 +307,11 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
           const SizedBox(width: 12),
           // Slot indicator
           _SlotIndicator(filled: filled, max: maxCount),
+          IconButton(
+            tooltip: 'Đóng đăng ký tuyến',
+            onPressed: () => Navigator.of(context).pop(false),
+            icon: const Icon(Icons.close_rounded, color: Brand.navy),
+          ),
         ],
       ),
     );
@@ -532,7 +538,11 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
       decoration: const BoxDecoration(
         border: Border(top: BorderSide(color: Brand.line)),
       ),
-      child: Row(
+      child: OverflowBar(
+        spacing: 12,
+        overflowSpacing: 12,
+        alignment: MainAxisAlignment.spaceBetween,
+        overflowAlignment: OverflowBarAlignment.end,
         children: [
           // Clear button
           OutlinedButton.icon(
@@ -550,22 +560,22 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
                 borderRadius: BorderRadius.circular(28),
               ),
               foregroundColor:
-              selectedIds.isEmpty ? Brand.inkSubtle : Colors.white,
+              selectedIds.isEmpty ? Brand.inkSubtle : Brand.navy,
               textStyle: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
               ),
             ),
           ),
-          const SizedBox(width: 12),
           // Submit button
-          Expanded(
+          SizedBox(
+            width: 190,
             child: ElevatedButton(
               onPressed: isSubmitting ? null : _submit,
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size.fromHeight(52),
                 backgroundColor: _kGold,
-                foregroundColor: const Color(0xFF1F2937),
+                foregroundColor: Colors.white,
                 disabledBackgroundColor: _kGold.withOpacity(0.4),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -581,7 +591,7 @@ class _RegisterRoutePopupState extends State<RegisterRoutePopup>
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(
-                  color: Color(0xFF1F2937),
+                  color: Colors.white,
                   strokeWidth: 2.5,
                 ),
               )
@@ -718,7 +728,7 @@ class _SelectedProvinceChip extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       padding: const EdgeInsets.only(left: 12, right: 6, top: 7, bottom: 7),
       decoration: BoxDecoration(
-        color: const Color(0xFFECFDF5),
+        color: Brand.b50,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: _kGreen400),
         boxShadow: [

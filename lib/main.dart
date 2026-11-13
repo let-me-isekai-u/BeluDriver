@@ -1,4 +1,5 @@
 import 'services/token_storage.dart';
+import 'services/session_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Bổ sung import
 import 'screens/driver/driver_home.dart';
@@ -9,6 +10,8 @@ import 'Screens/splash_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'services/firebase_notification_service.dart';
+
+final _navigatorKey = GlobalKey<NavigatorState>();
 
 
 
@@ -42,7 +45,15 @@ class BelucarApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    SessionAuth.onExpired = () {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        // Do not navigate away from a newer login completed during cleanup.
+        if (await TokenStorage.instance.readAccessToken() != null) return;
+        _navigatorKey.currentState?.pushNamedAndRemoveUntil('/login', (_) => false);
+      });
+    };
     return MaterialApp(
+      navigatorKey: _navigatorKey,
       debugShowCheckedModeBanner: false,
       initialRoute: "/splash", // Luôn bắt đầu từ Splash Screen
 

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'support/driver_session_fixture.dart';
 
 import 'package:beludriver_app/providers/chat_group_list_provider.dart';
 import 'package:beludriver_app/providers/chat_provider.dart';
@@ -74,6 +75,7 @@ class TestHub {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(() => installDriverSessionFixture('fixture-access'));
 
   test('accept and cancel pass the chat action key to the server', () async {
     final requests = <http.Request>[];

@@ -433,7 +433,7 @@ class _InfoState extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Brand.ink,
               ),
             ),
             const SizedBox(height: 8),
@@ -495,7 +495,7 @@ class _EmptyState extends StatelessWidget {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Brand.ink,
             ),
           ),
           const SizedBox(height: 8),

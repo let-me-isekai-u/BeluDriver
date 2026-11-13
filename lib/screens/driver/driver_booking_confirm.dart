@@ -159,6 +159,7 @@ class _DriverBookingConfirmScreenState
   }
 
   Future<void> _handleCreateBrokerRide() async {
+    if (_isCreatingRide) return;
     setState(() => _isCreatingRide = true);
 
     final token = (await TokenStorage.instance.readAccessToken());
