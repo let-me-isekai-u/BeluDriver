@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:beludriver_app/services/token_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -60,8 +61,10 @@ class LoginProvider extends ChangeNotifier {
         }
 
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString("accessToken", accessToken);
-        await prefs.setString("refreshToken", refreshToken);
+        await TokenStorage.instance.writeTokens(
+          accessToken: accessToken,
+          refreshToken: refreshToken,
+        );
         await prefs.setString("fullName", fullName);
 
         await prefs.setInt("loginKycStatus", kycStatus);
@@ -94,8 +97,10 @@ class LoginProvider extends ChangeNotifier {
         final message = data is Map ? data["message"] : null;
         return message is String ? message : "Không thể đăng nhập. Vui lòng thử lại.";
       }
-    } catch (e) {
-      debugPrint('[LOGIN] error = ${e.runtimeType}');
+    } on TokenStorageException catch (e) {
+      return e.toString();
+    } catch (_) {
+      debugPrint('[LOGIN] Không thể đăng nhập');
       return "Không thể đăng nhập. Vui lòng thử lại.";
     } finally {
       isLoading = false;

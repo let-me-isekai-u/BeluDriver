@@ -1,5 +1,5 @@
+import 'package:beludriver_app/services/token_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../ui/ui.dart';
 
@@ -148,8 +148,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       return _toast("Mật khẩu xác nhận không khớp", color: Theme.of(context).colorScheme.error);
     }
 
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("accessToken");
+    final token = (await TokenStorage.instance.readAccessToken());
 
     if (token == null) {
       _toast("Phiên đăng nhập hết hạn!", color: Theme.of(context).colorScheme.error);

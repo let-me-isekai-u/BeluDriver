@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'support/driver_session_fixture.dart';
 
 import 'package:beludriver_app/services/api_response.dart';
 import 'package:beludriver_app/services/v2/api_service.dart';
@@ -7,6 +8,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(() => installDriverSessionFixture('fixture'));
   test(
     'accept keeps its key after an unknown outcome and decodes Vietnamese',
     () async {

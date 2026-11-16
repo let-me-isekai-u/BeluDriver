@@ -1,11 +1,12 @@
 import 'dart:convert';
+import 'driver_auth_client.dart';
 
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 
 class ApiChatService {
   ApiChatService({required this.tokenProvider, http.Client? client})
-    : _client = client ?? http.Client();
+    : _client = DriverAuthClient(inner: client);
 
   final Future<String?> Function() tokenProvider;
   final http.Client _client;

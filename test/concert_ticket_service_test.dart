@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'support/driver_session_fixture.dart';
 
 import 'package:beludriver_app/services/concert_ticket_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,6 +7,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(() => installDriverSessionFixture('driver-token'));
   test('check-in ticket posts raw qrPayload to driver concert API', () async {
     final service = ConcertTicketService(
       client: MockClient((request) async {

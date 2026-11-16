@@ -1,8 +1,8 @@
 import 'dart:io';
 
+import 'package:beludriver_app/services/token_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../providers/kyc/kyc_provider.dart';
 import 'kyc_step_citizen_card.dart';
@@ -44,8 +44,7 @@ class _KycPopupState extends State<KycPopup> {
   }
 
   Future<void> _init() async {
-    final prefs = await SharedPreferences.getInstance();
-    _accessToken = prefs.getString("accessToken") ?? "";
+    _accessToken = (await TokenStorage.instance.readAccessToken()) ?? "";
 
     if (_accessToken.isEmpty) {
       debugPrint('[KYC_POPUP] access token missing');

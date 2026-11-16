@@ -73,6 +73,10 @@ class _DriverChatGroupListView extends StatelessWidget {
     return Scaffold(
       backgroundColor: bgCanvas,
       appBar: AppBar(
+        leading: BackButton(
+          color: Colors.white,
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
         elevation: 0,
         centerTitle: false,
         flexibleSpace: Container(
@@ -429,7 +433,7 @@ class _InfoState extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Brand.ink,
               ),
             ),
             const SizedBox(height: 8),
@@ -491,7 +495,7 @@ class _EmptyState extends StatelessWidget {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Brand.ink,
             ),
           ),
           const SizedBox(height: 8),

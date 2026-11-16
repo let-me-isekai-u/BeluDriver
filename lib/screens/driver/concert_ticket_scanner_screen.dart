@@ -1,6 +1,6 @@
+import 'package:beludriver_app/services/token_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app_theme.dart';
 import '../../models/concert_ticket_verification_model.dart';
@@ -32,7 +32,7 @@ class _ConcertTicketScannerScreenState
     final code = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (_) => const _ConcertQrScannerPage()),
     );
-    if (code == null || code.trim().isEmpty) return;
+    if (!mounted || code == null || code.trim().isEmpty) return;
     _codeController.text = code.trim();
     await _verify(code);
   }
@@ -44,8 +44,8 @@ class _ConcertTicketScannerScreenState
       return;
     }
 
-    final prefs = await SharedPreferences.getInstance();
-    final accessToken = prefs.getString('accessToken') ?? '';
+    final accessToken = (await TokenStorage.instance.readAccessToken()) ?? '';
+    if (!mounted) return;
     if (accessToken.isEmpty) {
       _showMessage('Không tìm thấy phiên đăng nhập tài xế.');
       return;
@@ -66,7 +66,7 @@ class _ConcertTicketScannerScreenState
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: const TextStyle(color: Colors.black)),
+        content: Text(message, style: const TextStyle(color: Colors.white)),
         backgroundColor: Brand.navy,
       ),
     );
@@ -79,10 +79,14 @@ class _ConcertTicketScannerScreenState
       appBar: AppBar(
         title: const Text(
           'Quét QR vé concert',
-          style: TextStyle(color: Brand.navy),
+          style: TextStyle(color: Colors.white),
         ),
         backgroundColor: Brand.navy,
         foregroundColor: Colors.white,
+        leading: BackButton(
+          color: Colors.white,
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
       ),
       body: SafeArea(
         child: ListView(
@@ -117,7 +121,7 @@ class _HeaderCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Brand.navy,
+        color: Brand.surface,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Brand.navy),
       ),
@@ -181,7 +185,7 @@ class _ManualInputCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Brand.navy,
+        color: Brand.surface,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.black),
       ),
@@ -204,7 +208,7 @@ class _ManualInputCard extends StatelessWidget {
             style: const TextStyle(color: Colors.black),
             decoration: InputDecoration(
               hintText: 'Dán toàn bộ chuỗi QR',
-              hintStyle: TextStyle(color: const Color(0x33041565)),
+              hintStyle: TextStyle(color: Brand.inkMuted),
               prefixIcon: const Icon(
                 Icons.confirmation_num,
                 color: Colors.black,
@@ -252,7 +256,7 @@ class _CheckingCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Brand.navy,
+        color: Brand.surface,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Brand.navy),
       ),
@@ -270,10 +274,7 @@ class _CheckingCard extends StatelessWidget {
           Expanded(
             child: Text(
               'Đang kiểm tra vé...',
-              style: TextStyle(
-                color: Brand.navy,
-                fontWeight: FontWeight.w800,
-              ),
+              style: TextStyle(color: Brand.navy, fontWeight: FontWeight.w800),
             ),
           ),
         ],
@@ -290,13 +291,11 @@ class _VerificationResultCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final borderColor = result.isValid ? Brand.navy : Colors.black;
-    final resultColor = result.isValid
-        ? const Color(0xFF2FBF71)
-        : const Color(0xFFE53935);
+    final resultColor = result.isValid ? Brand.success : Brand.danger;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: result.isValid ? Brand.navy : Brand.navy,
+        color: Brand.surface,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: borderColor, width: 1.4),
       ),
@@ -459,39 +458,44 @@ class _ConcertQrScannerPageState extends State<_ConcertQrScannerPage> {
         fit: StackFit.expand,
         children: [
           MobileScanner(
+            // Internal controller owns camera start/stop/dispose, including app lifecycle.
+            useAppLifecycleState: true,
             onDetect: (capture) {
               if (_scanned) return;
               final code = capture.barcodes.firstOrNull?.rawValue;
-              if (code == null || code.trim().isEmpty) return;
+              if (!mounted || code == null || code.trim().isEmpty) return;
               _scanned = true;
               Navigator.of(context).pop(code.trim());
             },
           ),
-          Container(color: Brand.canvas.withValues(alpha: 0.32)),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  CircleAvatar(
-                    backgroundColor: Brand.navy,
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.close,
-                        color: Brand.navy,
+          IgnorePointer(
+            child: Container(color: Colors.black.withValues(alpha: 0.2)),
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: Brand.navy,
+                      child: IconButton(
+                        tooltip: "Đóng camera",
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.of(context).pop(),
                       ),
-                      onPressed: () => Navigator.of(context).pop(),
                     ),
-                  ),
-                  const CircleAvatar(
-                    backgroundColor: Brand.navy,
-                    child: Icon(
-                      Icons.qr_code_scanner,
-                      color: Brand.navy,
+                    const CircleAvatar(
+                      backgroundColor: Brand.navy,
+                      child: Icon(Icons.qr_code_scanner, color: Colors.white),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -504,12 +508,12 @@ class _ConcertQrScannerPageState extends State<_ConcertQrScannerPage> {
               decoration: BoxDecoration(
                 color: Brand.navy,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.black, width: 1.5),
+                border: Border.all(color: Colors.white, width: 1.5),
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.confirmation_num, color: Colors.black),
+                  Icon(Icons.confirmation_num, color: Colors.white),
                   SizedBox(width: 8),
                   Flexible(
                     child: Text(
@@ -517,7 +521,7 @@ class _ConcertQrScannerPageState extends State<_ConcertQrScannerPage> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: Colors.black,
+                        color: Colors.white,
                         fontSize: 15,
                         fontWeight: FontWeight.w900,
                       ),
@@ -538,7 +542,7 @@ class _ConcertQrScannerPageState extends State<_ConcertQrScannerPage> {
               'Mã được kiểm tra trực tuyến',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Brand.navy,
+                color: Colors.white,
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
               ),
@@ -553,7 +557,7 @@ class _ConcertQrScannerPageState extends State<_ConcertQrScannerPage> {
               icon: const Icon(Icons.keyboard),
               label: const Text('Nhập mã thủ công'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.black,
+                foregroundColor: Colors.white,
                 backgroundColor: Brand.navy,
                 side: const BorderSide(color: Colors.black),
                 shape: RoundedRectangleBorder(

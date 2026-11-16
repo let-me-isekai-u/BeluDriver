@@ -1,0 +1,30 @@
+00:00 +0: loading /Users/nhatanhly/beludriver_app/test/qa_validation_test.dart
+00:00 +0: /Users/nhatanhly/beludriver_app/test/qa_validation_test.dart: Register validation priority valid input reaches registration without bypassing verification
+00:00 +1: /Users/nhatanhly/beludriver_app/test/qa_validation_test.dart: Register validation priority TC_Register_17 empty confirmation precedes mismatch
+00:00 +2: /Users/nhatanhly/beludriver_app/test/qa_validation_test.dart: Register validation priority TC_Register_19 empty confirmation precedes mismatch
+00:00 +3: /Users/nhatanhly/beludriver_app/test/qa_validation_test.dart: Register validation priority TC_Register_15 empty password precedes strength check
+00:00 +4: /Users/nhatanhly/beludriver_app/test/qa_validation_test.dart: Register validation priority invalid form never reaches registration HTTP call
+00:00 +5: /Users/nhatanhly/beludriver_app/test/qa_validation_test.dart: Withdrawal feedback TC_Home_12 missing fields have explicit messages
+00:00 +6: /Users/nhatanhly/beludriver_app/test/qa_validation_test.dart: Withdrawal feedback rejects malformed, zero, negative, and fractional amounts
+00:00 +7: /Users/nhatanhly/beludriver_app/test/qa_validation_test.dart: Withdrawal feedback TC_Home_15 balance boundary and formatted amounts
+00:00 +8: /Users/nhatanhly/beludriver_app/test/qa_validation_test.dart: Withdrawal feedback withdrawal keeps server rejection message and financial command key
+00:00 +9: /Users/nhatanhly/beludriver_app/test/qa_validation_test.dart: Order data TC_CreateOrder_05 rejects short and malformed phones
+00:00 +10: /Users/nhatanhly/beludriver_app/test/qa_validation_test.dart: Order data TC_CreateOrder_11/13 time and complete request survive changes
+00:00 +11: /Users/nhatanhly/beludriver_app/test/driver_login_api_test.dart: driver login returns a readable Vietnamese error when offline
+00:00 +12: /Users/nhatanhly/beludriver_app/test/qa_screens_test.dart: TC_Register_01 visible header and working back
+00:00 +13: /Users/nhatanhly/beludriver_app/test/qa_screens_test.dart: TC_Register_01 visible header and working back
+00:00 +14: /Users/nhatanhly/beludriver_app/test/qa_screens_test.dart: TC_Register_01 visible header and working back
+00:00 +15: /Users/nhatanhly/beludriver_app/test/qa_screens_test.dart: TC_Register_01 visible header and working back
+00:00 +16: /Users/nhatanhly/beludriver_app/test/qa_screens_test.dart: TC_Register_01 visible header and working back
+00:01 +17: /Users/nhatanhly/beludriver_app/test/chat_realtime_test.dart: driver group list refreshes when the hub reports group activity
+00:01 +18: /Users/nhatanhly/beludriver_app/test/chat_realtime_test.dart: driver group list refreshes when the hub reports group activity
+00:01 +19: /Users/nhatanhly/beludriver_app/test/chat_realtime_test.dart: driver group list refreshes when the hub reports group activity
+00:01 +20: /Users/nhatanhly/beludriver_app/test/chat_realtime_test.dart: driver group list refreshes when the hub reports group activity
+00:01 +21: /Users/nhatanhly/beludriver_app/test/chat_realtime_test.dart: driver group list refreshes when the hub reports group activity
+00:01 +22: /Users/nhatanhly/beludriver_app/test/qa_screens_test.dart: TC_CreateOrder_10/11 date and time selections remain visible
+00:01 +22: /Users/nhatanhly/beludriver_app/test/chat_realtime_test.dart: driver group receives new messages and updates ride cards through SignalR
+💬 DriverChatProvider: initChat start
+00:01 +23: /Users/nhatanhly/beludriver_app/test/qa_screens_test.dart: TC_CreateOrder_10/11 date and time selections remain visible
+00:01 +24: /Users/nhatanhly/beludriver_app/test/qa_screens_test.dart: TC_CreateOrder_13 displays complete trip with readable values
+00:01 +25: /Users/nhatanhly/beludriver_app/test/qa_screens_test.dart: TC_CreateOrder_06/07 dropdown and suggestions keep selections
+00:02 +26: All tests passed!

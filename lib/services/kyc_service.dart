@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'driver_auth_client.dart';
 import 'dart:io';
 import 'api_response.dart';
 
@@ -7,6 +8,7 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 
 class KYCService {
+  static final http.Client _http = DriverAuthClient();
   // -----------------------------------------------------------
   // BASE URL
   // -----------------------------------------------------------
@@ -39,13 +41,12 @@ class KYCService {
       final uri = Uri.parse("$_baseUrl/kyc");
       debugPrint('[KYC_SERVICE] GET $uri');
 
-      final response = await http.get(
+      final response = await _http.get(
         uri,
         headers: _authHeaders(accessToken),
       );
 
       debugPrint('[KYC_SERVICE] GET statusCode = ${response.statusCode}');
-      debugPrint('[KYC_SERVICE] GET body = ${response.body}');
 
       return response;
     } catch (e) {
@@ -65,13 +66,12 @@ class KYCService {
       final uri = Uri.parse("$_baseUrl/kyc/init");
       debugPrint('[KYC_SERVICE] POST $uri');
 
-      final response = await http.post(
+      final response = await _http.post(
         uri,
         headers: _jsonAuthHeaders(accessToken),
       );
 
       debugPrint('[KYC_SERVICE] initKycSession statusCode = ${response.statusCode}');
-      debugPrint('[KYC_SERVICE] initKycSession body = ${response.body}');
 
       return response;
     } catch (e) {
@@ -132,11 +132,10 @@ class KYCService {
 
       debugPrint('[KYC_SERVICE] total attached files = ${request.files.length}');
 
-      final streamedResponse = await request.send();
+      final streamedResponse = await _http.send(request);
       final response = await http.Response.fromStream(streamedResponse);
 
       debugPrint('[KYC_SERVICE] uploadKycBatch statusCode = ${response.statusCode}');
-      debugPrint('[KYC_SERVICE] uploadKycBatch body = ${response.body}');
 
       return response;
     } catch (e) {
@@ -250,14 +249,13 @@ class KYCService {
       debugPrint('[KYC_SERVICE] POST $uri');
       debugPrint('[KYC_SERVICE] submitKycSession body = $body');
 
-      final response = await http.post(
+      final response = await _http.post(
         uri,
         headers: _jsonAuthHeaders(accessToken),
         body: body,
       );
 
       debugPrint('[KYC_SERVICE] submitKycSession statusCode = ${response.statusCode}');
-      debugPrint('[KYC_SERVICE] submitKycSession body = ${response.body}');
 
       return response;
     } catch (e) {
@@ -318,11 +316,10 @@ class KYCService {
 
       debugPrint('[KYC_SERVICE] total attached files = ${request.files.length}');
 
-      final streamedResponse = await request.send();
+      final streamedResponse = await _http.send(request);
       final response = await http.Response.fromStream(streamedResponse);
 
       debugPrint('[KYC_SERVICE] POST (legacy) statusCode = ${response.statusCode}');
-      debugPrint('[KYC_SERVICE] POST (legacy) body = ${response.body}');
 
       return response;
     } catch (e) {
@@ -341,13 +338,12 @@ class KYCService {
       final uri = Uri.parse("$_baseUrl/route-options");
       debugPrint('[KYC_SERVICE] GET $uri');
 
-      final response = await http.get(
+      final response = await _http.get(
         uri,
         headers: _authHeaders(accessToken),
       );
 
       debugPrint('[KYC_SERVICE] GET route-options statusCode = ${response.statusCode}');
-      debugPrint('[KYC_SERVICE] GET route-options body = ${response.body}');
 
       return response;
     } catch (e) {
@@ -362,13 +358,12 @@ class KYCService {
       final uri = Uri.parse("$_baseUrl/routes");
       debugPrint('[KYC_SERVICE] GET $uri');
 
-      final response = await http.get(
+      final response = await _http.get(
         uri,
         headers: _authHeaders(accessToken),
       );
 
       debugPrint('[KYC_SERVICE] GET routes statusCode = ${response.statusCode}');
-      debugPrint('[KYC_SERVICE] GET routes body = ${response.body}');
 
       return response;
     } catch (e) {
@@ -393,14 +388,13 @@ class KYCService {
       debugPrint('[KYC_SERVICE] PUT $uri');
       debugPrint('[KYC_SERVICE] PUT routes body = $body');
 
-      final response = await http.put(
+      final response = await _http.put(
         uri,
         headers: _jsonAuthHeaders(accessToken),
         body: body,
       );
 
       debugPrint('[KYC_SERVICE] PUT routes statusCode = ${response.statusCode}');
-      debugPrint('[KYC_SERVICE] PUT routes response = ${response.body}');
 
       return response;
     } catch (e) {

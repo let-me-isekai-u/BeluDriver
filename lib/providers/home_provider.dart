@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:beludriver_app/services/token_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -81,8 +82,7 @@ class HomeProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('accessToken') ?? '';
+      final token = (await TokenStorage.instance.readAccessToken()) ?? '';
 
       if (token.isEmpty) return;
 
@@ -108,8 +108,7 @@ class HomeProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('accessToken') ?? '';
+      final token = (await TokenStorage.instance.readAccessToken()) ?? '';
 
       if (token.isEmpty) return;
 

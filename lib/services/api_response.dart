@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'driver_auth_client.dart';
+import 'session_auth.dart';
+
 import 'package:http/http.dart' as http;
 
 Map<String, dynamic>? responseJson(http.Response response) {
@@ -52,7 +55,7 @@ Future<http.Response> sendFinancialCommand(
   String? body,
   String? idempotencyKey,
 }) async {
-  final operation = (token, method, url, body);
+  final operation = (SessionAuth.operationSession(token), method, url, body);
   final key =
       idempotencyKey ??
       _pendingKeys.putIfAbsent(operation, () {
@@ -71,7 +74,7 @@ Future<http.Response> sendFinancialCommand(
   });
   if (body != null) request.body = body;
 
-  final client = http.Client();
+  final client = DriverAuthClient();
   try {
     final response = await client
         .send(request)
