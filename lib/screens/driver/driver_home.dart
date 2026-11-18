@@ -23,7 +23,6 @@ import '../kyc/kyc_popup.dart';
 import '../popup_list/withdraw_request_failed_popup.dart';
 import '../popup_list/withdraw_request_success_popup.dart';
 import 'activity_history.dart';
-import 'concert_ticket_scanner_screen.dart';
 import 'driver_booking_screen.dart';
 import 'driver_profile.dart';
 import 'recieve_order_screen.dart';
@@ -575,10 +574,6 @@ class _HomeDashboard extends StatelessWidget {
             BrandCard(
               padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
               child: Row(children: [
-                _quick(Icons.qr_code_scanner_rounded, 'Soát vé', () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const ConcertTicketScannerScreen()),
-                    )),
                 _quick(Icons.forum_rounded, 'Nhóm chat', () => Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const DriverChatGroupListScreen()),

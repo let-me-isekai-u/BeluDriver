@@ -1,12 +1,14 @@
-import 'dart:convert';
-
 import 'package:beludriver_app/services/token_storage.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/api_service.dart';
-import '../services/session_auth.dart';
+import '../services/active_session_mode.dart';
+import '../services/startup_session_restore.dart';
+import 'driver/driver_login_screen.dart';
+import '../services/driver_session_navigation.dart';
+import '../features/carrier_vehicle/carrier_vehicle_service.dart';
+import '../features/carrier_vehicle/carrier_vehicle_screens.dart';
 import '../services/kyc_service.dart';
 import '../ui/ui.dart';
 
@@ -161,69 +163,81 @@ class _SplashScreenState extends State<SplashScreen>
     }
   }
 
+  bool _checkingAuth = false;
+  bool _navigationStarted = false;
+  String? _restoreError;
+
   Future<void> _checkAuth() async {
+    if (_checkingAuth || _navigationStarted) return;
+    _checkingAuth = true;
+    if (mounted) setState(() => _restoreError = null);
     try {
-      await _restoreSession();
-    } on TokenStorageException {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Không thể truy cập bộ nhớ bảo mật. Vui lòng thử lại.'),
-          duration: const Duration(days: 1),
-          action: SnackBarAction(label: 'Thử lại', onPressed: _checkAuth),
-        ),
-      );
+      final restored = await StartupSessionRestore.restore();
+      if (!mounted || _navigationStarted) return;
+      if (restored?.mode == SessionMode.driver) {
+        final prefs = await SharedPreferences.getInstance();
+        await _saveOnboardingState(
+          prefs: prefs,
+          accessToken: restored!.driverToken!,
+        );
+      }
+      await _ensureMinDisplay();
+      if (!mounted || _navigationStarted) return;
+      if (restored == null) {
+        _goToLogin();
+      } else if (restored.mode == SessionMode.driver) {
+        _navigationStarted = true;
+        Navigator.of(context).pushReplacementNamed('/home');
+      } else {
+        _navigationStarted = true;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            settings: const RouteSettings(name: carrierRouteName),
+            builder: (_) =>
+                CarrierVehicleHomeScreen(initialRuns: restored.runs),
+          ),
+        );
+      }
+    } on TokenStorageException catch (error) {
+      if (mounted && !_navigationStarted) {
+        setState(() => _restoreError = error.toString());
+      }
+    } on CarrierVehicleException catch (error) {
+      if (mounted && !_navigationStarted) {
+        setState(() => _restoreError = error.message);
+      }
+    } catch (_) {
+      if (mounted && !_navigationStarted) {
+        setState(
+          () => _restoreError =
+              'Chưa thể khôi phục phiên. Kiểm tra kết nối rồi thử lại.',
+        );
+      }
+    } finally {
+      _checkingAuth = false;
     }
   }
 
-  Future<void> _restoreSession() async {
-    final prefs = await SharedPreferences.getInstance();
-    final tokens = await TokenStorage.instance.readTokens();
-    var token = tokens.$1;
-    final refresh = tokens.$2;
-    if (token == null && refresh == null) {
-      await _ensureMinDisplay();
-      _goToLogin();
-      return;
-    }
-    try {
-      token ??= await SessionAuth.refresh(null);
-      if (token == null) {
-        if (mounted) _goToLogin();
-        return;
-      }
-      final response = await ApiService.getDriverProfile(accessToken: token);
-      if (!mounted) return;
-      if (response.statusCode == 401) return; // Central expiry handler navigates.
-      if (response.statusCode != 200) throw const SessionRenewalException();
-      final current = await TokenStorage.instance.readAccessToken();
-      if (current == null) return;
-      await _saveOnboardingState(prefs: prefs, accessToken: current);
-      await _ensureMinDisplay();
-      if (mounted && await SessionAuth.tokenFor(current) != null) _goToHome();
-    } on TokenStorageException {
-      rethrow;
-    } catch (_) {
-      if (!mounted) return;
-      // An outage or malformed server response does not revoke the session.
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Chưa thể tải phiên đăng nhập. Vui lòng kiểm tra kết nối và thử lại.'),
-          duration: const Duration(days: 1),
-          action: SnackBarAction(label: 'Thử lại', onPressed: _checkAuth),
-        ),
-      );
-    }
+  Future<void> _chooseDriverLogin() async {
+    if (_navigationStarted) return;
+    // Guard before awaiting preferences: a late startup response cannot redirect.
+    _navigationStarted = true;
+    await ActiveSessionMode.remember(SessionMode.driver);
+    if (!mounted) return;
+    Navigator.of(context).pushReplacementNamed('/login');
   }
 
   void _goToLogin() {
-    if (!mounted) return;
-    Navigator.pushReplacementNamed(context, "/login");
-  }
-
-  void _goToHome() {
-    if (!mounted) return;
-    Navigator.pushReplacementNamed(context, "/home");
+    if (!mounted || _navigationStarted) return;
+    _navigationStarted = true;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        settings: const RouteSettings(name: '/login'),
+        builder: (_) => DriverLoginScreen(
+          initialMessage: CarrierVehicleService.sessionEndMessage,
+        ),
+      ),
+    );
   }
 
   @override
@@ -254,10 +268,7 @@ class _SplashScreenState extends State<SplashScreen>
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      const Color(0x33041565),
-                    ],
+                    colors: [Colors.transparent, const Color(0x33041565)],
                   ),
                 ),
               ),
@@ -271,16 +282,34 @@ class _SplashScreenState extends State<SplashScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _ShimmerLoadingBar(animation: _shimmerAnimation),
+                    if (_restoreError == null)
+                      _ShimmerLoadingBar(animation: _shimmerAnimation),
+                    if (_restoreError != null) ...[
+                      Text(
+                        _restoreError!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Brand.ink),
+                      ),
+                      TextButton(
+                        onPressed: _checkAuth,
+                        child: const Text('Thử lại'),
+                      ),
+                    ],
                     const SizedBox(height: 10),
                     Text(
-                      'Đang tải...',
+                      _restoreError == null
+                          ? 'Đang tải...'
+                          : 'Phiên đã lưu được giữ lại.',
                       style: TextStyle(
                         color: Brand.inkMuted,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                         letterSpacing: 0.6,
                       ),
+                    ),
+                    TextButton(
+                      onPressed: _chooseDriverLogin,
+                      child: const Text('Đăng nhập tài xế'),
                     ),
                   ],
                 ),
@@ -316,14 +345,9 @@ class _ShimmerLoadingBar extends StatelessWidget {
               borderRadius: BorderRadius.circular(4),
               child: Stack(
                 children: [
-                  Container(
-                    color: Colors.white,
-                  ),
+                  Container(color: Colors.white),
                   FractionallySizedBox(
-                    alignment: Alignment(
-                      (animation.value * 3.0) - 1.5,
-                      0,
-                    ),
+                    alignment: Alignment((animation.value * 3.0) - 1.5, 0),
                     widthFactor: 0.35,
                     child: Container(
                       decoration: BoxDecoration(

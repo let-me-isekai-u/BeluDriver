@@ -1,21 +1,22 @@
 import 'services/token_storage.dart';
 import 'services/session_auth.dart';
+import 'services/driver_session_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Bổ sung import
 import 'screens/driver/driver_home.dart';
 import 'app_theme.dart';
 import 'screens/driver/driver_login_screen.dart';
-import 'Screens/splash_screen.dart';
+import 'screens/splash_screen.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'services/firebase_notification_service.dart';
 
 final _navigatorKey = GlobalKey<NavigatorState>();
+final _sessionNavigation = DriverSessionNavigation();
 
-
-
-void main() async { // THÊM TỪ KHÓA ASYNC
+void main() async {
+  // THÊM TỪ KHÓA ASYNC
 
   // 1. Đảm bảo Flutter Widgets đã được khởi tạo
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,7 +28,6 @@ void main() async { // THÊM TỪ KHÓA ASYNC
   );
 
   await FirebaseNotificationService.init();
-
 
   // Non-sensitive preferences remain here; credentials use TokenStorage.
   await SharedPreferences.getInstance();
@@ -45,15 +45,10 @@ class BelucarApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    SessionAuth.onExpired = () {
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        // Do not navigate away from a newer login completed during cleanup.
-        if (await TokenStorage.instance.readAccessToken() != null) return;
-        _navigatorKey.currentState?.pushNamedAndRemoveUntil('/login', (_) => false);
-      });
-    };
+    SessionAuth.onExpired = _sessionNavigation.driverExpired;
     return MaterialApp(
       navigatorKey: _navigatorKey,
+      navigatorObservers: [_sessionNavigation],
       debugShowCheckedModeBanner: false,
       initialRoute: "/splash", // Luôn bắt đầu từ Splash Screen
 

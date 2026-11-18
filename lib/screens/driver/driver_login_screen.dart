@@ -10,9 +10,11 @@ import '../forgot_password_screen.dart';
 import 'driver_home.dart';
 import 'driver_register_screen.dart';
 import '../../ui/ui.dart';
+import '../../services/active_session_mode.dart';
 
 class DriverLoginScreen extends StatefulWidget {
-  const DriverLoginScreen({super.key});
+  const DriverLoginScreen({super.key, this.initialMessage});
+  final String? initialMessage;
 
   @override
   State<DriverLoginScreen> createState() => _LoginScreenState();
@@ -25,6 +27,11 @@ class _LoginScreenState extends State<DriverLoginScreen>
   @override
   void initState() {
     super.initState();
+    if (widget.initialMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showSnack(widget.initialMessage!);
+      });
+    }
     _logoController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -55,23 +62,29 @@ class _LoginScreenState extends State<DriverLoginScreen>
     );
   }
 
+  bool _loginInFlight = false;
   Future<void> _login(LoginProvider provider) async {
-    final result = await provider.login();
+    if (_loginInFlight) return;
+    _loginInFlight = true;
+    try {
+      await ActiveSessionMode.remember(SessionMode.driver);
+      if (!mounted) return;
+      final result = await provider.login();
 
-    if (!mounted) return;
+      if (!mounted || !(ModalRoute.of(context)?.isCurrent ?? false)) return;
 
-    if (result == null) {
-      _showSnack(
-        "Đăng nhập thành công!",
-        color: Brand.navy,
-      );
+      if (result == null) {
+        _showSnack("Đăng nhập thành công!", color: Brand.navy);
 
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const DriverHomeScreen()),
-        (Route<dynamic> route) => false,
-      );
-    } else {
-      _showSnack(result);
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const DriverHomeScreen()),
+          (Route<dynamic> route) => false,
+        );
+      } else {
+        _showSnack(result);
+      }
+    } finally {
+      _loginInFlight = false;
     }
   }
 
@@ -148,7 +161,14 @@ class _LoginScreenState extends State<DriverLoginScreen>
               height: 60,
               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
               alignment: Alignment.center,
-              child: const BrandMark(size: 28),
+              clipBehavior: Clip.antiAlias,
+              child: Image.asset(
+                'lib/assets/icons/dong_duong_driver_logo.png',
+                width: 60,
+                height: 60,
+                fit: BoxFit.cover,
+                semanticLabel: 'Logo Tài xế Đông Dương',
+              ),
             ),
           ),
           const SizedBox(width: 12),

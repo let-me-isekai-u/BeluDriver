@@ -55,8 +55,8 @@ class DriverAuthClient extends http.BaseClient {
       );
     request.headers['Authorization'] = 'Bearer $token';
 
-    // No automatic replay of writes, even if a key is present: the backend's
-    // idempotency guarantee has not been verified. This POST is read-only.
+    // Replay only reads, including the read-only withdrawal history POST.
+    // Never replay a write on timeout/network/5xx.
     final replayable =
         request.method == 'GET' ||
         request.method == 'HEAD' ||

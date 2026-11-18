@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'active_session_mode.dart';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -206,6 +207,15 @@ class TokenStorage {
   Future<void> clearVehicleSession() => _serialized(() async {
     await _writeValueVerified(vehicleSessionKey, 'null');
     await _removeVehicleLegacy(required: true);
+  });
+
+  Future<void> clearDriverPreferences() => _serialized(() async {
+    final prefs = await _preferences();
+    for (final key in prefs.getKeys()) {
+      if (key != _legacyVehicleKey && key != ActiveSessionMode.preferenceKey && !await prefs.remove(key)) {
+        throw const TokenStorageException();
+      }
+    }
   });
 
   /// Used only where the previous implementation cleared all preferences.

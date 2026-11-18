@@ -59,6 +59,26 @@ void main() {
     storage = TokenStorage(secureStorage: secure);
   });
 
+  test('driver logout preserves secure and legacy vehicle sessions', () async {
+    final vehicle = jsonEncode({
+      'accessToken': 'vehicle-access',
+      'sessionToken': 'vehicle-session',
+      'sessionExpiresAt': '2035-01-01T00:00:00Z',
+      'vehicle': {},
+    });
+    await storage.writeTokens(accessToken: 'driver', refreshToken: 'refresh');
+    await storage.writeVehicleSession(vehicle);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('carrier_vehicle_session_v1', vehicle);
+    await prefs.setString('fullName', 'Driver');
+    await storage.clear();
+    await storage.clearDriverPreferences();
+    expect(await storage.readTokens(), (null, null));
+    expect(secure.values[TokenStorage.vehicleSessionKey], vehicle);
+    expect(prefs.getString('carrier_vehicle_session_v1'), vehicle);
+    expect(prefs.getString('fullName'), isNull);
+  });
+
   test(
     'new login writes only secure storage and survives service restart',
     () async {

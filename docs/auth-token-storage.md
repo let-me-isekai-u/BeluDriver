@@ -97,3 +97,9 @@ Các plugin registrant là file tự sinh sau khi thêm package. Danh sách gồ
 - `test/token_storage_test.dart`
 - `windows/flutter/generated_plugin_registrant.cc`
 - `windows/flutter/generated_plugins.cmake`
+
+## Cập nhật audit QR 17/11/2026
+
+Logout/xóa tài khoản Driver hiện chỉ xóa token và preferences của Driver, giữ phiên xe độc lập (kể cả legacy khi migration chưa thành công). Không còn dùng `clearAll()` ở ProfileProvider. Splash khôi phục phiên xe đã lưu trước; callback Driver expiry giữ nguyên route xe và chỉ xử lý điều hướng Driver khi rời mode. Chi tiết, giới hạn kiểm chứng và bước QA: [audit QR](qr-audit/2026-11-17.md).
+
+Bổ sung cùng ngày: khôi phục theo `lastActiveMode` nếu có, fallback sang phiên còn lại khi phiên ưu tiên bị từ chối/hết hạn; metadata chưa có ưu tiên phiên xe để tương thích bản cũ. Kiểm tra API có bảo vệ trước khi vào Home. Lỗi tạm thời giữ credential và chờ người dùng thử lại. Xem [báo cáo restore và gỡ concert](session-restore-and-concert-removal-2026-11-17.md).

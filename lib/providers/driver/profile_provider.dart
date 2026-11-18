@@ -3,7 +3,6 @@ import '../../features/driver_location/driver_gps_tracker.dart';
 
 import 'package:beludriver_app/services/token_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/driver/driver_profile_model.dart';
@@ -55,7 +54,6 @@ class ProfileProvider extends ChangeNotifier {
 
   Future<bool> deleteAccount() async {
     await DriverGpsTracker.instance.stop();
-    final prefs = await SharedPreferences.getInstance();
     final accessToken = (await TokenStorage.instance.readAccessToken());
 
     if (accessToken == null || accessToken.isEmpty) {
@@ -66,8 +64,8 @@ class ProfileProvider extends ChangeNotifier {
       final res = await ApiService.deleteAccount(accessToken: accessToken);
 
       if (res.statusCode == 200) {
-        await TokenStorage.instance.clearAll();
-        await prefs.clear();
+        await TokenStorage.instance.clear();
+        await TokenStorage.instance.clearDriverPreferences();
         profile = null;
         onboardingStatus = null;
         notifyListeners();
@@ -82,15 +80,14 @@ class ProfileProvider extends ChangeNotifier {
 
   Future<void> logout() async {
     await DriverGpsTracker.instance.stop();
-    final prefs = await SharedPreferences.getInstance();
     final accessToken = (await TokenStorage.instance.readAccessToken());
 
     if (accessToken != null && accessToken.isNotEmpty) {
       await ApiService.Driverlogout(accessToken);
     }
 
-    await TokenStorage.instance.clearAll();
-    await prefs.clear();
+    await TokenStorage.instance.clear();
+    await TokenStorage.instance.clearDriverPreferences();
     profile = null;
     onboardingStatus = null;
     notifyListeners();

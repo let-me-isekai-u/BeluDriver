@@ -1,7 +1,6 @@
 import 'package:beludriver_app/models/broker_ride_models.dart';
 import 'package:beludriver_app/models/location_models.dart';
 import 'package:beludriver_app/providers/broker/order_form_provider.dart';
-import 'package:beludriver_app/screens/driver/concert_ticket_scanner_screen.dart';
 import 'package:beludriver_app/screens/driver/driver_booking_confirm.dart';
 import 'package:beludriver_app/screens/driver/driver_booking_screen.dart';
 import 'package:beludriver_app/screens/driver/driver_home.dart';
@@ -15,43 +14,6 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
-
-class _CameraPlatform extends MobileScannerPlatform {
-  int starts = 0;
-  int stops = 0;
-  int disposals = 0;
-  @override
-  Stream<BarcodeCapture?> get barcodesStream => const Stream.empty();
-  @override
-  Stream<TorchState> get torchStateStream => const Stream.empty();
-  @override
-  Stream<double> get zoomScaleStateStream => const Stream.empty();
-  @override
-  Widget buildCameraView() => const ColoredBox(color: Colors.black);
-  @override
-  Future<MobileScannerViewAttributes> start(StartOptions options) async {
-    starts++;
-    return const MobileScannerViewAttributes(
-      cameraDirection: CameraFacing.back,
-      currentTorchMode: TorchState.off,
-      size: Size(390, 844),
-    );
-  }
-
-  @override
-  Future<void> stop() async {
-    stops++;
-  }
-
-  @override
-  Future<void> dispose() async {
-    disposals++;
-  }
-
-  @override
-  Future<void> updateScanWindow(Rect? window) async {}
-}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -108,50 +70,6 @@ void main() {
     await tester.tap(find.byTooltip('Quay lại đăng nhập'));
     await tester.pumpAndSettle();
     expect(find.text('Mở đăng ký'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('TC_Home_03 ticket page has visible title and back', (
-    tester,
-  ) async {
-    await show(tester, const ConcertTicketScannerScreen());
-    expect(
-      tester.widget<Text>(find.text('Quét QR vé concert')).style?.color,
-      Colors.white,
-    );
-    expect(find.byType(BackButton), findsOneWidget);
-    expect(find.text('Kiểm vé lên xe'), findsOneWidget);
-    await tester.tap(find.text('Kiểm vé'));
-    await tester.pump();
-    expect(
-      find.text('Vui lòng quét hoặc nhập mã QR vé concert.'),
-      findsOneWidget,
-    );
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('TC_Home_05 close is at top and stops camera', (tester) async {
-    final original = MobileScannerPlatform.instance;
-    final camera = _CameraPlatform();
-    MobileScannerPlatform.instance = camera;
-    addTearDown(() => MobileScannerPlatform.instance = original);
-    await show(tester, const ConcertTicketScannerScreen());
-    await tester.tap(find.text('Quét QR'));
-    await tester.pumpAndSettle();
-    expect(camera.starts, greaterThan(0));
-    final scanner = tester.state(find.byType(MobileScanner));
-    expect(scanner.mounted, isTrue);
-    expect(tester.getTopLeft(find.byTooltip('Đóng camera')).dy, lessThan(100));
-    await tester.tap(find.byTooltip('Đóng camera'));
-    await tester.pumpAndSettle();
-    await tester.pump();
-    await tester.pump();
-    expect(find.text('Kiểm vé lên xe'), findsOneWidget);
-    await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-    });
-    expect(camera.stops, greaterThan(0));
-    expect(scanner.mounted, isFalse);
     expect(tester.takeException(), isNull);
   });
 

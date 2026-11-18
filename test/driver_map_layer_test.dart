@@ -67,7 +67,10 @@ void main() {
     expect(url.host, 'tiles.track-asia.com');
     expect(url.path, startsWith('/raster-tiles/v2/15/'));
     expect(url.queryParameters['key'], driverMapKey);
-    expect(find.text('TrackAsia · OpenStreetMap'), findsOneWidget);
+    expect(find.byType(SimpleAttributionWidget), findsNothing);
+    expect(find.textContaining('flutter_map |'), findsNothing);
+    expect(find.text('© TrackAsia'), findsOneWidget);
+    expect(find.text('© OpenStreetMap contributors'), findsOneWidget);
     expect(find.text('Thử lại'), findsNothing);
     expect(tester.takeException(), isNull);
   });
