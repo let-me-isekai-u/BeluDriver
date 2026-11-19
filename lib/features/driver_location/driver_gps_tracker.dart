@@ -161,7 +161,6 @@ class DriverGpsTracker extends ChangeNotifier {
           'Máy chủ chưa mở được phiên chia sẻ vị trí.',
         );
       }
-      enabled = true;
       _serviceSubscription = device.serviceStatus().listen(
         (status) {
           if (status == ServiceStatus.disabled && generation == _generation) {
@@ -177,6 +176,7 @@ class DriverGpsTracker extends ChangeNotifier {
         await stop();
         return;
       }
+      enabled = true;
       _subscription = device.watch().listen(
         (position) {
           if (enabled && generation == _generation) {
@@ -191,7 +191,8 @@ class DriverGpsTracker extends ChangeNotifier {
         },
       );
       _timer = Timer.periodic(const Duration(seconds: 10), (_) => flush());
-      await flush();
+      // The toggle represents an open session. Sampling and sending can finish later.
+      unawaited(flush());
     } catch (error) {
       if (generation == _generation) {
         enabled = false;
@@ -274,7 +275,7 @@ class DriverGpsTracker extends ChangeNotifier {
       }
     } finally {
       _sending = false;
-      notifyListeners();
+      if (generation == _generation) notifyListeners();
     }
   }
 

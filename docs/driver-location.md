@@ -21,6 +21,8 @@ Khi tài xế chủ động bật công tắc, app kiểm tra quyền và yêu c
 
 Ngày 20/11/2026, bản Android 1.2.7 đã kiểm trên điện thoại Android 15. **Bật** bật GPS và chia sẻ ngay từ Trang chủ. **Không, cảm ơn** giữ cả hai trạng thái tắt. Mỗi lần thử chỉ mở một hộp thoại. Bộ kiểm thử hồi quy đạt 24/24.
 
+Công tắc chuyển sang bật khi GPS sẵn sàng và máy chủ đã mở phiên chia sẻ. Lần lấy và gửi tọa độ đầu tiên chạy sau đó, nên tài xế có thể tắt chia sẻ ngay cả khi lần gửi đó đang chờ.
+
 Sau khi quay lại từ Cài đặt, app kiểm tra lại cả quyền và GPS rồi tiếp tục yêu cầu bật chia sẻ. Hủy hộp thoại hoặc quay lại mà chưa cấp quyền/bật GPS giữ công tắc tắt; không mở hộp thoại lặp vô hạn. Rời màn hình hoặc dừng phiên khi đang mở Cài đặt hủy ý định bật còn chờ. Khôi phục tự động khi mở Trang chủ không tự xin quyền hoặc mở Cài đặt. Chỉ thu thập/gửi GPS sau khi đủ điều kiện thiết bị và máy chủ trả stream chia sẻ.
 
 Kiểm thử hồi quy: `flutter test test/driver_location_test.dart test/driver_location_setup_test.dart`; ca mới kiểm quyền chưa cấp, từ chối, từ chối vĩnh viễn, GPS tắt, hủy, quay lại từ Cài đặt, thoát màn hình/dừng phiên và lỗi mở Cài đặt. Các ca nền/force-kill và iOS vẫn cần kiểm thực địa như giới hạn bên dưới.

@@ -190,29 +190,48 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('Android approval resumes sharing without opening Settings', (
-    tester,
-  ) async {
-    platform.servicesEnabled = false;
-    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-      locationSettings,
-      (call) async {
-        expect(call.method, 'requestEnableLocation');
-        expect(api.toggles, isEmpty);
-        return 'closed';
-      },
-    );
-    await showTile(tester);
-    expect(api.toggles, isEmpty);
-    platform.servicesEnabled = true;
-    await tester.pump(const Duration(milliseconds: 200));
-    await tester.pumpAndSettle();
-    expect(find.byType(AlertDialog), findsNothing);
-    expect(platform.calls, isNot(contains('locationSettings')));
-    expect(api.toggles, [(true, 'original-account')]);
-    expect(tracker.enabled, isTrue);
-    await tester.runAsync(() => tracker.stop(disableServer: false));
-  });
+  testWidgets(
+    'Android approval enables the switch before the first GPS report',
+    (tester) async {
+      platform.servicesEnabled = false;
+      final sample = device.sampleGate = Completer<Position>();
+      final report = api.reportGate = Completer<Map<String, dynamic>>();
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        locationSettings,
+        (call) async {
+          expect(call.method, 'requestEnableLocation');
+          expect(api.toggles, isEmpty);
+          return 'closed';
+        },
+      );
+      await showTile(tester);
+      expect(api.toggles, isEmpty);
+      platform.servicesEnabled = true;
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(platform.calls, isNot(contains('locationSettings')));
+      expect(api.toggles, [(true, 'original-account')]);
+      expect(tracker.enabled, isTrue);
+      final toggle = find.byType(SwitchListTile);
+      expect(tester.widget<SwitchListTile>(toggle).value, isTrue);
+      expect(tester.widget<SwitchListTile>(toggle).onChanged, isNotNull);
+      expect(api.reports, isEmpty);
+
+      sample.complete(point(21));
+      await tester.pump();
+      expect(api.reports, hasLength(1));
+      expect(tracker.lastSentAt, isNull);
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(tester.widget<SwitchListTile>(toggle).value, isFalse);
+      expect(api.toggles.last.$1, isFalse);
+
+      report.complete({'accepted': true});
+      await tester.pump();
+      expect(tracker.lastSentAt, isNull);
+    },
+  );
 
   testWidgets(
     'only one Android request is pending and cancellation keeps sharing off',

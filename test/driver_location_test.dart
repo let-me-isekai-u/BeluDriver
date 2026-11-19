@@ -29,6 +29,7 @@ class FakeDevice implements DriverGpsDevice {
   Position latest = point(21);
   int watches = 0;
   bool failSample = false;
+  Completer<Position>? sampleGate;
   @override
   Future<String?> permission({required bool request}) async => denied;
   @override
@@ -44,7 +45,8 @@ class FakeDevice implements DriverGpsDevice {
   @override
   Future<Position> sample() async {
     if (failSample) throw Exception('GPS paused');
-    return latest;
+    final pending = sampleGate;
+    return pending == null ? latest : pending.future;
   }
 }
 
@@ -107,6 +109,7 @@ void main() {
       await tracker.start();
       expect(tracker.enabled, isTrue);
       expect(gps.watches, 1);
+      await Future<void>.delayed(Duration.zero);
       expect(api.reports.single['streamId'], 'fixture-stream');
       await tracker.stop();
       gps.positions.add(point(22));
@@ -148,6 +151,7 @@ void main() {
     await tracker.stop();
     api.reportGate!.complete({'accepted': true});
     await starting;
+    await Future<void>.delayed(Duration.zero);
     expect(tracker.enabled, isFalse);
     expect(tracker.lastSentAt, isNull);
     expect(api.toggles.last.$1, isFalse);
@@ -180,6 +184,7 @@ void main() {
 
   test('a missed GPS-off event cannot send a cached point', () async {
     await tracker.start();
+    await Future<void>.delayed(Duration.zero);
     gps.serviceEnabled = false;
     await tracker.flush();
 
@@ -236,6 +241,7 @@ void main() {
     );
     gps.failSample = true;
     await tracker.start();
+    await Future<void>.delayed(Duration.zero);
     expect(api.reports, isEmpty);
     expect(tracker.lastError, isNotNull);
   });
