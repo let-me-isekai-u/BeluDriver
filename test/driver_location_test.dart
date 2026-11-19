@@ -23,12 +23,18 @@ Position point(double lat, {DateTime? at}) => Position(
 
 class FakeDevice implements DriverGpsDevice {
   final positions = StreamController<Position>.broadcast();
+  final statuses = StreamController<ServiceStatus>.broadcast();
+  bool serviceEnabled = true;
   String? denied;
   Position latest = point(21);
   int watches = 0;
   bool failSample = false;
   @override
   Future<String?> permission({required bool request}) async => denied;
+  @override
+  Future<bool> isServiceEnabled() async => serviceEnabled;
+  @override
+  Stream<ServiceStatus> serviceStatus() => statuses.stream;
   @override
   Stream<Position> watch() {
     watches++;
@@ -48,6 +54,7 @@ class FakeApi extends DriverLocationApi {
   final toggles = <(bool, String?)>[];
   final reports = <Map<String, dynamic>>[];
   Completer<Map<String, dynamic>>? enableGate;
+  Completer<Map<String, dynamic>>? disableGate;
   Completer<Map<String, dynamic>>? reportGate;
   @override
   Future<String> token() async => 'original-account';
@@ -60,6 +67,7 @@ class FakeApi extends DriverLocationApi {
   }) async {
     toggles.add((enabled, accessToken));
     if (enabled && enableGate != null) return enableGate!.future;
+    if (!enabled && disableGate != null) return disableGate!.future;
     return {'enabled': enabled, 'streamId': enabled ? 'fixture-stream' : null};
   }
 
@@ -86,6 +94,7 @@ void main() {
     await tracker.stop(disableServer: false);
     tracker.dispose();
     await gps.positions.close();
+    await gps.statuses.close();
     api.client.close();
   });
 
@@ -143,6 +152,59 @@ void main() {
     expect(tracker.lastSentAt, isNull);
     expect(api.toggles.last.$1, isFalse);
   });
+
+  test('turning Android location off stops sharing immediately', () async {
+    await tracker.start();
+    api.disableGate = Completer();
+    gps.serviceEnabled = false;
+    gps.statuses.add(ServiceStatus.disabled);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(tracker.enabled, isFalse);
+    expect(api.toggles.map((toggle) => toggle.$1), [true, false]);
+    expect(gps.positions.hasListener, isFalse);
+    expect(gps.statuses.hasListener, isFalse);
+
+    gps.serviceEnabled = true;
+    gps.statuses.add(ServiceStatus.enabled);
+    await tracker.start();
+    expect(api.toggles, hasLength(2));
+    api.disableGate!.complete({'enabled': false});
+    await Future<void>.delayed(Duration.zero);
+    expect(tracker.enabled, isFalse);
+
+    await tracker.start();
+    expect(tracker.enabled, isTrue);
+    expect(api.toggles.map((toggle) => toggle.$1), [true, false, true]);
+  });
+
+  test('a missed GPS-off event cannot send a cached point', () async {
+    await tracker.start();
+    gps.serviceEnabled = false;
+    await tracker.flush();
+
+    expect(tracker.enabled, isFalse);
+    expect(api.reports, hasLength(1));
+    expect(api.toggles.last.$1, isFalse);
+  });
+
+  test(
+    'GPS off while awaiting server enable does not start the stream',
+    () async {
+      api.enableGate = Completer();
+      final starting = tracker.start();
+      await Future<void>.delayed(Duration.zero);
+      expect(api.toggles.single.$1, isTrue);
+      gps.serviceEnabled = false;
+      api.enableGate!.complete({'enabled': true, 'streamId': 'late-stream'});
+      await starting;
+
+      expect(tracker.enabled, isFalse);
+      expect(gps.watches, 0);
+      expect(api.reports, isEmpty);
+      expect(api.toggles.last.$1, isFalse);
+    },
+  );
 
   test('late enable is compensated with the original account token', () async {
     api.enableGate = Completer();

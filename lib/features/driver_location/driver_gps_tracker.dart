@@ -11,8 +11,15 @@ class DriverGpsSetupException extends DriverLocationException {
     : super(422, message);
 }
 
+const _locationDisabled = DriverGpsSetupException(
+  DriverGpsSetupAction.locationSettings,
+  'Hãy bật vị trí (GPS) trên điện thoại để chia sẻ khi làm việc.',
+);
+
 abstract interface class DriverGpsDevice {
   Future<String?> permission({required bool request});
+  Future<bool> isServiceEnabled();
+  Stream<ServiceStatus> serviceStatus();
   Stream<Position> watch();
   Future<Position> sample();
 }
@@ -34,27 +41,29 @@ class GeolocatorDriverGpsDevice implements DriverGpsDevice {
         permission != LocationPermission.always) {
       return 'Cần quyền vị trí để chia sẻ với điều hành.';
     }
-    if (!await Geolocator.isLocationServiceEnabled()) {
-      throw const DriverGpsSetupException(
-        DriverGpsSetupAction.locationSettings,
-        'Hãy bật vị trí (GPS) trên điện thoại để chia sẻ khi làm việc.',
-      );
-    }
+    if (!await isServiceEnabled()) throw _locationDisabled;
     return null;
   }
+
+  @override
+  Future<bool> isServiceEnabled() => Geolocator.isLocationServiceEnabled();
+
+  @override
+  Stream<ServiceStatus> serviceStatus() => Geolocator.getServiceStatusStream();
 
   @override
   Stream<Position> watch() {
     final LocationSettings settings =
         defaultTargetPlatform == TargetPlatform.android
         ? AndroidSettings(
+            // Background reads must not launch Google's settings dialog.
+            forceLocationManager: true,
             accuracy: LocationAccuracy.high,
             distanceFilter: 10,
             intervalDuration: const Duration(seconds: 5),
             foregroundNotificationConfig: const ForegroundNotificationConfig(
               notificationTitle: 'Đang chia sẻ vị trí khi làm việc',
-              notificationText:
-                  'Super admin xem vị trí để hỗ trợ điều hành. Tắt chia sẻ tại Trang chủ khi nghỉ.',
+              notificationText: '',
               enableWakeLock: true,
             ),
           )
@@ -75,10 +84,16 @@ class GeolocatorDriverGpsDevice implements DriverGpsDevice {
 
   @override
   Future<Position> sample() => Geolocator.getCurrentPosition(
-    locationSettings: const LocationSettings(
-      accuracy: LocationAccuracy.high,
-      timeLimit: Duration(seconds: 8),
-    ),
+    locationSettings: defaultTargetPlatform == TargetPlatform.android
+        ? AndroidSettings(
+            forceLocationManager: true,
+            accuracy: LocationAccuracy.high,
+            timeLimit: const Duration(seconds: 8),
+          )
+        : const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 8),
+          ),
   );
 }
 
@@ -96,6 +111,7 @@ class DriverGpsTracker extends ChangeNotifier {
   DriverGpsSetupAction? setupAction;
   DateTime? lastSentAt;
   StreamSubscription<Position>? _subscription;
+  StreamSubscription<ServiceStatus>? _serviceSubscription;
   Timer? _timer;
   Position? _latest;
   String? _stream;
@@ -129,6 +145,7 @@ class DriverGpsTracker extends ChangeNotifier {
       if (error != null) throw DriverLocationException(422, error);
       if (generation != _generation) return;
       access = await api.token();
+      if (generation != _generation) return;
       final response = await api.setSharing(true, accessToken: access);
       if (generation != _generation) {
         // Disable a late enable using the original account token, never the next logged-in account.
@@ -145,6 +162,21 @@ class DriverGpsTracker extends ChangeNotifier {
         );
       }
       enabled = true;
+      _serviceSubscription = device.serviceStatus().listen(
+        (status) {
+          if (status == ServiceStatus.disabled && generation == _generation) {
+            unawaited(stop());
+          }
+        },
+        // flush also checks the current service state if the stream is unavailable.
+        onError: (Object _) {},
+      );
+      final serviceEnabled = await device.isServiceEnabled();
+      if (generation != _generation) return;
+      if (!serviceEnabled) {
+        await stop();
+        return;
+      }
       _subscription = device.watch().listen(
         (position) {
           if (enabled && generation == _generation) {
@@ -152,6 +184,7 @@ class DriverGpsTracker extends ChangeNotifier {
           }
         },
         onError: (Object _) {
+          if (generation != _generation) return;
           lastError =
               'Chưa lấy được GPS mới. Kiểm tra quyền vị trí và GPS trên máy.';
           notifyListeners();
@@ -163,19 +196,18 @@ class DriverGpsTracker extends ChangeNotifier {
       if (generation == _generation) {
         enabled = false;
         _stream = null;
-        await _subscription?.cancel();
-        _subscription = null;
-        _timer?.cancel();
-        _timer = null;
+        await _stopWatching();
         if (access != null) {
           try {
             await api.setSharing(false, accessToken: access);
           } catch (_) {}
         }
-        lastError = error is DriverLocationException
-            ? error.message
-            : 'Chưa bật được chia sẻ vị trí. Kiểm tra mạng và thử lại.';
-        setupAction = error is DriverGpsSetupException ? error.action : null;
+        if (generation == _generation) {
+          lastError = error is DriverLocationException
+              ? error.message
+              : 'Chưa bật được chia sẻ vị trí. Kiểm tra mạng và thử lại.';
+          setupAction = error is DriverGpsSetupException ? error.action : null;
+        }
       }
     } finally {
       if (generation == _generation) {
@@ -190,6 +222,12 @@ class DriverGpsTracker extends ChangeNotifier {
     final generation = _generation;
     _sending = true;
     try {
+      final serviceEnabled = await device.isServiceEnabled();
+      if (generation != _generation) return;
+      if (!serviceEnabled) {
+        await stop();
+        return;
+      }
       // A stationary phone still needs a fresh sensor sample; do not fake a heartbeat by changing
       // the timestamp of an old point. The server can show a stale state when the OS pauses GPS.
       if ((_latest == null ||
@@ -240,27 +278,44 @@ class DriverGpsTracker extends ChangeNotifier {
     }
   }
 
+  Future<void> _stopWatching() async {
+    _timer?.cancel();
+    _timer = null;
+    final position = _subscription;
+    final service = _serviceSubscription;
+    _subscription = null;
+    _serviceSubscription = null;
+    await Future.wait([
+      if (position != null) position.cancel(),
+      if (service != null) service.cancel(),
+    ]);
+  }
+
   Future<void> stop({bool disableServer = true}) async {
-    ++_generation;
+    final generation = ++_generation;
     enabled = false;
-    busy = false;
+    busy = disableServer;
     setupAction = null;
     _stream = null;
     _latest = null;
-    _timer?.cancel();
-    _timer = null;
-    await _subscription?.cancel();
-    _subscription = null;
     notifyListeners();
-    if (disableServer) {
-      try {
-        await api.setSharing(false);
-        lastError = null;
-      } catch (_) {
-        lastError =
-            'Đã dừng GPS trên máy. Chưa báo tắt được tới máy chủ; vị trí gần nhất sẽ chuyển cũ.';
+    try {
+      final stopWatching = _stopWatching();
+      if (disableServer) {
+        await Future.wait([stopWatching, api.setSharing(false)]);
+        if (generation == _generation) lastError = null;
+      } else {
+        await stopWatching;
       }
-      notifyListeners();
+    } catch (_) {
+      if (disableServer && generation == _generation) {
+        lastError = 'Chưa đồng bộ trạng thái tắt chia sẻ.';
+      }
+    } finally {
+      if (generation == _generation) {
+        busy = false;
+        notifyListeners();
+      }
     }
   }
 }

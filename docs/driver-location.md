@@ -11,6 +11,12 @@ Triển khai 2026-11-12. Tài xế app tự bật/tắt ở Trang chủ, không 
 
 Công tắc ở Trang chủ chỉ có nhãn “Chia sẻ vị trí khi làm việc”, không kèm mô tả trạng thái khi bật/tắt. Chỉ hiện thông báo lỗi khi có lỗi cần xử lý.
 
+Thông báo Android khi đang chia sẻ chỉ hiển thị tiêu đề. Nếu tài xế tắt dịch vụ vị trí của điện thoại, app chuyển công tắc sang tắt, dừng lấy và gửi tọa độ, rồi báo tắt chia sẻ tới máy chủ. Sau khi bật lại GPS, tài xế bật lại công tắc để chia sẻ tiếp.
+
+Trên Android, cả luồng vị trí và lần lấy mẫu định kỳ đều dùng `LocationManager`. Hộp thoại bật GPS của app chỉ xuất hiện khi tài xế gạt công tắc. Việc lấy mẫu định kỳ không gọi hộp thoại Độ chính xác vị trí của Google.
+
+Ngày 20/11/2026, 22 kiểm thử đạt. Trên Android 15, thông báo khi chia sẻ chỉ có tiêu đề và không phát sinh hộp thoại Google qua nhiều lượt lấy vị trí. Tắt vị trí từ Trung tâm điều khiển làm công tắc tắt và thông báo biến mất. Bật lại vị trí và mở lại app vẫn giữ công tắc tắt.
+
 Khi tài xế chủ động bật công tắc, app kiểm tra quyền và yêu cầu quyền vị trí qua hộp thoại hệ điều hành nếu chưa được cấp. Nếu quyền đã bị từ chối vĩnh viễn, app hỏi mở Cài đặt ứng dụng để cấp lại quyền. Khi đã có quyền nhưng dịch vụ vị trí đang tắt, app hỏi mở Cài đặt vị trí để bật GPS; không chỉ hiện dòng báo lỗi.
 
 Sau khi quay lại từ Cài đặt, app kiểm tra lại cả quyền và GPS rồi tiếp tục yêu cầu bật chia sẻ. Hủy hộp thoại hoặc quay lại mà chưa cấp quyền/bật GPS giữ công tắc tắt; không mở hộp thoại lặp vô hạn. Rời màn hình hoặc dừng phiên khi đang mở Cài đặt hủy ý định bật còn chờ. Khôi phục tự động khi mở Trang chủ không tự xin quyền hoặc mở Cài đặt. Chỉ thu thập/gửi GPS sau khi đủ điều kiện thiết bị và máy chủ trả stream chia sẻ.

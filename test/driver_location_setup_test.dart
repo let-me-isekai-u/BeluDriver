@@ -1,10 +1,11 @@
 import 'package:beludriver_app/features/driver_location/driver_gps_tracker.dart';
 import 'package:beludriver_app/features/driver_location/driver_location_tile.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 
-import 'driver_location_test.dart' show FakeApi, FakeDevice;
+import 'driver_location_test.dart' show FakeApi, FakeDevice, point;
 
 class _LocationPlatform extends GeolocatorPlatform {
   LocationPermission permission = LocationPermission.whileInUse;
@@ -12,6 +13,22 @@ class _LocationPlatform extends GeolocatorPlatform {
   bool servicesEnabled = true;
   bool settingsAvailable = true;
   final calls = <String>[];
+  LocationSettings? watchSettings;
+  LocationSettings? sampleSettings;
+
+  @override
+  Stream<Position> getPositionStream({LocationSettings? locationSettings}) {
+    watchSettings = locationSettings;
+    return const Stream.empty();
+  }
+
+  @override
+  Future<Position> getCurrentPosition({
+    LocationSettings? locationSettings,
+  }) async {
+    sampleSettings = locationSettings;
+    return point(21);
+  }
 
   @override
   Future<LocationPermission> checkPermission() async {
@@ -71,9 +88,27 @@ void main() {
     await tracker.stop(disableServer: false);
     tracker.dispose();
     await device.positions.close();
+    await device.statuses.close();
     api.client.close();
     GeolocatorPlatform.instance = originalPlatform;
   });
+
+  test(
+    'Android tracking and samples cannot open Google settings dialogs',
+    () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      final device = GeolocatorDriverGpsDevice();
+      await device.watch().drain<void>();
+      await device.sample();
+
+      final watch = platform.watchSettings as AndroidSettings;
+      final sample = platform.sampleSettings as AndroidSettings;
+      expect(watch.forceLocationManager, isTrue);
+      expect(sample.forceLocationManager, isTrue);
+      expect(watch.foregroundNotificationConfig?.notificationText, isEmpty);
+    },
+  );
 
   test(
     'requests missing permission even when GPS is off; collects nothing',
