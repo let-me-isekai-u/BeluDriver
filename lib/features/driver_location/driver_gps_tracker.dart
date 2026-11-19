@@ -3,6 +3,14 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'driver_location_api.dart';
 
+enum DriverGpsSetupAction { locationSettings, appSettings }
+
+class DriverGpsSetupException extends DriverLocationException {
+  final DriverGpsSetupAction action;
+  const DriverGpsSetupException(this.action, String message)
+    : super(422, message);
+}
+
 abstract interface class DriverGpsDevice {
   Future<String?> permission({required bool request});
   Stream<Position> watch();
@@ -12,18 +20,25 @@ abstract interface class DriverGpsDevice {
 class GeolocatorDriverGpsDevice implements DriverGpsDevice {
   @override
   Future<String?> permission({required bool request}) async {
-    if (!await Geolocator.isLocationServiceEnabled()) {
-      return 'Hãy bật GPS trên điện thoại.';
-    }
     var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied && request) {
       permission = await Geolocator.requestPermission();
     }
     if (permission == LocationPermission.deniedForever) {
-      return 'Cho phép vị trí trong Cài đặt ứng dụng để chia sẻ khi làm việc.';
+      throw const DriverGpsSetupException(
+        DriverGpsSetupAction.appSettings,
+        'Cho phép vị trí trong Cài đặt ứng dụng để chia sẻ khi làm việc.',
+      );
     }
-    if (permission == LocationPermission.denied) {
+    if (permission != LocationPermission.whileInUse &&
+        permission != LocationPermission.always) {
       return 'Cần quyền vị trí để chia sẻ với điều hành.';
+    }
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      throw const DriverGpsSetupException(
+        DriverGpsSetupAction.locationSettings,
+        'Hãy bật vị trí (GPS) trên điện thoại để chia sẻ khi làm việc.',
+      );
     }
     return null;
   }
@@ -78,6 +93,7 @@ class DriverGpsTracker extends ChangeNotifier {
   bool enabled = false;
   bool busy = false;
   String? lastError;
+  DriverGpsSetupAction? setupAction;
   DateTime? lastSentAt;
   StreamSubscription<Position>? _subscription;
   Timer? _timer;
@@ -105,6 +121,7 @@ class DriverGpsTracker extends ChangeNotifier {
     final generation = ++_generation;
     busy = true;
     lastError = null;
+    setupAction = null;
     notifyListeners();
     String? access;
     try {
@@ -158,6 +175,7 @@ class DriverGpsTracker extends ChangeNotifier {
         lastError = error is DriverLocationException
             ? error.message
             : 'Chưa bật được chia sẻ vị trí. Kiểm tra mạng và thử lại.';
+        setupAction = error is DriverGpsSetupException ? error.action : null;
       }
     } finally {
       if (generation == _generation) {
@@ -226,6 +244,7 @@ class DriverGpsTracker extends ChangeNotifier {
     ++_generation;
     enabled = false;
     busy = false;
+    setupAction = null;
     _stream = null;
     _latest = null;
     _timer?.cancel();
