@@ -216,11 +216,13 @@ class _RideDetailView extends StatelessWidget {
   }
 
   Widget _buildOverviewStats(ThemeData theme, RideDetailModel ride) {
+    final method = ride.paymentMethod.toLowerCase();
+    final cash = method.contains('tiền mặt') || method.contains('cod');
     return Row(
       children: [
         Expanded(
           child: DriverStatTile(
-            label: "Giá chuyến",
+            label: cash ? "Thu khách" : "Giá chuyến",
             value: _formatMoney(ride.price),
             icon: Icons.receipt_long_rounded,
           ),
