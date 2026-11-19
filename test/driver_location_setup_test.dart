@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:beludriver_app/features/driver_location/driver_gps_tracker.dart';
 import 'package:beludriver_app/features/driver_location/driver_location_tile.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -63,12 +66,17 @@ class _LocationPlatform extends GeolocatorPlatform {
 
 class _Device extends FakeDevice {
   @override
+  Future<bool> isServiceEnabled() =>
+      GeolocatorDriverGpsDevice().isServiceEnabled();
+
+  @override
   Future<String?> permission({required bool request}) =>
       GeolocatorDriverGpsDevice().permission(request: request);
 }
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
+  final binding = TestWidgetsFlutterBinding.ensureInitialized();
+  const locationSettings = MethodChannel('beludriver/location_settings');
   late GeolocatorPlatform originalPlatform;
   late _LocationPlatform platform;
   late FakeApi api;
@@ -76,6 +84,10 @@ void main() {
   late DriverGpsTracker tracker;
 
   setUp(() {
+    binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      locationSettings,
+      (_) async => 'unavailable',
+    );
     originalPlatform = GeolocatorPlatform.instance;
     platform = _LocationPlatform();
     GeolocatorPlatform.instance = platform;
@@ -85,6 +97,10 @@ void main() {
   });
 
   tearDown(() async {
+    binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      locationSettings,
+      null,
+    );
     await tracker.stop(disableServer: false);
     tracker.dispose();
     await device.positions.close();
@@ -173,6 +189,59 @@ void main() {
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pumpAndSettle();
   }
+
+  testWidgets('Android approval resumes sharing without opening Settings', (
+    tester,
+  ) async {
+    platform.servicesEnabled = false;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      locationSettings,
+      (call) async {
+        expect(call.method, 'requestEnableLocation');
+        expect(api.toggles, isEmpty);
+        return 'closed';
+      },
+    );
+    await showTile(tester);
+    expect(api.toggles, isEmpty);
+    platform.servicesEnabled = true;
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(platform.calls, isNot(contains('locationSettings')));
+    expect(api.toggles, [(true, 'original-account')]);
+    expect(tracker.enabled, isTrue);
+    await tester.runAsync(() => tracker.stop(disableServer: false));
+  });
+
+  testWidgets(
+    'only one Android request is pending and cancellation keeps sharing off',
+    (tester) async {
+      platform.servicesEnabled = false;
+      final pending = Completer<String>();
+      var prompts = 0;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        locationSettings,
+        (call) {
+          prompts++;
+          return pending.future;
+        },
+      );
+      await showTile(tester);
+      await tester.tap(find.byType(SwitchListTile));
+      await tester.pumpAndSettle();
+      expect(prompts, 1);
+      pending.complete('closed');
+      await tester.pump();
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 200));
+      }
+      expect(platform.calls, isNot(contains('locationSettings')));
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(tracker.enabled, isFalse);
+      expect(api.toggles, isEmpty);
+    },
+  );
 
   testWidgets('GPS off offers settings; cancel keeps sharing off', (
     tester,

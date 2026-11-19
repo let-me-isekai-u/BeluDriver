@@ -17,7 +17,9 @@ Trên Android, cả luồng vị trí và lần lấy mẫu định kỳ đều 
 
 Ngày 20/11/2026, 22 kiểm thử đạt. Trên Android 15, thông báo khi chia sẻ chỉ có tiêu đề và không phát sinh hộp thoại Google qua nhiều lượt lấy vị trí. Tắt vị trí từ Trung tâm điều khiển làm công tắc tắt và thông báo biến mất. Bật lại vị trí và mở lại app vẫn giữ công tắc tắt.
 
-Khi tài xế chủ động bật công tắc, app kiểm tra quyền và yêu cầu quyền vị trí qua hộp thoại hệ điều hành nếu chưa được cấp. Nếu quyền đã bị từ chối vĩnh viễn, app hỏi mở Cài đặt ứng dụng để cấp lại quyền. Khi đã có quyền nhưng dịch vụ vị trí đang tắt, app hỏi mở Cài đặt vị trí để bật GPS; không chỉ hiện dòng báo lỗi.
+Khi tài xế chủ động bật công tắc, app kiểm tra quyền và yêu cầu quyền vị trí qua hộp thoại hệ điều hành nếu chưa được cấp. Nếu quyền đã bị từ chối vĩnh viễn, app hỏi mở Cài đặt ứng dụng để cấp lại quyền. Nếu đã có quyền nhưng GPS đang tắt, Android dùng hộp thoại hệ thống để tài xế có thể bật GPS ngay. Chọn từ chối giữ chia sẻ tắt. App dùng lối mở Cài đặt vị trí nếu thiết bị không hỗ trợ hộp thoại bật trực tiếp.
+
+Ngày 20/11/2026, bản Android 1.2.7 đã kiểm trên điện thoại Android 15. **Bật** bật GPS và chia sẻ ngay từ Trang chủ. **Không, cảm ơn** giữ cả hai trạng thái tắt. Mỗi lần thử chỉ mở một hộp thoại. Bộ kiểm thử hồi quy đạt 24/24.
 
 Sau khi quay lại từ Cài đặt, app kiểm tra lại cả quyền và GPS rồi tiếp tục yêu cầu bật chia sẻ. Hủy hộp thoại hoặc quay lại mà chưa cấp quyền/bật GPS giữ công tắc tắt; không mở hộp thoại lặp vô hạn. Rời màn hình hoặc dừng phiên khi đang mở Cài đặt hủy ý định bật còn chờ. Khôi phục tự động khi mở Trang chủ không tự xin quyền hoặc mở Cài đặt. Chỉ thu thập/gửi GPS sau khi đủ điều kiện thiết bị và máy chủ trả stream chia sẻ.
 
