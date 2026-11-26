@@ -198,7 +198,7 @@ void main() {
           await tester.pumpAndSettle();
           expect(requests, 1);
           expect(find.text('Không gửi được mã.'), findsOneWidget);
-          expect(field('Mã OTP email'), findsNothing);
+          expect(field('Mã OTP SMS'), findsNothing);
           expect(find.text('Gửi mã xác minh'), findsOneWidget);
           expect(tester.takeException(), isNull);
         },
@@ -225,9 +225,9 @@ void main() {
           await agree(tester);
           await tester.tap(find.text('Gửi mã xác minh'));
           await tester.pumpAndSettle();
-          expect(field('Mã OTP email'), findsOneWidget);
+          expect(field('Mã OTP SMS'), findsOneWidget);
           expect(
-            find.text('Nhập mã OTP gửi tới d***@example.invalid.'),
+            find.textContaining('Mã có hiệu lực 3 phút.'),
             findsOneWidget,
           );
           final provider = state(tester);
@@ -235,17 +235,17 @@ void main() {
           await tester.pumpAndSettle();
           expect(
             tester
-                .widget<TextField>(field('Mã OTP email'))
+                .widget<TextField>(field('Mã OTP SMS'))
                 .decoration!
                 .errorText,
-            'Vui lòng nhập mã OTP email',
+            'Vui lòng nhập mã OTP SMS',
           );
           expect(requests.length, 1);
-          await enter(tester, 'Mã OTP email', '012345');
+          await enter(tester, 'Mã OTP SMS', '012345');
           await tester.tap(find.text('Đăng ký'));
           await tester.pumpAndSettle();
           expect(find.text('Mã OTP sai hoặc đã hết hạn.'), findsWidgets);
-          expect(field('Mã OTP email'), findsOneWidget);
+          expect(field('Mã OTP SMS'), findsOneWidget);
           expect(requests.length, 2);
           await tester.tap(find.text('Quay lại'));
           await tester.pumpAndSettle();

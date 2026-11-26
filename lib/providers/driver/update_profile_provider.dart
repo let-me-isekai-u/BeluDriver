@@ -23,6 +23,8 @@ class UpdateProfileProvider extends ChangeNotifier {
     required String fullName,
     required String email,
     required String licenseNumber,
+    required Future<String?> Function() readSmsCode,
+    required bool changedEmail,
   }) async {
     isLoading = true;
     notifyListeners();
@@ -34,10 +36,22 @@ class UpdateProfileProvider extends ChangeNotifier {
         return 'Phiên đăng nhập đã hết hạn';
       }
 
+      String? challengeId;
+      String? otp;
+      if (changedEmail) {
+        challengeId = await ApiService.requestEmailChangeCode(
+          accessToken: accessToken,
+          email: email,
+        );
+        otp = await readSmsCode();
+        if (otp == null) return '';
+      }
       final res = await ApiService.updateProfile(
         accessToken: accessToken,
         fullName: fullName,
         email: email,
+        challengeId: challengeId,
+        otp: otp,
         licenseNumber: licenseNumber,
         avatarFilePath: avatar?.path,
       );
@@ -52,6 +66,10 @@ class UpdateProfileProvider extends ChangeNotifier {
       } catch (_) {
         return 'Cập nhật thất bại (${res.statusCode})';
       }
+    } on FormatException catch (error) {
+      return error.message;
+    } catch (_) {
+      return 'Không cập nhật được hồ sơ. Vui lòng thử lại.';
     } finally {
       isLoading = false;
       notifyListeners();

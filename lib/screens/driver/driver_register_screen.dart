@@ -30,7 +30,7 @@ const List<_StepInfo> _steps = [
   _StepInfo("Cá nhân", Icons.badge_outlined),
   _StepInfo("Tài khoản", Icons.lock_outline_rounded),
   _StepInfo("Xác nhận", Icons.verified_user_outlined),
-  _StepInfo("OTP email", Icons.mark_email_read_outlined),
+  _StepInfo("OTP SMS", Icons.sms_outlined),
 ];
 
 class _RegisterView extends StatefulWidget {
@@ -587,13 +587,13 @@ class _RegisterViewState extends State<_RegisterView>
   Widget _buildStepOtp(BuildContext context, ThemeData theme) {
     final provider = context.watch<RegisterProvider>();
     return DriverSectionCard(
-      title: 'Xác minh email',
-      icon: Icons.mark_email_read_outlined,
+      title: 'Xác minh số điện thoại',
+      icon: Icons.sms_outlined,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Nhập mã OTP gửi tới ${provider.maskedChallengeEmail}.',
+            'Nhập mã SMS gửi tới ${provider.challengePhone}. Mã có hiệu lực 3 phút.',
             style: const TextStyle(color: Brand.inkMuted),
           ),
           const SizedBox(height: 16),
@@ -604,7 +604,7 @@ class _RegisterViewState extends State<_RegisterView>
             onSubmitted: () => _focusNext(RegistrationField.otp),
             onTap: () => _ensureVisible(RegistrationField.otp),
             getController: (p) => p.otpController,
-            hint: 'Mã OTP email',
+            hint: 'Mã OTP SMS',
             icon: Icons.password_rounded,
             keyboardType: TextInputType.number,
             textInputAction: TextInputAction.done,

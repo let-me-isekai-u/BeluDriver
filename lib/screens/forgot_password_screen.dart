@@ -15,7 +15,7 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _codeController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
@@ -28,9 +28,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   int _countdown = 0;
   Timer? _timer;
+  String? _challengeId;
+  String? _challengePhone;
 
   void _startCountdown() {
-    _countdown = 30;
+    _countdown = 60;
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_countdown == 0) {
@@ -61,26 +63,39 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Future<void> _sendCode() async {
-    final email = _emailController.text.trim();
+    final phone = _phoneController.text.trim();
 
-    if (email.isEmpty || !email.contains("@")) {
-      _showSnack("Vui lòng nhập email hợp lệ");
+    if (!RegExp(r'^(?:0|84|\+84)[35789][0-9]{8}$').hasMatch(phone)) {
+      _showSnack("Vui lòng nhập số điện thoại di động hợp lệ");
       return;
     }
 
     setState(() => _isSendingCode = true);
 
     try {
-      final res = await ApiService.sendForgotPasswordOtp(email: email);
+      final res = await ApiService.sendForgotPasswordOtp(phone: phone);
 
-      if (res.statusCode == 200) {
-        _showSnack("Đã gửi mã xác thực!", color: Brand.navy);
+      if (!mounted) return;
+      final body = jsonDecode(utf8.decode(res.bodyBytes));
+      final id = body is Map ? body['challengeId'] : null;
+      if (res.statusCode == 200 && id is String && id.isNotEmpty) {
+        _challengeId = id;
+        _challengePhone = phone;
+        _codeController.clear();
+        _showSnack(
+          "Nếu số đã đăng ký, mã sẽ được gửi qua SMS. Mã có hiệu lực 3 phút.",
+          color: Brand.navy,
+        );
         _startCountdown();
       } else {
-        _showSnack("Gửi mã thất bại");
+        _showSnack(
+          body is Map && body['message'] is String
+              ? body['message'] as String
+              : "Gửi mã thất bại",
+        );
       }
     } catch (e) {
-      _showSnack("Lỗi kết nối: $e");
+      if (mounted) _showSnack("Không kết nối được máy chủ. Vui lòng thử lại.");
     } finally {
       if (mounted) setState(() => _isSendingCode = false);
     }
@@ -89,15 +104,27 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Future<void> _resetPassword() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final phone = _phoneController.text.trim();
+    final challengeId = _challengeId;
+    if (challengeId == null || _challengePhone != phone) {
+      _showSnack("Vui lòng yêu cầu mã xác minh cho số điện thoại này.");
+      return;
+    }
+    if (!RegExp(r'^[0-9]{6}$').hasMatch(_codeController.text.trim())) {
+      _showSnack("Mã SMS gồm 6 chữ số.");
+      return;
+    }
     setState(() => _isResetting = true);
 
     try {
       final res = await ApiService.resetPassword(
-        email: _emailController.text.trim(),
+        phone: phone,
+        challengeId: challengeId,
         otp: _codeController.text.trim(),
         newPassword: _passwordController.text.trim(),
       );
 
+      if (!mounted) return;
       if (res.statusCode == 200) {
         _showSnack("Đổi mật khẩu thành công!", color: Brand.navy);
 
@@ -110,7 +137,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         _showSnack(body["message"] ?? "Đổi mật khẩu thất bại");
       }
     } catch (e) {
-      _showSnack("Lỗi kết nối: $e");
+      if (mounted) _showSnack("Không kết nối được máy chủ. Vui lòng thử lại.");
     } finally {
       if (mounted) setState(() => _isResetting = false);
     }
@@ -119,14 +146,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   void dispose() {
     _timer?.cancel();
-    _emailController.dispose();
+    _phoneController.dispose();
     _codeController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
     super.dispose();
   }
 
-  InputDecoration _decor(ThemeData theme, {required String label, required IconData icon, Widget? suffixIcon}) {
+  InputDecoration _decor(
+    ThemeData theme, {
+    required String label,
+    required IconData icon,
+    Widget? suffixIcon,
+  }) {
     return InputDecoration(
       labelText: label,
       labelStyle: theme.textTheme.bodyMedium?.copyWith(
@@ -138,11 +170,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       suffixIcon: suffixIcon,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.12)),
+        borderSide: BorderSide(
+          color: theme.colorScheme.onSurface.withOpacity(0.12),
+        ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.12)),
+        borderSide: BorderSide(
+          color: theme.colorScheme.onSurface.withOpacity(0.12),
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -173,14 +209,25 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               children: [
                 const SizedBox(height: 20),
 
-                // EMAIL
+                // PHONE
                 TextFormField(
-                  controller: _emailController,
-                  style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurface),
-                  decoration: _decor(theme, label: "Email", icon: Icons.email),
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.colorScheme.onSurface,
+                  ),
+                  decoration: _decor(
+                    theme,
+                    label: "Số điện thoại",
+                    icon: Icons.phone,
+                  ),
                   validator: (v) {
-                    if (v == null || v.isEmpty) return "Vui lòng nhập email";
-                    if (!v.contains("@")) return "Email không hợp lệ";
+                    if (v == null || v.isEmpty)
+                      return "Vui lòng nhập số điện thoại";
+                    if (!RegExp(
+                      r'^(?:0|84|\+84)[35789][0-9]{8}$',
+                    ).hasMatch(v.trim()))
+                      return "Số điện thoại không hợp lệ";
                     return null;
                   },
                 ),
@@ -193,8 +240,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     Expanded(
                       child: TextFormField(
                         controller: _codeController,
-                        style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurface),
-                        decoration: _decor(theme, label: "Mã xác thực", icon: Icons.lock_clock_rounded),
+                        keyboardType: TextInputType.number,
+                        autofillHints: const [AutofillHints.oneTimeCode],
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: theme.colorScheme.onSurface,
+                        ),
+                        decoration: _decor(
+                          theme,
+                          label: "Mã xác thực",
+                          icon: Icons.lock_clock_rounded,
+                        ),
                         validator: (v) {
                           if (v == null || v.isEmpty) return "Nhập mã xác thực";
                           return null;
@@ -205,19 +260,22 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     SizedBox(
                       height: 52,
                       child: ElevatedButton(
-                        onPressed: (_isSendingCode || _countdown > 0) ? null : _sendCode,
+                        onPressed:
+                            (_isSendingCode || _isResetting || _countdown > 0)
+                            ? null
+                            : _sendCode,
                         child: _isSendingCode
                             ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
                             : Text(_countdown > 0 ? "$_countdown s" : "Gửi mã"),
                       ),
-                    )
+                    ),
                   ],
                 ),
 
@@ -227,7 +285,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 TextFormField(
                   controller: _passwordController,
                   obscureText: !_showPass,
-                  style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurface),
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.colorScheme.onSurface,
+                  ),
                   decoration: _decor(
                     theme,
                     label: "Mật khẩu mới",
@@ -253,22 +313,28 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 TextFormField(
                   controller: _confirmController,
                   obscureText: !_showConfirmPass,
-                  style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurface),
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.colorScheme.onSurface,
+                  ),
                   decoration: _decor(
                     theme,
                     label: "Nhập lại mật khẩu",
                     icon: Icons.lock_outline,
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _showConfirmPass ? Icons.visibility : Icons.visibility_off,
+                        _showConfirmPass
+                            ? Icons.visibility
+                            : Icons.visibility_off,
                         color: theme.colorScheme.onSurface.withOpacity(0.7),
                       ),
-                      onPressed: () => setState(() => _showConfirmPass = !_showConfirmPass),
+                      onPressed: () =>
+                          setState(() => _showConfirmPass = !_showConfirmPass),
                     ),
                   ),
                   validator: (v) {
                     if (v == null || v.isEmpty) return "Nhập lại mật khẩu";
-                    if (v != _passwordController.text.trim()) return "Mật khẩu không khớp";
+                    if (v != _passwordController.text.trim())
+                      return "Mật khẩu không khớp";
                     return null;
                   },
                 ),
@@ -283,24 +349,30 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     onPressed: _isResetting ? null : _resetPassword,
                     child: _isResetting
                         ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
                         : const Text("Đổi mật khẩu"),
                   ),
                 ),
 
                 const SizedBox(height: 12),
 
+                const Text(
+                  "Không còn dùng số đã đăng ký? Gọi 0964 986 902 để được hỗ trợ.",
+                  textAlign: TextAlign.center,
+                ),
                 TextButton(
                   onPressed: () {
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (_) => const DriverLoginScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => const DriverLoginScreen(),
+                      ),
                     );
                   },
                   child: Text(

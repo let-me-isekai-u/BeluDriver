@@ -7,6 +7,7 @@ import '../../app_theme.dart';
 import '../../models/driver/driver_profile_model.dart';
 import '../../providers/driver/update_profile_provider.dart';
 import '../../widgets/driver_ui.dart';
+import '../../widgets/email_change_sms_dialog.dart';
 import '../../ui/ui.dart';
 
 class DriverUpdateProfileScreen extends StatelessWidget {
@@ -62,16 +63,26 @@ class _DriverUpdateProfileViewState extends State<_DriverUpdateProfileView> {
 
   Future<void> _handleUpdate() async {
     final provider = context.read<UpdateProfileProvider>();
+    final email = _emailController.text.trim();
+    final changedEmail =
+        email.toLowerCase() != widget.profile.email.trim().toLowerCase();
     final error = await provider.updateProfile(
+      changedEmail: changedEmail,
+      readSmsCode: () =>
+          mounted ? showEmailChangeSmsDialog(context) : Future.value(),
       fullName: _fullNameController.text.trim(),
-      email: _emailController.text.trim(),
+      email: email,
       licenseNumber: _licenseNumberController.text.trim(),
     );
 
-    if (!mounted) return;
+    if (!mounted || error == '') return;
 
     if (error == null) {
-      _showSnack('Cập nhật thông tin thành công');
+      _showSnack(
+        changedEmail
+            ? 'Đã đổi email. Vui lòng đăng nhập lại.'
+            : 'Cập nhật thông tin thành công',
+      );
       Navigator.pop(context, true);
     } else {
       _showSnack(error);
@@ -98,10 +109,7 @@ class _DriverUpdateProfileViewState extends State<_DriverUpdateProfileView> {
       appBar: AppBar(
         title: Text(
           'Cập nhật hồ sơ',
-          style: TextStyle(
-            color: Brand.navy,
-            fontWeight: FontWeight.w800,
-          ),
+          style: TextStyle(color: Brand.navy, fontWeight: FontWeight.w800),
         ),
         iconTheme: IconThemeData(color: Brand.navy),
       ),
@@ -158,9 +166,7 @@ class _DriverUpdateProfileViewState extends State<_DriverUpdateProfileView> {
                           )
                         : const Icon(Icons.save_rounded),
                     label: Text(
-                      provider.isLoading
-                          ? 'Đang cập nhật...'
-                          : 'Lưu thay đổi',
+                      provider.isLoading ? 'Đang cập nhật...' : 'Lưu thay đổi',
                     ),
                     style: ElevatedButton.styleFrom(
                       shape: RoundedRectangleBorder(
@@ -176,9 +182,7 @@ class _DriverUpdateProfileViewState extends State<_DriverUpdateProfileView> {
             Container(
               color: Colors.black26,
               child: Center(
-                child: CircularProgressIndicator(
-                  color: Brand.navy,
-                ),
+                child: CircularProgressIndicator(color: Brand.navy),
               ),
             ),
         ],
@@ -191,17 +195,12 @@ class _DriverUpdateProfileViewState extends State<_DriverUpdateProfileView> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Brand.navy,
-            Brand.b700,
-          ],
+          colors: [Brand.navy, Brand.b700],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: Brand.navy.withValues(alpha: 0.16),
-        ),
+        border: Border.all(color: Brand.navy.withValues(alpha: 0.16)),
       ),
       child: Row(
         children: [
@@ -209,16 +208,10 @@ class _DriverUpdateProfileViewState extends State<_DriverUpdateProfileView> {
             children: [
               CircleAvatar(
                 radius: 42,
-                backgroundColor: Brand.navy.withValues(
-                  alpha: 0.14,
-                ),
+                backgroundColor: Brand.navy.withValues(alpha: 0.14),
                 backgroundImage: _avatarProvider(provider),
                 child: _avatarProvider(provider) == null
-                    ? Icon(
-                        Icons.person_rounded,
-                        size: 46,
-                        color: Brand.navy,
-                      )
+                    ? Icon(Icons.person_rounded, size: 46, color: Brand.navy)
                     : null,
               ),
               Positioned(
@@ -235,10 +228,7 @@ class _DriverUpdateProfileViewState extends State<_DriverUpdateProfileView> {
                       decoration: BoxDecoration(
                         color: Brand.navy,
                         shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Brand.navy,
-                          width: 2,
-                        ),
+                        border: Border.all(color: Brand.navy, width: 2),
                       ),
                       child: const Icon(
                         Icons.camera_alt_rounded,

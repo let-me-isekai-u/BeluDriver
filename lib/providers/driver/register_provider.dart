@@ -79,6 +79,7 @@ class RegisterProvider extends ChangeNotifier {
   }
 
   String? get challengeId => _challengeId;
+  String? get challengePhone => _challengePhone;
   bool get hasMatchingChallenge =>
       _challengeId != null &&
       _challengeEmail == emailController.text.trim() &&
@@ -210,7 +211,9 @@ class RegisterProvider extends ChangeNotifier {
       case RegistrationField.region:
         return selectedRegion == null ? 'Vui lòng chọn miền hoạt động' : null;
       case RegistrationField.phone:
-        return RegExp(r'^[0-9]{9,11}$').hasMatch(phoneController.text.trim())
+        return RegExp(
+              r'^(?:0|84|\+84)[35789][0-9]{8}$',
+            ).hasMatch(phoneController.text.trim())
             ? null
             : 'Số điện thoại không hợp lệ';
       case RegistrationField.confirmPhone:
@@ -243,7 +246,7 @@ class RegisterProvider extends ChangeNotifier {
             : 'Bạn cần xác nhận xe có gắn camera hành trình và hoạt động bình thường';
       case RegistrationField.otp:
         if (otpController.text.trim().isEmpty) {
-          return 'Vui lòng nhập mã OTP email';
+          return 'Vui lòng nhập mã OTP SMS';
         }
         return RegExp(r'^[0-9]{6}$').hasMatch(otpController.text.trim())
             ? null
@@ -296,7 +299,7 @@ class RegisterProvider extends ChangeNotifier {
         response,
         response.statusCode == 429
             ? 'Bạn đã yêu cầu mã quá nhiều lần. Vui lòng thử lại sau.'
-            : 'Không lấy được mã xác minh email. Vui lòng thử lại.',
+            : 'Không gửi được mã SMS. Vui lòng thử lại.',
       );
       return false;
     } catch (_) {
@@ -319,8 +322,7 @@ class RegisterProvider extends ChangeNotifier {
       return false;
     }
     if (!hasMatchingChallenge) {
-      apiError =
-          'Vui lòng yêu cầu mã xác minh cho email và số điện thoại hiện tại.';
+      apiError = 'Vui lòng yêu cầu mã xác minh cho số điện thoại hiện tại.';
       _notify();
       onSnack(apiError!);
       return false;
@@ -352,7 +354,7 @@ class RegisterProvider extends ChangeNotifier {
       if (response.statusCode >= 500 || response.statusCode == 408) {
         registrationOutcomeUnknown = true;
         apiError =
-            'Chưa xác nhận được kết quả đăng ký. Vui lòng kiểm tra email hoặc đăng nhập trước khi thử lại.';
+            'Chưa xác nhận được kết quả đăng ký. Vui lòng thử đăng nhập trước khi đăng ký lại.';
       } else {
         apiError = apiErrorMessage(
           response,
@@ -365,7 +367,7 @@ class RegisterProvider extends ChangeNotifier {
       if (_disposed) return false;
       registrationOutcomeUnknown = true;
       apiError =
-          'Chưa xác nhận được kết quả đăng ký. Vui lòng kiểm tra email hoặc đăng nhập trước khi thử lại.';
+          'Chưa xác nhận được kết quả đăng ký. Vui lòng thử đăng nhập trước khi đăng ký lại.';
       onSnack(apiError!);
       return false;
     } finally {

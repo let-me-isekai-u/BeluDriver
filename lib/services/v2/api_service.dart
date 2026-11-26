@@ -26,8 +26,7 @@ class ApiService {
   // -----------------------------------------------------------
   // BASE URL CHUẨN
   // -----------------------------------------------------------
-  static const String _baseUrl =
-      "$apiOrigin/api/accountdriverapi";
+  static const String _baseUrl = "$apiOrigin/api/accountdriverapi";
 
   // Default headers
   static Map<String, String> _defaultHeaders() => {
@@ -73,9 +72,7 @@ class ApiService {
   // 2️⃣ LOGOUT
   // -----------------------------------------------------------
   static Future<http.Response> Driverlogout(String accessToken) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/accountdriverapi/logout",
-    );
+    final url = Uri.parse("$apiOrigin/api/accountdriverapi/logout");
 
     try {
       return await _http
@@ -182,6 +179,7 @@ class ApiService {
             body: jsonEncode({
               'ownerType': 2,
               'purpose': 'register',
+              'channel': 'sms',
               'email': email,
               'phone': phone,
             }),
@@ -325,14 +323,12 @@ class ApiService {
 
   //Gửi OTP khi quên mật khẩu
   static Future<http.Response> sendForgotPasswordOtp({
-    required String email,
+    required String phone,
   }) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/accountdriverapi/forgot-password",
-    );
+    final url = Uri.parse("$apiOrigin/api/accountdriverapi/forgot-password");
 
     try {
-      final body = jsonEncode({"email": email});
+      final body = jsonEncode({"phone": phone});
 
       return await _http
           .post(url, headers: _defaultHeaders(), body: body)
@@ -344,17 +340,17 @@ class ApiService {
 
   //Nhập mật khẩu mới khi quên
   static Future<http.Response> resetPassword({
-    required String email,
+    required String phone,
+    required String challengeId,
     required String otp,
     required String newPassword,
   }) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/accountdriverapi/reset-password",
-    );
+    final url = Uri.parse("$apiOrigin/api/accountdriverapi/reset-password");
 
     try {
       final body = jsonEncode({
-        "email": email,
+        "phone": phone,
+        "challengeId": challengeId,
         "otp": otp,
         "newPassword": newPassword,
       });
@@ -388,9 +384,7 @@ class ApiService {
     required String oldPassword,
     required String newPassword,
   }) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/accountdriverapi/change-password",
-    );
+    final url = Uri.parse("$apiOrigin/api/accountdriverapi/change-password");
 
     print("🔵 [API] CALL CHANGE PASSWORD → $url");
 
@@ -425,9 +419,7 @@ class ApiService {
   static Future<http.Response> deleteAccount({
     required String accessToken,
   }) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/accountdriverapi/delete",
-    );
+    final url = Uri.parse("$apiOrigin/api/accountdriverapi/delete");
 
     print("🔵 [API] CALL DELETE ACCOUNT → $url");
 
@@ -457,9 +449,7 @@ class ApiService {
     required double amount,
     required String content,
   }) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/paymentapi/deposite",
-    );
+    final url = Uri.parse("$apiOrigin/api/paymentapi/deposite");
 
     print("🔵 [API] DEPOSIT WALLET → $url");
     print("➡️ amount: $amount | content: $content");
@@ -525,9 +515,7 @@ class ApiService {
   static Future<http.Response> getAcceptedRides({
     required String accessToken,
   }) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/driverapi/ride-confirmed",
-    );
+    final url = Uri.parse("$apiOrigin/api/driverapi/ride-confirmed");
 
     print("🔵 [API] GET WAITING RIDES → $url");
 
@@ -598,7 +586,9 @@ class ApiService {
     final url = Uri.parse("$apiOrigin/api/provinceapi/active");
 
     try {
-      final response = await _http.get(url).timeout(const Duration(seconds: 15));
+      final response = await _http
+          .get(url)
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -617,12 +607,12 @@ class ApiService {
 
   //Lấy huyện theo tỉnh
   static Future<List<dynamic>> getDistricts({required int provinceId}) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/provinceapi/district/$provinceId",
-    );
+    final url = Uri.parse("$apiOrigin/api/provinceapi/district/$provinceId");
 
     try {
-      final response = await _http.get(url).timeout(const Duration(seconds: 15));
+      final response = await _http
+          .get(url)
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -644,17 +634,14 @@ class ApiService {
     String? location,
     int size = 5,
   }) async {
-    final url =
-        Uri.parse(
-          "$apiOrigin/api/track-asia/autocomplete",
-        ).replace(
-          queryParameters: {
-            "input": input,
-            "size": size.toString(),
-            if (location != null && location.trim().isNotEmpty)
-              "location": location.trim(),
-          },
-        );
+    final url = Uri.parse("$apiOrigin/api/track-asia/autocomplete").replace(
+      queryParameters: {
+        "input": input,
+        "size": size.toString(),
+        if (location != null && location.trim().isNotEmpty)
+          "location": location.trim(),
+      },
+    );
 
     try {
       return await _http
@@ -689,9 +676,7 @@ class ApiService {
     required int paymentMethod,
     required int quantity,
   }) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/v2/address/resolve-route",
-    );
+    final url = Uri.parse("$apiOrigin/api/v2/address/resolve-route");
 
     try {
       final body = jsonEncode({
@@ -754,7 +739,9 @@ class ApiService {
     required int rideId,
     required int rideSource,
   }) => current.ApiService.startRide(
-    accessToken: accessToken, rideId: rideId, rideSource: rideSource,
+    accessToken: accessToken,
+    rideId: rideId,
+    rideSource: rideSource,
   );
 
   // Hoàn thành chuyến đi
@@ -763,16 +750,16 @@ class ApiService {
     required int rideId,
     required int rideSource,
   }) => current.ApiService.completeRide(
-    accessToken: accessToken, rideId: rideId, rideSource: rideSource,
+    accessToken: accessToken,
+    rideId: rideId,
+    rideSource: rideSource,
   );
 
   // Lấy danh sách chuyến đang đi (status = 3)
   static Future<http.Response> getProcessingRides({
     required String accessToken,
   }) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/driverapi/ride-process",
-    );
+    final url = Uri.parse("$apiOrigin/api/driverapi/ride-process");
 
     print("🔵 [API] GET PROCESSING RIDES → $url");
 
@@ -800,9 +787,7 @@ class ApiService {
   static Future<http.Response> getRideHistory({
     required String accessToken,
   }) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/driverapi/ride-history",
-    );
+    final url = Uri.parse("$apiOrigin/api/driverapi/ride-history");
 
     print("🔵 [API] GET RIDE HISTORY → $url");
 
@@ -854,9 +839,7 @@ class ApiService {
   static Future<http.Response> getWithdrawalHistory({
     required String accessToken,
   }) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/withdrawalapi/history-withdrawal",
-    );
+    final url = Uri.parse("$apiOrigin/api/withdrawalapi/history-withdrawal");
 
     try {
       return await _http
@@ -926,9 +909,7 @@ class ApiService {
   static Future<http.Response> getRideCountByProvince({
     required String accessToken,
   }) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/rideapi/ride-count-by-province",
-    );
+    final url = Uri.parse("$apiOrigin/api/rideapi/ride-count-by-province");
 
     return await _http.get(
       url,
@@ -986,9 +967,7 @@ class ApiService {
     String note = "",
     int? groupId,
   }) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/v2/ride/create-broker",
-    );
+    final url = Uri.parse("$apiOrigin/api/v2/ride/create-broker");
 
     try {
       final normalizedQuantity = BrokerRideType.normalizeQuantity(
@@ -1045,9 +1024,7 @@ class ApiService {
   static Future<http.Response> getBrokerRides({
     required String accessToken,
   }) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/rideapi/ride-broker",
-    );
+    final url = Uri.parse("$apiOrigin/api/rideapi/ride-broker");
 
     try {
       return await _http
@@ -1135,9 +1112,7 @@ class ApiService {
     required String accessToken,
     required int depositId,
   }) async {
-    final url = Uri.parse(
-      "$apiOrigin/api/depositapi/cancel/$depositId",
-    );
+    final url = Uri.parse("$apiOrigin/api/depositapi/cancel/$depositId");
 
     print("🔵 [API] CANCEL DEPOSIT REQUEST → $url");
     print("➡️ depositId: $depositId");
