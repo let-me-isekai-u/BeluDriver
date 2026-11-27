@@ -27,8 +27,6 @@ void main() async {
     FirebaseNotificationService.firebaseMessagingBackgroundHandler,
   );
 
-  await FirebaseNotificationService.init();
-
   // Non-sensitive preferences remain here; credentials use TokenStorage.
   await SharedPreferences.getInstance();
   try {

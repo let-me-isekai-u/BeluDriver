@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:beludriver_app/services/token_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:video_player/video_player.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/api_service.dart';
@@ -10,7 +14,7 @@ import '../services/driver_session_navigation.dart';
 import '../features/carrier_vehicle/carrier_vehicle_service.dart';
 import '../features/carrier_vehicle/carrier_vehicle_screens.dart';
 import '../services/kyc_service.dart';
-import '../ui/ui.dart';
+import '../services/firebase_notification_service.dart';
 
 void appLog(String tag, String msg) {
   debugPrint('[$tag] $msg');
@@ -23,69 +27,83 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with TickerProviderStateMixin {
-  late AnimationController _pulseController;
-  late Animation<double> _pulseAnimation;
-
-  late AnimationController _fadeController;
-  late Animation<double> _fadeAnimation;
-
-  late AnimationController _shimmerController;
-  late Animation<double> _shimmerAnimation;
-
-  static const Duration _minDisplayDuration = Duration(seconds: 3);
-  late final DateTime _splashStart;
+class _SplashScreenState extends State<SplashScreen> {
+  late final VideoPlayerController _video;
+  Timer? _watchdog;
+  bool _introDone = false;
+  bool _videoFailed = false;
+  bool _authDone = false;
+  RestoredAppSession? _restoredSession;
 
   @override
   void initState() {
     super.initState();
-    appLog('SPLASH', 'initState called. Setting up animations.');
-    _splashStart = DateTime.now();
-
-    _fadeController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
+    _video = VideoPlayerController.asset(
+      'assets/videos/intro_splash.mp4',
+      videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
     );
-    _fadeAnimation = CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeIn,
-    );
-    _fadeController.forward();
-
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    )..repeat(reverse: true);
-    _pulseAnimation = Tween<double>(begin: 0.97, end: 1.03).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
-
-    _shimmerController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat();
-    _shimmerAnimation = CurvedAnimation(
-      parent: _shimmerController,
-      curve: Curves.easeInOut,
-    );
-
-    _checkAuth();
+    _video.addListener(_onVideo);
+    _watchdog = Timer(const Duration(seconds: 20), _failVideo);
+    unawaited(_startVideo());
+    unawaited(_checkAuth());
+    // Notification permissions must not gate playback or session validation.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(
+        FirebaseNotificationService.init().catchError((Object error) {
+          debugPrint(
+            'Notification initialization unavailable: ${error.runtimeType}',
+          );
+        }),
+      );
+    });
   }
 
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    _fadeController.dispose();
-    _shimmerController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _ensureMinDisplay() async {
-    final elapsed = DateTime.now().difference(_splashStart);
-    if (elapsed < _minDisplayDuration) {
-      await Future.delayed(_minDisplayDuration - elapsed);
+  Future<void> _startVideo() async {
+    try {
+      await _video.initialize().timeout(const Duration(seconds: 8));
+      if (!mounted || _videoFailed) return;
+      await _video.setVolume(0);
+      await _video.setLooping(false);
+      // The asset ends at the Dong Duong logo, before the next scene.
+      await _video.setPlaybackSpeed(1.5);
+      if (!mounted || _videoFailed) return;
+      setState(() {});
+      await _video.play();
+      if (!mounted || _introDone) return;
+      _watchdog?.cancel();
+      // Handles a decoder that stalls without reporting an error.
+      _watchdog = Timer(
+        _video.value.duration + const Duration(seconds: 8),
+        _failVideo,
+      );
+    } catch (_) {
+      _failVideo();
     }
+  }
+
+  void _onVideo() {
+    if (!mounted || _introDone) return;
+    final value = _video.value;
+    if (value.hasError) {
+      _failVideo();
+    } else if (value.isInitialized &&
+        value.duration > Duration.zero &&
+        value.position >= value.duration) {
+      _watchdog?.cancel();
+      setState(() => _introDone = true);
+      _navigateIfReady();
+    }
+  }
+
+  void _failVideo() {
+    if (!mounted || _introDone) return;
+    _watchdog?.cancel();
+    unawaited(_video.pause().catchError((Object _) {}));
+    setState(() {
+      _videoFailed = true;
+      _introDone = true;
+    });
+    _navigateIfReady();
   }
 
   Future<void> _saveOnboardingState({
@@ -170,7 +188,12 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _checkAuth() async {
     if (_checkingAuth || _navigationStarted) return;
     _checkingAuth = true;
-    if (mounted) setState(() => _restoreError = null);
+    if (mounted) {
+      setState(() {
+        _restoreError = null;
+        _authDone = false;
+      });
+    }
     try {
       final restored = await StartupSessionRestore.restore();
       if (!mounted || _navigationStarted) return;
@@ -181,23 +204,12 @@ class _SplashScreenState extends State<SplashScreen>
           accessToken: restored!.driverToken!,
         );
       }
-      await _ensureMinDisplay();
       if (!mounted || _navigationStarted) return;
-      if (restored == null) {
-        _goToLogin();
-      } else if (restored.mode == SessionMode.driver) {
-        _navigationStarted = true;
-        Navigator.of(context).pushReplacementNamed('/home');
-      } else {
-        _navigationStarted = true;
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            settings: const RouteSettings(name: carrierRouteName),
-            builder: (_) =>
-                CarrierVehicleHomeScreen(initialRuns: restored.runs),
-          ),
-        );
-      }
+      setState(() {
+        _restoredSession = restored;
+        _authDone = true;
+      });
+      _navigateIfReady();
     } on TokenStorageException catch (error) {
       if (mounted && !_navigationStarted) {
         setState(() => _restoreError = error.toString());
@@ -215,6 +227,25 @@ class _SplashScreenState extends State<SplashScreen>
       }
     } finally {
       _checkingAuth = false;
+    }
+  }
+
+  void _navigateIfReady() {
+    if (!mounted || !_introDone || !_authDone || _navigationStarted) return;
+    final restored = _restoredSession;
+    if (restored == null) {
+      _goToLogin();
+    } else if (restored.mode == SessionMode.driver) {
+      _navigationStarted = true;
+      Navigator.of(context).pushReplacementNamed('/home');
+    } else {
+      _navigationStarted = true;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          settings: const RouteSettings(name: carrierRouteName),
+          builder: (_) => CarrierVehicleHomeScreen(initialRuns: restored.runs),
+        ),
+      );
     }
   }
 
@@ -241,132 +272,82 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
+  void dispose() {
+    _watchdog?.cancel();
+    _video.removeListener(_onVideo);
+    unawaited(_video.dispose());
+    super.dispose();
+  }
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF4AB8E8),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Positioned.fill(
-              child: Image.asset(
-                'lib/assets/summer_splash.png',
-                fit: BoxFit.contain,
-                alignment: Alignment.center,
-              ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: size.height * 0.15,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, const Color(0x33041565)],
-                  ),
+  @override
+  Widget build(BuildContext context) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark.copyWith(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: const Color(0xFFECEDE8),
+      ),
+      child: Scaffold(
+        backgroundColor: const Color(0xFFECEDE8),
+        body: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: Center(
+                  child: !_videoFailed && _video.value.isInitialized
+                      ? SizedBox.expand(
+                          child: FittedBox(
+                            fit: BoxFit.contain,
+                            child: SizedBox(
+                              width: _video.value.size.width,
+                              height: _video.value.size.height,
+                              child: VideoPlayer(_video),
+                            ),
+                          ),
+                        )
+                      // Match the native launch screen and the video's first
+                      // frame while loading or if playback is unavailable.
+                      : const SizedBox.expand(),
                 ),
               ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 36,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 48),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_restoreError == null)
-                      _ShimmerLoadingBar(animation: _shimmerAnimation),
-                    if (_restoreError != null) ...[
-                      Text(
-                        _restoreError!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Brand.ink),
-                      ),
+              // Reserve space: loading never overlays any part of the video.
+              if (_introDone && _restoreError != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_restoreError!, textAlign: TextAlign.center),
                       TextButton(
                         onPressed: _checkAuth,
                         child: const Text('Thử lại'),
                       ),
-                    ],
-                    const SizedBox(height: 10),
-                    Text(
-                      _restoreError == null
-                          ? 'Đang tải...'
-                          : 'Phiên đã lưu được giữ lại.',
-                      style: TextStyle(
-                        color: Brand.inkMuted,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0.6,
+                      const Text('Phiên đã lưu được giữ lại.'),
+                      TextButton(
+                        onPressed: _chooseDriverLogin,
+                        child: const Text('Đăng nhập tài xế'),
                       ),
-                    ),
-                    TextButton(
-                      onPressed: _chooseDriverLogin,
-                      child: const Text('Đăng nhập tài xế'),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+              SizedBox(
+                height: 28,
+                child: _introDone && !_authDone && _restoreError == null
+                    ? const Center(
+                        child: SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      )
+                    : null,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    );
-  }
-}
-
-class _ShimmerLoadingBar extends StatelessWidget {
-  final Animation<double> animation;
-
-  const _ShimmerLoadingBar({required this.animation});
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (context, _) {
-        return Container(
-          height: 4,
-          decoration: BoxDecoration(
-            color: Brand.b50,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: 1.0,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: Stack(
-                children: [
-                  Container(color: Colors.white),
-                  FractionallySizedBox(
-                    alignment: Alignment((animation.value * 3.0) - 1.5, 0),
-                    widthFactor: 0.35,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.transparent,
-                            Brand.inkMuted,
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 }
